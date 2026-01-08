@@ -636,7 +636,7 @@ const PromoBannerSection = () => {
               <span className="block text-amber-300">Up to 50% Off</span>
             </h2>
             <p className="text-white/80 text-lg mb-8 max-w-lg mx-auto lg:mx-0">
-              Don't miss out on our biggest sale of the season. Get exclusive
+              Do not miss out on our biggest sale of the season. Get exclusive
               deals on thousands of products.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
