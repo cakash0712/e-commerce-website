@@ -1,7 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, createContext, useContext } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import axios from "axios";
+import Shop from "./components/Shop";
+import Categories from "./components/Categories";
+import Deals from "./components/Deals";
+import About from "./components/About";
+import Cart from "./components/Cart";
+import Wishlist from "./components/Wishlist";
+import Profile from "./components/Profile";
+import Search from "./components/Search";
+import Navigation from "./components/Navigation";
+import Footer from "./components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +34,7 @@ import {
   Heart,
   Menu,
   X,
-  Search,
+  Search as SearchIcon,
   User,
   ArrowRight,
   Quote,
@@ -36,127 +46,119 @@ import {
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Navigation Component
-const Navigation = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+// Cart Context
+const CartContext = createContext();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+  return context;
+};
+
+// Wishlist Context
+const WishlistContext = createContext();
+
+export const useWishlist = () => {
+  const context = useContext(WishlistContext);
+  if (!context) {
+    throw new Error('useWishlist must be used within a WishlistProvider');
+  }
+  return context;
+};
+
+const CartProvider = ({ children }) => {
+  const [cartItems, setCartItems] = useState([]);
+
+  const addToCart = (product) => {
+    setCartItems(prevItems => {
+      const existingItem = prevItems.find(item => item.id === product.id);
+      if (existingItem) {
+        return prevItems.map(item =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      } else {
+        return [...prevItems, { ...product, quantity: 1 }];
+      }
+    });
+  };
+
+  const removeFromCart = (id) => {
+    setCartItems(prevItems => prevItems.filter(item => item.id !== id));
+  };
+
+  const updateQuantity = (id, quantity) => {
+    if (quantity <= 0) {
+      removeFromCart(id);
+      return;
+    }
+    setCartItems(prevItems =>
+      prevItems.map(item =>
+        item.id === id ? { ...item, quantity } : item
+      )
+    );
+  };
+
+  const getCartTotal = () => {
+    return cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+  };
+
+  const getCartCount = () => {
+    return cartItems.reduce((count, item) => count + item.quantity, 0);
+  };
 
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-white/95 backdrop-blur-md shadow-lg"
-          : "bg-transparent"
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center">
-              <ShoppingCart className="w-5 h-5 text-white" />
-            </div>
-            <span
-              className={`text-xl font-bold ${
-                isScrolled ? "text-gray-900" : "text-white"
-              }`}
-            >
-              ShopVerse
-            </span>
-          </Link>
+    <CartContext.Provider value={{
+      cartItems,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      getCartTotal,
+      getCartCount
+    }}>
+      {children}
+    </CartContext.Provider>
+  );
+};
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-8">
-            {["Home", "Shop", "Categories", "Deals", "About"].map((item) => (
-              <Link
-                key={item}
-                to={item === "Home" ? "/" : `/${item.toLowerCase()}`}
-                className={`text-sm font-medium transition-colors hover:text-violet-600 ${
-                  isScrolled ? "text-gray-700" : "text-white/90"
-                }`}
-              >
-                {item}
-              </Link>
-            ))}
-          </div>
+const WishlistProvider = ({ children }) => {
+  const [wishlistItems, setWishlistItems] = useState([]);
 
-          {/* Desktop Actions */}
-          <div className="hidden lg:flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className={isScrolled ? "text-gray-700" : "text-white"}
-            >
-              <Search className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={isScrolled ? "text-gray-700" : "text-white"}
-            >
-              <Heart className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`relative ${isScrolled ? "text-gray-700" : "text-white"}`}
-            >
-              <ShoppingCart className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-violet-600 text-white text-xs rounded-full flex items-center justify-center">
-                3
-              </span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={isScrolled ? "text-gray-700" : "text-white"}
-            >
-              <User className="w-5 h-5" />
-            </Button>
-          </div>
+  const addToWishlist = (product) => {
+    setWishlistItems(prevItems => {
+      const existingItem = prevItems.find(item => item.id === product.id);
+      if (!existingItem) {
+        return [...prevItems, product];
+      }
+      return prevItems;
+    });
+  };
 
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`lg:hidden ${isScrolled ? "text-gray-700" : "text-white"}`}
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </Button>
-        </div>
-      </div>
+  const removeFromWishlist = (id) => {
+    setWishlistItems(prevItems => prevItems.filter(item => item.id !== id));
+  };
 
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden bg-white border-t">
-          <div className="px-4 py-4 space-y-3">
-            {["Home", "Shop", "Categories", "Deals", "About"].map((item) => (
-              <Link
-                key={item}
-                to={item === "Home" ? "/" : `/${item.toLowerCase()}`}
-                className="block py-2 text-gray-700 hover:text-violet-600"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                {item}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-    </nav>
+  const isInWishlist = (id) => {
+    return wishlistItems.some(item => item.id === id);
+  };
+
+  const getWishlistCount = () => {
+    return wishlistItems.length;
+  };
+
+  return (
+    <WishlistContext.Provider value={{
+      wishlistItems,
+      addToWishlist,
+      removeFromWishlist,
+      isInWishlist,
+      getWishlistCount
+    }}>
+      {children}
+    </WishlistContext.Provider>
   );
 };
 
@@ -190,22 +192,26 @@ const HeroSection = () => {
               lightning-fast delivery, and unmatched customer service.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button
-                size="lg"
-                className="bg-white text-violet-900 hover:bg-white/90 px-8 py-6 text-lg group"
-                data-testid="shop-now-btn"
-              >
-                Shop Now
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/30 text-white hover:bg-white/10 px-8 py-6 text-lg"
-                data-testid="explore-btn"
-              >
-                Explore Collections
-              </Button>
+              <Link to="/shop">
+                <Button
+                  size="lg"
+                  className="bg-white text-violet-900 hover:bg-white/90 px-8 py-6 text-lg group"
+                  data-testid="shop-now-btn"
+                >
+                  Shop Now
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+              <Link to="/categories">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-white/30 text-white hover:bg-white/10 px-8 py-6 text-lg"
+                  data-testid="explore-btn"
+                >
+                  Explore Collections
+                </Button>
+              </Link>
             </div>
 
             {/* Trust Badges */}
@@ -437,6 +443,8 @@ const CategoriesSection = () => {
 
 // Featured Products Section
 const FeaturedProductsSection = () => {
+  const { addToCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const products = [
     {
       id: 1,
@@ -573,9 +581,10 @@ const FeaturedProductsSection = () => {
                   <Button
                     size="icon"
                     variant="secondary"
-                    className="rounded-full bg-white/90 hover:bg-white"
+                    className={`rounded-full bg-white/90 hover:bg-white ${isInWishlist(product.id) ? 'text-red-500' : ''}`}
+                    onClick={() => isInWishlist(product.id) ? removeFromWishlist(product.id) : addToWishlist(product)}
                   >
-                    <Heart className="w-4 h-4" />
+                    <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
                   </Button>
                 </div>
               </div>
@@ -603,6 +612,7 @@ const FeaturedProductsSection = () => {
                 </div>
                 <Button
                   className="w-full mt-4 bg-violet-600 hover:bg-violet-700"
+                  onClick={() => addToCart(product)}
                   data-testid={`add-to-cart-${product.id}`}
                 >
                   <ShoppingCart className="w-4 h-4 mr-2" />
@@ -640,14 +650,16 @@ const PromoBannerSection = () => {
               deals on thousands of products.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button
-                size="lg"
-                className="bg-white text-violet-700 hover:bg-white/90 px-8"
-                data-testid="shop-sale-btn"
-              >
-                Shop the Sale
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
+              <Link to="/deals">
+                <Button
+                  size="lg"
+                  className="bg-white text-violet-700 hover:bg-white/90 px-8"
+                  data-testid="shop-sale-btn"
+                >
+                  Shop the Sale
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
             </div>
 
             {/* Countdown Timer (Static for demo) */}
@@ -809,138 +821,6 @@ const NewsletterSection = () => {
   );
 };
 
-// Footer Component
-const Footer = () => {
-  return (
-    <footer className="bg-gray-900 text-white pt-16 pb-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-          {/* Brand */}
-          <div className="lg:col-span-1">
-            <Link to="/" className="flex items-center space-x-2 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold">ShopVerse</span>
-            </Link>
-            <p className="text-gray-400 mb-6">
-              Your one-stop destination for premium products at unbeatable
-              prices.
-            </p>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-gray-400 hover:text-white"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z" />
-                </svg>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-gray-400 hover:text-white"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-                </svg>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-gray-400 hover:text-white"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z" />
-                </svg>
-              </Button>
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h3 className="font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-3">
-              {["Home", "Shop", "Categories", "Deals", "About Us"].map(
-                (link) => (
-                  <li key={link}>
-                    <Link
-                      to={`/${link.toLowerCase().replace(" ", "-")}`}
-                      className="text-gray-400 hover:text-white transition-colors"
-                    >
-                      {link}
-                    </Link>
-                  </li>
-                )
-              )}
-            </ul>
-          </div>
-
-          {/* Customer Service */}
-          <div>
-            <h3 className="font-semibold mb-4">Customer Service</h3>
-            <ul className="space-y-3">
-              {[
-                "Contact Us",
-                "FAQs",
-                "Shipping Info",
-                "Returns & Exchanges",
-                "Track Order",
-              ].map((link) => (
-                <li key={link}>
-                  <Link
-                    to="#"
-                    className="text-gray-400 hover:text-white transition-colors"
-                  >
-                    {link}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Contact Info */}
-          <div>
-            <h3 className="font-semibold mb-4">Contact Us</h3>
-            <ul className="space-y-3">
-              <li className="flex items-center gap-3 text-gray-400">
-                <MapPin className="w-5 h-5" />
-                <span>123 Commerce St, New York, NY</span>
-              </li>
-              <li className="flex items-center gap-3 text-gray-400">
-                <Phone className="w-5 h-5" />
-                <span>+1 (555) 123-4567</span>
-              </li>
-              <li className="flex items-center gap-3 text-gray-400">
-                <Mail className="w-5 h-5" />
-                <span>support@shopverse.com</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-gray-400 text-sm">
-            © 2025 ShopVerse. All rights reserved.
-          </p>
-          <div className="flex gap-6">
-            <Link to="#" className="text-gray-400 hover:text-white text-sm">
-              Privacy Policy
-            </Link>
-            <Link to="#" className="text-gray-400 hover:text-white text-sm">
-              Terms of Service
-            </Link>
-            <Link to="#" className="text-gray-400 hover:text-white text-sm">
-              Cookies
-            </Link>
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
-};
-
 // Home Page Component
 const Home = () => {
   const helloWorldApi = async () => {
@@ -974,12 +854,24 @@ const Home = () => {
 function App() {
   return (
     <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="*" element={<Home />} />
-        </Routes>
-      </BrowserRouter>
+      <CartProvider>
+        <WishlistProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/deals" element={<Deals />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/wishlist" element={<Wishlist />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="*" element={<Home />} />
+            </Routes>
+          </BrowserRouter>
+        </WishlistProvider>
+      </CartProvider>
     </div>
   );
 }
