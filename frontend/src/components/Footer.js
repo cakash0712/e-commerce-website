@@ -59,14 +59,14 @@ const Footer = () => {
           <div>
             <h3 className="font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-3">
-              {["Home", "Shop", "Categories", "Deals", "About Us"].map(
+              {["Home", "Shop", "Categories", "Deals", "About"].map(
                 (link) => (
                   <li key={link}>
                     <Link
                       to={`/${link.toLowerCase().replace(" ", "-")}`}
                       className="text-gray-400 hover:text-white transition-colors"
                     >
-                      {link}
+                      {link === "About" ? "About Us" : link}
                     </Link>
                   </li>
                 )
@@ -79,18 +79,18 @@ const Footer = () => {
             <h3 className="font-semibold mb-4">Customer Service</h3>
             <ul className="space-y-3">
               {[
-                "Contact Us",
-                "FAQs",
-                "Shipping Info",
-                "Returns & Exchanges",
-                "Track Order",
+                { label: "Contact Us", to: "/contact" },
+                { label: "FAQs", to: "/faq" },
+                { label: "Shipping Info", to: "/shipping" },
+                { label: "Returns & Exchanges", to: "/returns" },
+                { label: "Track Order", to: "/track-order" },
               ].map((link) => (
-                <li key={link}>
+                <li key={link.label}>
                   <Link
-                    to="#"
+                    to={link.to}
                     className="text-gray-400 hover:text-white transition-colors"
                   >
-                    {link}
+                    {link.label}
                   </Link>
                 </li>
               ))}
@@ -122,13 +122,13 @@ const Footer = () => {
             © 2025 ShopVerse. All rights reserved.
           </p>
           <div className="flex gap-6">
-            <Link to="#" className="text-gray-400 hover:text-white text-sm">
+            <Link to="/privacy" className="text-gray-400 hover:text-white text-sm">
               Privacy Policy
             </Link>
-            <Link to="#" className="text-gray-400 hover:text-white text-sm">
+            <Link to="/terms" className="text-gray-400 hover:text-white text-sm">
               Terms of Service
             </Link>
-            <Link to="#" className="text-gray-400 hover:text-white text-sm">
+            <Link to="/cookies" className="text-gray-400 hover:text-white text-sm">
               Cookies
             </Link>
           </div>

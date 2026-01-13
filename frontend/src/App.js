@@ -9,9 +9,18 @@ import About from "./components/About";
 import Cart from "./components/Cart";
 import Wishlist from "./components/Wishlist";
 import Profile from "./components/Profile";
-import Search from "./components/Search";
 import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
+import Payment from "./components/Payment";
+import Contact from "./components/Contact";
+import FAQ from "./components/FAQ";
+import ShippingInfo from "./components/ShippingInfo";
+import Returns from "./components/Returns";
+import TrackOrder from "./components/TrackOrder";
+import PrivacyPolicy from "./components/PrivacyPolicy";
+import TermsOfService from "./components/TermsOfService";
+import Cookies from "./components/Cookies";
+import DetailsView from "./components/DetailsView";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +55,76 @@ import {
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Auth Context
+const AuthContext = createContext();
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await axios.get('https://api.escuelajs.co/api/v1/auth/profile', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setUser(response.data);
+        } catch (error) {
+          localStorage.removeItem('token');
+        }
+      }
+      setLoading(false);
+    };
+    checkAuth();
+  }, []);
+
+  const login = async (email, password) => {
+    const response = await axios.post('https://api.escuelajs.co/api/v1/auth/login', { email, password });
+    const { access_token } = response.data;
+    localStorage.setItem('token', access_token);
+    const profileResponse = await axios.get('https://api.escuelajs.co/api/v1/auth/profile', {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+    setUser(profileResponse.data);
+    return profileResponse.data;
+  };
+
+  const register = async (userData) => {
+    const response = await axios.post('https://api.escuelajs.co/api/v1/users', {
+      ...userData,
+      avatar: userData.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=John'
+    });
+    return response.data;
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+  };
+
+  const updateUser = async (userId, updates) => {
+    const response = await axios.put(`https://api.escuelajs.co/api/v1/users/${userId}`, updates);
+    setUser(prev => ({ ...prev, ...response.data }));
+    return response.data;
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout, register, updateUser, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
 // Cart Context
 const CartContext = createContext();
 
@@ -68,8 +147,30 @@ export const useWishlist = () => {
   return context;
 };
 
+// Orders Context
+const OrderContext = createContext();
+
+export const useOrders = () => {
+  const context = useContext(OrderContext);
+  if (!context) {
+    throw new Error('useOrders must be used within an OrderProvider');
+  }
+  return context;
+};
+
 const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState([]);
+  const [cartItems, setCartItems] = useState(() => {
+    try {
+      const savedCart = localStorage.getItem('shopverse_cart');
+      return savedCart ? JSON.parse(savedCart) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('shopverse_cart', JSON.stringify(cartItems));
+  }, [cartItems]);
 
   const addToCart = (product) => {
     setCartItems(prevItems => {
@@ -77,11 +178,11 @@ const CartProvider = ({ children }) => {
       if (existingItem) {
         return prevItems.map(item =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + (product.quantity || 1) }
             : item
         );
       } else {
-        return [...prevItems, { ...product, quantity: 1 }];
+        return [...prevItems, { ...product, quantity: product.quantity || 1 }];
       }
     });
   };
@@ -159,6 +260,35 @@ const WishlistProvider = ({ children }) => {
     }}>
       {children}
     </WishlistContext.Provider>
+  );
+};
+
+const OrderProvider = ({ children }) => {
+  const [orders, setOrders] = useState(() => {
+    const savedOrders = localStorage.getItem('orders');
+    return savedOrders ? JSON.parse(savedOrders) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('orders', JSON.stringify(orders));
+  }, [orders]);
+
+  const addOrder = (order) => {
+    setOrders(prevOrders => [order, ...prevOrders]);
+  };
+
+  const getRecentOrders = (limit = 5) => {
+    return orders.slice(0, limit);
+  };
+
+  return (
+    <OrderContext.Provider value={{
+      orders,
+      addOrder,
+      getRecentOrders
+    }}>
+      {children}
+    </OrderContext.Provider>
   );
 };
 
@@ -338,102 +468,97 @@ const FeaturesSection = () => {
   );
 };
 
-// Categories Section
-const CategoriesSection = () => {
-  const categories = [
+// Premium Bento Grid Section
+const ModernBentoGrid = () => {
+  const items = [
     {
-      name: "Electronics",
-      icon: Laptop,
-      count: 245,
-      image:
-        "https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=400&h=300&fit=crop",
-      color: "from-blue-600 to-indigo-600",
+      title: "Audio Elite",
+      tag: "Pure Sound",
+      image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80",
+      description: "Experience sound like never before with our studio-grade headphones.",
+      width: "col-span-1 lg:col-span-2",
+      height: "h-[320px] lg:h-[400px]",
+      link: "/shop?category=electronics"
     },
     {
-      name: "Fashion",
-      icon: Shirt,
-      count: 189,
-      image:
-        "https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=300&fit=crop",
-      color: "from-pink-600 to-rose-600",
+      title: "Pro Workspaces",
+      tag: "Efficiency",
+      image: "https://images.unsplash.com/photo-1493934558415-9d19f0b2b4d2?w=800&q=80",
+      description: "Minimalist desk setups for maximum focus.",
+      width: "col-span-1",
+      height: "h-[320px] lg:h-[400px]",
+      link: "/shop?category=electronics"
     },
     {
-      name: "Home & Garden",
-      icon: HomeIcon,
-      count: 156,
-      image:
-        "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=400&h=300&fit=crop",
-      color: "from-green-600 to-emerald-600",
+      title: "Active Life",
+      tag: "Peak Performance",
+      image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
+      description: "Gear that moves with you.",
+      width: "col-span-1",
+      height: "h-[320px] lg:h-[480px]",
+      link: "/shop?category=sports"
     },
     {
-      name: "Sports",
-      icon: Dumbbell,
-      count: 98,
-      image:
-        "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=300&fit=crop",
-      color: "from-orange-600 to-amber-600",
-    },
-    {
-      name: "Books",
-      icon: BookOpen,
-      count: 312,
-      image:
-        "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400&h=300&fit=crop",
-      color: "from-purple-600 to-violet-600",
-    },
-    {
-      name: "Beauty",
-      icon: Sparkles,
-      count: 87,
-      image:
-        "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=300&fit=crop",
-      color: "from-red-600 to-pink-600",
-    },
+      title: "Urban Style",
+      tag: "2025 Look",
+      image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&q=80",
+      description: "Modern fashion for the urban explorer.",
+      width: "col-span-1 lg:col-span-2",
+      height: "h-[320px] lg:h-[480px]",
+      link: "/shop?category=fashion"
+    }
   ];
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-24 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <Badge className="mb-4">Categories</Badge>
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-            Shop by Category
-          </h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Explore our diverse range of products across multiple categories
-          </p>
+        <div className="flex flex-col mb-16 space-y-4">
+          <Badge className="w-fit bg-violet-600 text-white rounded-full px-4 font-bold border-none">The Lookbook</Badge>
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+            <h2 className="text-4xl lg:text-6xl font-black text-gray-900 leading-tight">
+              Curated <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-pink-500 italic">Collections</span>
+            </h2>
+            <p className="text-gray-500 text-lg max-w-md">
+              A bespoke selection of items chosen for their design, utility, and timeless appeal.
+            </p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {categories.map((category, index) => (
-            <Link
-              key={index}
-              to={`/shop?category=${category.name.toLowerCase()}`}
-              className="group"
-              data-testid={`category-${category.name.toLowerCase()}`}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {items.map((item, idx) => (
+            <div
+              key={idx}
+              className={`group relative ${item.width} ${item.height} rounded-[2.5rem] overflow-hidden shadow-2xl bg-gray-100 transition-all duration-700 hover:-translate-y-3`}
             >
-              <Card className="overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full">
-                <div className="relative h-32 overflow-hidden">
-                  <img
-                    src={category.image}
-                    alt={category.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-t ${category.color} opacity-60 group-hover:opacity-70 transition-opacity`}
-                  ></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <category.icon className="w-10 h-10 text-white" />
+              <img
+                src={item.image}
+                alt={item.title}
+                loading="lazy"
+                onLoad={(e) => e.target.classList.add('opacity-100')}
+                className="w-full h-full object-cover transition-all duration-1000 opacity-0 group-hover:scale-105"
+              />
+
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+
+              <div className="absolute inset-0 p-8 flex flex-col justify-end">
+                <div className="space-y-4 translate-y-6 group-hover:translate-y-0 transition-transform duration-500">
+                  <div className="flex items-center gap-2">
+                    <span className="h-px w-8 bg-violet-400"></span>
+                    <span className="text-violet-400 text-sm font-bold uppercase tracking-widest">{item.tag}</span>
                   </div>
+                  <h3 className="text-3xl font-bold text-white leading-none">{item.title}</h3>
+                  <p className="text-gray-300 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+                    {item.description}
+                  </p>
+                  <Link to={item.link} className="inline-block mt-4">
+                    <Button variant="outline" className="rounded-full border-white/20 text-white hover:bg-white hover:text-black transition-all">
+                      Explore Series
+                    </Button>
+                  </Link>
                 </div>
-                <CardContent className="p-4 text-center">
-                  <h3 className="font-semibold text-gray-900 group-hover:text-violet-600 transition-colors">
-                    {category.name}
-                  </h3>
-                  <p className="text-sm text-gray-500">{category.count} items</p>
-                </CardContent>
-              </Card>
-            </Link>
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -445,55 +570,35 @@ const CategoriesSection = () => {
 const FeaturedProductsSection = () => {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
-  const products = [
-    {
-      id: 1,
-      name: "Premium Wireless Headphones",
-      price: 199.99,
-      originalPrice: 249.99,
-      image:
-        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop",
-      rating: 4.5,
-      reviews: 128,
-      discount: 20,
-      isNew: true,
-    },
-    {
-      id: 2,
-      name: "Smart Watch Pro",
-      price: 299.99,
-      originalPrice: 399.99,
-      image:
-        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop",
-      rating: 4.8,
-      reviews: 89,
-      discount: 25,
-      isBestSeller: true,
-    },
-    {
-      id: 3,
-      name: "Gaming Laptop Ultra",
-      price: 1299.99,
-      originalPrice: 1499.99,
-      image:
-        "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=400&fit=crop",
-      rating: 4.6,
-      reviews: 67,
-      discount: 13,
-    },
-    {
-      id: 4,
-      name: "Wireless Earbuds Elite",
-      price: 149.99,
-      originalPrice: 199.99,
-      image:
-        "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop",
-      rating: 4.3,
-      reviews: 203,
-      discount: 25,
-      isNew: true,
-    },
-  ];
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await axios.get('https://dummyjson.com/products?limit=8&skip=10');
+        const mappedProducts = response.data.products.map(p => ({
+          id: p.id,
+          name: p.title,
+          price: Math.round(p.price * 83),
+          originalPrice: Math.round(p.price * 83 * (1 + p.discountPercentage / 100)),
+          image: p.thumbnail || p.images[0],
+          rating: p.rating,
+          reviews: p.reviews ? p.reviews.length : Math.floor(Math.random() * 500) + 50,
+          discount: Math.round(p.discountPercentage),
+          isNew: Math.random() > 0.8,
+          isBestSeller: Math.random() > 0.8,
+          description: p.description
+        }));
+        setProducts(mappedProducts);
+      } catch (error) {
+        console.error("Failed to fetch products", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   const renderStars = (rating) => {
     const stars = [];
@@ -522,12 +627,20 @@ const FeaturedProductsSection = () => {
     return stars;
   };
 
+  if (isLoading) {
+    return (
+      <section className="py-24 bg-gray-50/50 flex justify-center items-center min-h-[400px]">
+        <div className="w-12 h-12 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+      </section>
+    );
+  }
+
   return (
-    <section className="py-20 bg-gray-50">
+    <section className="py-24 bg-gray-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
           <div>
-            <Badge className="mb-4">Featured</Badge>
+            <Badge className="mb-4 bg-violet-100 text-violet-600 border-violet-200">Featured</Badge>
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
               Trending Products
             </h2>
@@ -545,79 +658,93 @@ const FeaturedProductsSection = () => {
           </Link>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {products.map((product) => (
             <Card
               key={product.id}
-              className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300"
+              className="group border-0 shadow-md hover:shadow-2xl transition-all duration-500 overflow-hidden bg-white flex flex-col"
               data-testid={`product-${product.id}`}
             >
-              <div className="relative overflow-hidden">
+              <div className="relative overflow-hidden aspect-square">
                 <img
                   src={product.image}
                   alt={product.name}
-                  className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop" }}
                 />
                 {/* Badges */}
-                <div className="absolute top-3 left-3 flex flex-col gap-2">
+                <div className="absolute top-4 left-4 flex flex-col gap-2">
                   {product.discount && (
-                    <Badge className="bg-red-500 hover:bg-red-500">
+                    <Badge className="bg-violet-600 text-white border-0 font-bold px-3 py-1 text-xs shadow-xl">
                       -{product.discount}%
                     </Badge>
                   )}
                   {product.isNew && (
-                    <Badge className="bg-green-500 hover:bg-green-500">
-                      New
+                    <Badge className="bg-indigo-500 text-white border-0 font-bold px-3 py-1 text-xs shadow-xl">
+                      NEW
                     </Badge>
                   )}
                   {product.isBestSeller && (
-                    <Badge className="bg-amber-500 hover:bg-amber-500">
-                      Best Seller
+                    <Badge className="bg-amber-500 text-white border-0 font-bold px-3 py-1 text-xs shadow-xl">
+                      BEST SELLER
                     </Badge>
                   )}
                 </div>
                 {/* Quick Actions */}
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-4 right-4 translate-y-2 lg:translate-y-4 lg:opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
                   <Button
                     size="icon"
                     variant="secondary"
-                    className={`rounded-full bg-white/90 hover:bg-white ${isInWishlist(product.id) ? 'text-red-500' : ''}`}
+                    className={`rounded-2xl bg-white shadow-2xl hover:bg-white ${isInWishlist(product.id) ? 'text-violet-600' : 'text-gray-400'}`}
                     onClick={() => isInWishlist(product.id) ? removeFromWishlist(product.id) : addToWishlist(product)}
                   >
-                    <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+                    <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
                   </Button>
                 </div>
               </div>
-              <CardContent className="p-5">
-                <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-violet-600 transition-colors line-clamp-1">
-                  {product.name}
-                </h3>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="flex">{renderStars(product.rating)}</div>
-                  <span className="text-sm text-gray-500">
-                    ({product.reviews})
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl font-bold text-gray-900">
-                      ${product.price}
+              <CardContent className="p-6 flex flex-col flex-1">
+                <div className="flex-1">
+                  <div className="flex items-center gap-1 mb-3">
+                    <div className="flex">{renderStars(product.rating)}</div>
+                    <span className="text-[10px] font-black text-gray-400 ml-1">
+                      ({product.reviews})
+                    </span>
+                  </div>
+                  <Link to={`/shop`}>
+                    <h3 className="font-bold text-gray-900 mb-2 group-hover:text-violet-600 transition-colors line-clamp-2 text-lg leading-tight">
+                      {product.name}
+                    </h3>
+                  </Link>
+                  <div className="flex items-baseline gap-2 mb-6">
+                    <span className="text-2xl font-black text-gray-900 tracking-tighter">
+                      ₹{product.price}
                     </span>
                     {product.originalPrice && (
-                      <span className="text-sm text-gray-400 line-through">
-                        ${product.originalPrice}
+                      <span className="text-sm text-gray-400 line-through font-bold">
+                        ₹{product.originalPrice}
                       </span>
                     )}
                   </div>
                 </div>
-                <Button
-                  className="w-full mt-4 bg-violet-600 hover:bg-violet-700"
-                  onClick={() => addToCart(product)}
-                  data-testid={`add-to-cart-${product.id}`}
-                >
-                  <ShoppingCart className="w-4 h-4 mr-2" />
-                  Add to Cart
-                </Button>
+                <div className="flex gap-3">
+                  <Button
+                    className="flex-1 h-12 bg-gray-900 hover:bg-violet-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 group/btn overflow-hidden relative shadow-lg shadow-gray-200"
+                    onClick={() => addToCart(product)}
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-2 group-hover/btn:animate-bounce" />
+                    Cart
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-12 border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95"
+                    onClick={() => {
+                      addToCart(product);
+                      window.location.href = '/payment';
+                    }}
+                  >
+                    Buy Now
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -726,7 +853,7 @@ const TestimonialsSection = () => {
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <Badge className="mb-4">Testimonials</Badge>
+          <Badge className="mb-4 bg-violet-100 text-violet-600 border-violet-200">Testimonials</Badge>
           <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
             What Our Customers Say
           </h2>
@@ -841,7 +968,7 @@ const Home = () => {
       <Navigation />
       <HeroSection />
       <FeaturesSection />
-      <CategoriesSection />
+      <ModernBentoGrid />
       <FeaturedProductsSection />
       <PromoBannerSection />
       <TestimonialsSection />
@@ -854,24 +981,37 @@ const Home = () => {
 function App() {
   return (
     <div className="App">
-      <CartProvider>
-        <WishlistProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/categories" element={<Categories />} />
-              <Route path="/deals" element={<Deals />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/wishlist" element={<Wishlist />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/search" element={<Search />} />
-              <Route path="*" element={<Home />} />
-            </Routes>
-          </BrowserRouter>
-        </WishlistProvider>
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <WishlistProvider>
+            <OrderProvider>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/product/:id" element={<DetailsView />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/categories" element={<Categories />} />
+                  <Route path="/deals" element={<Deals />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/faq" element={<FAQ />} />
+                  <Route path="/shipping" element={<ShippingInfo />} />
+                  <Route path="/returns" element={<Returns />} />
+                  <Route path="/track-order" element={<TrackOrder />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/cookies" element={<Cookies />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/payment" element={<Payment />} />
+                  <Route path="/wishlist" element={<Wishlist />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="*" element={<Home />} />
+                </Routes>
+              </BrowserRouter>
+            </OrderProvider>
+          </WishlistProvider>
+        </CartProvider>
+      </AuthProvider>
     </div>
   );
 }
