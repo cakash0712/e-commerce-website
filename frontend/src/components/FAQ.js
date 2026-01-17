@@ -45,7 +45,7 @@ const FAQ = () => {
             id: 1,
             category: "orders",
             question: "How do I track my order status?",
-            answer: "Once your order has been dispatched, you will receive a confirmation email containing your tracking number and a link to our logistics portal. You can also view real-time updates within your ShopVerse account under the 'Order History' section."
+            answer: "Once your order has been dispatched, you will receive a confirmation email containing your tracking number and a link to our logistics portal. You can also view real-time updates within your ZippyCart account under the 'Order History' section."
         },
         {
             id: 2,
@@ -63,7 +63,7 @@ const FAQ = () => {
             id: 4,
             category: "shipping",
             question: "Do you offer international shipping?",
-            answer: "Yes, ShopVerse currently ships to over 50 countries worldwide. International orders are subject to local customs duties and taxes, which are calculated and applied during the checkout process for total transparency."
+            answer: "Yes, ZippyCart currently ships to over 50 countries worldwide. International orders are subject to local customs duties and taxes, which are calculated and applied during the checkout process for total transparency."
         },
         {
             id: 5,
@@ -75,7 +75,7 @@ const FAQ = () => {
             id: 6,
             category: "payments",
             question: "Is my payment information secure?",
-            answer: "ShopVerse adheres to Level 1 PCI DSS compliance standards. We do not store your credit card information on our servers; instead, we utilize industry-leading payment tokens to authorize transactions securely."
+            answer: "ZippyCart adheres to Level 1 PCI DSS compliance standards. We do not store your credit card information on our servers; instead, we utilize industry-leading payment tokens to authorize transactions securely."
         }
     ];
 

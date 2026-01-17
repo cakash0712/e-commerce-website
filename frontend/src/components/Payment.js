@@ -78,7 +78,7 @@ const Payment = () => {
                             <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
                                 <Box className="w-5 h-5 text-white" />
                             </div>
-                            <span className="tracking-tighter">ShopVerse</span>
+                            <span className="tracking-tighter">ZippyCart</span>
                         </Link>
                         <h1 className="text-xl font-medium tracking-tight text-gray-700">Order Placed</h1>
                     </div>
@@ -144,7 +144,7 @@ const Payment = () => {
                         <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
                             <Box className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-2xl font-bold tracking-tighter">ShopVerse</span>
+                        <span className="text-2xl font-bold tracking-tighter">ZippyCart</span>
                     </Link>
                     <h1 className="text-2xl font-light text-gray-700 hidden sm:block">Checkout</h1>
                     <div className="text-gray-400">
@@ -308,7 +308,7 @@ const Payment = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                                        <p className="text-[10px] text-gray-600 max-w-[200px]">By placing your order, you agree to ShopVerse's privacy notice and conditions of use.</p>
+                                        <p className="text-[10px] text-gray-600 max-w-[200px]">By placing your order, you agree to ZippyCart's privacy notice and conditions of use.</p>
                                         <Button
                                             onClick={handlePlaceOrder}
                                             disabled={isProcessing}
@@ -388,7 +388,7 @@ const Payment = () => {
                         <Link to="/privacy" className="hover:text-red-700 hover:underline">Privacy</Link>
                         <Link to="/help" className="hover:text-red-700 hover:underline">Help</Link>
                     </div>
-                    <p>© ShopVerse.com, Inc. or its affiliates</p>
+                    <p>© ZippyCart.com, Inc. or its affiliates</p>
                 </div>
             </main>
         </div>

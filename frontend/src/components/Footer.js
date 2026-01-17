@@ -18,7 +18,7 @@ const Footer = () => {
               <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-indigo-500 rounded-xl flex items-center justify-center">
                 <ShoppingCart className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold">ShopVerse</span>
+              <span className="text-xl font-bold">ZippyCart</span>
             </Link>
             <p className="text-gray-400 mb-6">
               Your one-stop destination for premium products at unbeatable
@@ -107,11 +107,11 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-3 text-gray-400">
                 <Phone className="w-5 h-5" />
-                <span>+1 (555) 123-4567</span>
+                <span>  +91 7305122455</span>
               </li>
               <li className="flex items-center gap-3 text-gray-400">
                 <Mail className="w-5 h-5" />
-                <span>support@shopverse.com</span>
+                <span>  zippycart0712@gmail.com</span>
               </li>
             </ul>
           </div>
@@ -119,7 +119,7 @@ const Footer = () => {
 
         <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-400 text-sm">
-            © 2025 ShopVerse. All rights reserved.
+            © 2025 ZippyCart. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link to="/privacy" className="text-gray-400 hover:text-white text-sm">

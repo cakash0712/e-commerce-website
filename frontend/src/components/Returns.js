@@ -87,7 +87,7 @@ const Returns = () => {
                                 <ShieldCheck className="w-12 h-12 text-violet-400" />
                                 <h3 className="text-2xl font-bold">Institutional Guarantee</h3>
                                 <p className="text-gray-400 text-sm leading-relaxed">
-                                    Every ShopVerse artifact is backed by our verified assurance policy. If your
+                                    Every ZippyCart artifact is backed by our verified assurance policy. If your
                                     procurement does not align with your technical requirements, our team will
                                     facilitate an immediate resolution.
                                 </p>

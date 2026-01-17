@@ -14,7 +14,7 @@ const TermsOfService = () => {
                     <div className="text-center mb-16">
                         <div className="inline-flex items-center gap-2 px-4 py-2 bg-violet-100 text-violet-600 rounded-full text-xs font-black uppercase tracking-widest mb-6">Terms & Usage</div>
                         <h1 className="text-4xl lg:text-7xl font-black text-gray-900 mb-6 tracking-tighter">Terms of <span className="text-violet-600">Service</span></h1>
-                        <p className="text-gray-500 text-lg font-medium">Agreement between ShopVerse and the User</p>
+                        <p className="text-gray-500 text-lg font-medium">Agreement between ZippyCart and the User</p>
                     </div>
 
                     <Card className="border-0 shadow-xl rounded-[3rem] overflow-hidden bg-white mb-10 text-left">
@@ -57,7 +57,7 @@ const TermsOfService = () => {
                                     <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase text-[10px]">3. Intellectual Property</h2>
                                 </div>
                                 <p className="text-gray-600 leading-relaxed font-medium">
-                                    The website and its original content, features, and functionality are owned by ShopVerse and are protected by international copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws. All materials, including images, illustrations, and designs are part of our exclusive digital heritage.
+                                    The website and its original content, features, and functionality are owned by ZippyCart and are protected by international copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws. All materials, including images, illustrations, and designs are part of our exclusive digital heritage.
                                 </p>
                             </section>
 

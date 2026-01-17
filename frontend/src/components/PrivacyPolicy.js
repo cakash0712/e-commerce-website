@@ -25,7 +25,7 @@ const PrivacyPolicy = () => {
                                     <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase text-[10px]">1. Introduction</h2>
                                 </div>
                                 <p className="text-gray-600 leading-relaxed font-medium">
-                                    Welcome to ShopVerse. At ShopVerse, we respect your privacy and are committed to protecting your personal data. This privacy policy will inform you as to how we look after your personal data when you visit our website and tell you about your privacy rights and how the law protects you.
+                                    Welcome to ZippyCart. At ZippyCart, we respect your privacy and are committed to protecting your personal data. This privacy policy will inform you as to how we look after your personal data when you visit our website and tell you about your privacy rights and how the law protects you.
                                 </p>
                             </section>
 
@@ -79,7 +79,7 @@ const PrivacyPolicy = () => {
                     <div className="text-center p-10 bg-gray-900 rounded-[3rem] text-white overflow-hidden relative group">
                         <div className="absolute inset-0 bg-gradient-to-r from-violet-600/20 to-indigo-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                         <h3 className="text-2xl font-black mb-4 tracking-tight relative z-10">Questions about Privacy?</h3>
-                        <p className="text-gray-400 mb-8 font-medium relative z-10">If you have any questions regarding this policy, please contact our legal team at legal@shopverse.com</p>
+                        <p className="text-gray-400 mb-8 font-medium relative z-10">If you have any questions regarding this policy, please contact our legal team at legal@ZippyCart.com</p>
                         <button className="px-10 py-4 bg-violet-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-violet-700 transition-all active:scale-95 relative z-10">Contact Legal</button>
                     </div>
                 </div>

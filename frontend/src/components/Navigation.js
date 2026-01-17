@@ -152,13 +152,13 @@ const Navigation = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20 gap-4">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 shrink-0">
-            <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center">
-              <ShoppingCart className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-gray-900">
-              ShopVerse
-            </span>
+          <Link to="/" className="flex items-center space-x-0 shrink-0">
+            <img
+              src="/assets/zlogo1.png"
+              alt="ZippyCart Logo"
+              className="w-40 h-40 object-contain"
+            />
+            
           </Link>
 
           {/* Desktop Navigation */}

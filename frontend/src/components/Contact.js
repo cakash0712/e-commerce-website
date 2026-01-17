@@ -51,7 +51,7 @@ const Contact = () => {
                                 {
                                     icon: Mail,
                                     title: "Email Us",
-                                    desc: "support@shopverse.com",
+                                    desc: "  zippycart0712@gmail.com",
                                     sub: "Response within 24 hours",
                                     color: "text-violet-600",
                                     bg: "bg-violet-50"
@@ -59,7 +59,7 @@ const Contact = () => {
                                 {
                                     icon: Phone,
                                     title: "Call Us",
-                                    desc: "+1 (555) 000-1234",
+                                    desc: "+91 7305122455",
                                     sub: "Mon-Fri, 9am - 6pm EST",
                                     color: "text-indigo-600",
                                     bg: "bg-indigo-50"

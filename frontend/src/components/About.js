@@ -50,8 +50,8 @@ const About = () => {
   ];
 
   const testimonials = [
-    { name: "Sarah Johnson", role: "Verified Customer", quote: "ShopVerse has transformed my shopping experience. The quality and prices are unbeatable!", img: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop" },
-    { name: "Michael Chen", role: "Regular Shopper", quote: "Fast delivery and excellent customer service. I recommend ShopVerse to all my friends.", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop" },
+    { name: "Sarah Johnson", role: "Verified Customer", quote: "ZippyCart has transformed my shopping experience. The quality and prices are unbeatable!", img: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop" },
+    { name: "Michael Chen", role: "Regular Shopper", quote: "Fast delivery and excellent customer service. I recommend ZippyCart to all my friends.", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop" },
     { name: "Emily Rodriguez", role: "Fashion Enthusiast", quote: "The product selection is amazing and the website is so easy to navigate. Love it!", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop" },
     { name: "David Kim", role: "Tech Gadget Lover", quote: "Found all the latest gadgets at great prices. The return policy gave me peace of mind.", img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop" }
   ];
@@ -115,7 +115,7 @@ const About = () => {
                 Our Story
               </h2>
               <p className="text-gray-600 text-lg leading-relaxed">
-                Founded in 2018, ShopVerse began with a simple mission: make quality products accessible to everyone. What started as a small team with big dreams has grown into a trusted destination for thousands of customers.
+                Founded in 2018, ZippyCart began with a simple mission: make quality products accessible to everyone. What started as a small team with big dreams has grown into a trusted destination for thousands of customers.
               </p>
               <p className="text-gray-600 text-lg leading-relaxed">
                 We believe shopping should be enjoyable, not stressful. That's why we've built a platform that combines curated selections, competitive prices, and exceptional customer service.
@@ -173,7 +173,7 @@ const About = () => {
               What Our Customers Say
             </h2>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              Don't just take our word for it. Here's what our satisfied customers have to say about their ShopVerse experience.
+              Don't just take our word for it. Here's what our satisfied customers have to say about their ZippyCart experience.
             </p>
           </div>
 

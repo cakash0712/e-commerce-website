@@ -182,7 +182,7 @@ export const useOrders = () => {
 const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState(() => {
     try {
-      const savedCart = localStorage.getItem('shopverse_cart');
+      const savedCart = localStorage.getItem('ZippyCart_cart');
       return savedCart ? JSON.parse(savedCart) : [];
     } catch (e) {
       return [];
@@ -190,7 +190,7 @@ const CartProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    localStorage.setItem('shopverse_cart', JSON.stringify(cartItems));
+    localStorage.setItem('ZippyCart_cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
   const addToCart = (product) => {
