@@ -339,7 +339,7 @@ const Navigation = () => {
                 </Avatar>
               </Link>
             ) : (
-              <Link to="/profile">
+              <Link to="/auth">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -450,7 +450,7 @@ const Navigation = () => {
                 )}
               </Link>
               <Link
-                to="/profile"
+                to={user ? '/profile' : '/auth'}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 text-gray-700 hover:text-violet-600 bg-gray-50 rounded-lg transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >

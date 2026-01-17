@@ -135,7 +135,7 @@ const Shop = () => {
       {/* Hero Header - Professional & Formal */}
       <div className="bg-gradient-to-b from-violet-50 to-white border-b border-violet-200 py-12 md:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif text-gray-900 mb-4 md:mb-6 tracking-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif text-gray-900 mb-4 md:mb-6 tracking-tight pt-4">
             The Catalog
           </h1>
           <div className="h-1 w-24 sm:w-32 bg-violet-600 mx-auto mb-6 md:mb-8 rounded-full"></div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,12 +13,13 @@ import Navigation from "./Navigation";
 import Footer from "./Footer";
 
 const Profile = () => {
-  const { user, login, logout, register, updateUser, loading, setUser } = useAuth();
-  const { orders } = useOrders();
-  const [activeView, setActiveView] = useState("overview");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const fileInputRef = useRef(null);
+   const navigate = useNavigate();
+   const { user, login, logout, register, updateUser, loading, setUser } = useAuth();
+   const { orders } = useOrders();
+   const [activeView, setActiveView] = useState("overview");
+   const [isLoading, setIsLoading] = useState(false);
+   const [error, setError] = useState("");
+   const fileInputRef = useRef(null);
 
   // Address State
   // Address State
@@ -248,17 +249,9 @@ const Profile = () => {
 
   const logoutAndRedirect = () => {
     logout();
+    navigate("/auth");
   };
 
-  // Auth Mode and OTP States
-  const [authMode, setAuthMode] = useState("login"); // login, signup, otp
-  const [authStep, setAuthStep] = useState("phone"); // phone, otp, details (for signup)
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [otpValues, setOtpValues] = useState(["", "", "", "", "", ""]);
-  const [signupData, setSignupData] = useState({ name: "", email: "", gender: "", dob: "", address: "", password: "" });
-  const [otpTimer, setOtpTimer] = useState(0);
-  const [generatedOtp, setGeneratedOtp] = useState("");
-  const otpInputRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
 
   // OTP Timer
   useEffect(() => {
@@ -269,23 +262,69 @@ const Profile = () => {
   }, [otpTimer]);
 
   const handleSendOtp = () => {
-    if (phoneNumber.length !== 10) {
-      setError("Please enter a valid 10-digit phone number");
-      return;
+    let identifier = loginMethod === "phone" ? phoneNumber : email;
+    let isValid = false;
+    if (loginMethod === "phone") {
+      isValid = identifier.length === 10 && /^\d+$/.test(identifier);
+      if (!isValid) {
+        setError("Please enter a valid 10-digit phone number");
+        return;
+      }
+    } else {
+      isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+      if (!isValid) {
+        setError("Please enter a valid email address");
+        return;
+      }
     }
+
     const registeredPhone = localStorage.getItem('user_phone');
+    const registeredEmail = localStorage.getItem('user_email');
+    const storedPassword = localStorage.getItem('user_password');
+
     if (authMode === "login") {
-      if (!registeredPhone || phoneNumber !== registeredPhone) {
-        setError("This number is not registered. Please sign up first.");
+      if (loginMethod === "phone") {
+        if (!registeredPhone || identifier !== registeredPhone) {
+          setError("This number is not registered. Please sign up first.");
+          return;
+        }
+      } else {
+        if (!registeredEmail || identifier !== registeredEmail) {
+          setError("This email is not registered. Please sign up first.");
+          return;
+        }
+      }
+      if (password !== storedPassword) {
+        setError("Incorrect password.");
         return;
       }
+      // For login, send OTP after credentials
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedOtp(otp);
+      console.log("Generated OTP:", otp); // For testing purposes
+      setAuthStep("otp");
+      setOtpTimer(30);
+      setError("");
     } else if (authMode === "signup") {
-      if (registeredPhone && phoneNumber === registeredPhone) {
-        setError("This number is already registered. Please sign in instead.");
-        return;
+      if (loginMethod === "phone") {
+        if (registeredPhone && identifier === registeredPhone) {
+          setError("This number is already registered. Please sign in instead.");
+          return;
+        }
+      } else {
+        if (registeredEmail && identifier === registeredEmail) {
+          setError("This email is already registered. Please sign in instead.");
+          return;
+        }
       }
+      // For signup, go to details after credentials validation
+      setAuthStep("details");
+      setError("");
     }
-    // Generate a random 6-digit OTP (In production, this would be sent via SMS)
+  };
+
+  const handleSendOtpFromDetails = () => {
+    // Send OTP after personal details
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     setGeneratedOtp(otp);
     console.log("Generated OTP:", otp); // For testing purposes
@@ -325,17 +364,11 @@ const Profile = () => {
         setAuthStep("details");
         setError("");
       } else {
-        // Login: check if phone is registered
-        const registeredPhone = localStorage.getItem('user_phone');
-        if (registeredPhone && phoneNumber === registeredPhone) {
-          try {
-            await login("kminchelle", "0lelplR");
-          } catch (err) {
-            setError("Login failed. Demo mode activated.");
-
-          }
-        } else {
-          setError("Phone number not registered. Please sign up first.");
+        // Login: already checked in handleSendOtp, so proceed to login
+        try {
+          await login("kminchelle", "0lelplR");
+        } catch (err) {
+          setError("Login failed. Demo mode activated.");
         }
       }
     } else {
@@ -357,7 +390,11 @@ const Profile = () => {
       address: signupData.address,
     };
     localStorage.setItem('user_profile', JSON.stringify(profileData));
-    localStorage.setItem('user_phone', phoneNumber); // Save phone for future login
+    if (loginMethod === "phone") {
+      localStorage.setItem('user_phone', phoneNumber);
+    } else {
+      localStorage.setItem('user_email', email);
+    }
     localStorage.setItem('user_password', signupData.password); // Save password for future login
 
     try {
@@ -371,268 +408,14 @@ const Profile = () => {
   };
 
   const resetAuth = () => {
-    setAuthStep("phone");
+    setAuthStep("credentials");
     setOtpValues(["", "", "", "", "", ""]);
     setPhoneNumber("");
+    setEmail("");
+    setPassword("");
     setSignupData({ name: "", email: "", gender: "", dob: "", address: "", password: "" });
     setError("");
   };
-
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-12 h-12 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-  );
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-violet-50 to-white flex flex-col">
-        <Navigation />
-        <div className="flex-1 flex items-center justify-center p-4 pt-24">
-          <Card className="w-full max-w-md shadow-2xl border-0 overflow-hidden rounded-2xl">
-            {/* Header */}
-            <div className="bg-gradient-to-br from-violet-600 to-indigo-700 p-8 text-center text-white relative overflow-hidden">
-              <div className="relative">
-                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  {authMode === "login" ? <LogIn className="w-8 h-8" /> : <UserPlus className="w-8 h-8" />}
-                </div>
-                <h2 className="text-2xl font-bold mb-1">
-                  {authMode === "login" ? "Welcome Back" : "Create Account"}
-                </h2>
-                <p className="text-violet-200 text-sm">
-                  {authStep === "phone" && "Enter your phone number to continue"}
-                  {authStep === "otp" && "Verify with OTP sent to your phone"}
-                  {authStep === "details" && "Complete your profile"}
-                </p>
-              </div>
-            </div>
-
-            <CardContent className="p-6">
-              {error && (
-                <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100 mb-4">
-                  {error}
-                </div>
-              )}
-
-              {/* Phone Number Step */}
-              {authStep === "phone" && (
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Phone Number</Label>
-                    <div className="flex">
-                      <div className="flex items-center justify-center px-4 bg-gray-100 border border-r-0 border-gray-200 rounded-l-lg text-gray-600 font-medium">
-                        +91
-                      </div>
-                      <Input
-                        type="tel"
-                        placeholder="Enter 10-digit number"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                        className="h-12 rounded-l-none rounded-r-lg border-gray-200 focus:ring-2 focus:ring-violet-600 text-lg tracking-wider"
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleSendOtp}
-                    className="w-full h-12 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold"
-                  >
-                    <Phone className="w-4 h-4 mr-2" />
-                    Send OTP
-                  </Button>
-
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-200"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-4 bg-white text-gray-500">or continue with</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button variant="outline" className="h-12 rounded-lg border-gray-200 hover:bg-gray-50">
-                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                      </svg>
-                      Google
-                    </Button>
-                    <Button variant="outline" className="h-12 rounded-lg border-gray-200 hover:bg-gray-50">
-                      <Mail className="w-5 h-5 mr-2 text-gray-600" />
-                      Email
-                    </Button>
-                  </div>
-
-                  <p className="text-center text-sm text-gray-500">
-                    {authMode === "login" ? "Don't have an account? " : "Already have an account? "}
-                    <button
-                      onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); resetAuth(); }}
-                      className="text-violet-600 font-semibold hover:underline"
-                    >
-                      {authMode === "login" ? "Sign Up" : "Sign In"}
-                    </button>
-                  </p>
-                </div>
-              )}
-
-              {/* OTP Verification Step */}
-              {authStep === "otp" && (
-                <div className="space-y-6">
-                  <div className="text-center mb-2">
-                    <p className="text-gray-600 text-sm">
-                      OTP sent to <span className="font-semibold">+91 {phoneNumber}</span>
-                    </p>
-                    <button onClick={() => setAuthStep("phone")} className="text-violet-600 text-sm font-medium hover:underline">
-                      Change number
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700 text-center block">Enter 6-digit OTP</Label>
-                    <div className="flex justify-center gap-2">
-                      {otpValues.map((value, index) => (
-                        <Input
-                          key={index}
-                          ref={otpInputRefs[index]}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={1}
-                          value={value}
-                          onChange={(e) => handleOtpChange(index, e.target.value.replace(/\D/g, ""))}
-                          onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                          className="w-12 h-14 text-center text-xl font-bold border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-600"
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleVerifyOtp}
-                    className="w-full h-12 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Verify OTP
-                  </Button>
-
-                  <div className="text-center">
-                    {otpTimer > 0 ? (
-                      <p className="text-gray-500 text-sm">Resend OTP in <span className="font-semibold text-violet-600">{otpTimer}s</span></p>
-                    ) : (
-                      <button onClick={handleSendOtp} className="text-violet-600 font-semibold text-sm hover:underline">
-                        Resend OTP
-                      </button>
-                    )}
-                  </div>
-
-                  <p className="text-center text-xs text-gray-400">
-                    Demo: Use OTP <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">123456</span> for testing
-                  </p>
-                </div>
-              )}
-
-              {/* Complete Profile Step (Signup only) */}
-              {authStep === "details" && (
-                <div className="space-y-6">
-                  <div className="text-center mb-2">
-                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <CheckCircle className="w-8 h-8 text-emerald-600" />
-                    </div>
-                    <p className="text-emerald-600 font-semibold">Phone verified successfully!</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Full Name *</Label>
-                        <Input
-                          placeholder="Enter your name"
-                          value={signupData.name}
-                          onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
-                          className="h-12 rounded-lg border-gray-200 focus:ring-2 focus:ring-violet-600"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Email *</Label>
-                        <Input
-                          type="email"
-                          placeholder="name@example.com"
-                          value={signupData.email}
-                          onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                          className="h-12 rounded-lg border-gray-200 focus:ring-2 focus:ring-violet-600"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Password *</Label>
-                        <Input
-                          type="password"
-                          placeholder="Create a password"
-                          value={signupData.password}
-                          onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                          className="h-12 rounded-lg border-gray-200 focus:ring-2 focus:ring-violet-600"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Gender</Label>
-                        <select
-                          value={signupData.gender}
-                          onChange={(e) => setSignupData({ ...signupData, gender: e.target.value })}
-                          className="h-12 w-full rounded-lg border border-gray-200 focus:ring-2 focus:ring-violet-600 px-3"
-                        >
-                          <option value="">Select Gender</option>
-                          <option value="male">Male</option>
-                          <option value="female">Female</option>
-                          <option value="other">Other</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Date of Birth</Label>
-                        <Input
-                          type="date"
-                          value={signupData.dob}
-                          onChange={(e) => setSignupData({ ...signupData, dob: e.target.value })}
-                          className="h-12 rounded-lg border-gray-200 focus:ring-2 focus:ring-violet-600"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">Address (Optional)</Label>
-                      <Input
-                        placeholder="Enter your address"
-                        value={signupData.address}
-                        onChange={(e) => setSignupData({ ...signupData, address: e.target.value })}
-                        className="h-12 rounded-lg border-gray-200 focus:ring-2 focus:ring-violet-600"
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleCompleteSignup}
-                    className="w-full h-12 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold"
-                  >
-                    Complete Signup
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-
-            {/* Footer */}
-            <div className="px-6 pb-6">
-              <p className="text-center text-xs text-gray-400">
-                By continuing, you agree to our{" "}
-                <Link to="/terms" className="text-violet-600 hover:underline">Terms of Service</Link>
-                {" "}and{" "}
-                <Link to="/privacy" className="text-violet-600 hover:underline">Privacy Policy</Link>
-              </p>
-            </div>
-          </Card>
-        </div >
-        <Footer />
-      </div >
-    );
-  }
 
   const SidebarGroup = ({ title, icon: Icon, children }) => (
     <div className="border-b border-gray-100 last:border-0">
@@ -655,6 +438,16 @@ const Profile = () => {
       {label}
     </button>
   );
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="w-12 h-12 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
+
+  if (!user) {
+    return <Navigate to="/auth" />;
+  }
 
   return (
     <div className="min-h-screen bg-[#f1f3f6] flex flex-col pt-20">

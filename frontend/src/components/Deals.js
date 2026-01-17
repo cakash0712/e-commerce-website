@@ -23,6 +23,7 @@ import Footer from "./Footer";
 const Deals = () => {
   const navigate = useNavigate();
   const [deals, setDeals] = useState([]);
+  const [displayedDeals, setDisplayedDeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -54,7 +55,8 @@ const Deals = () => {
               category: p.category
             };
           });
-        setDeals(mappedDeals.slice(0, 48));
+        setDeals(mappedDeals);
+        setDisplayedDeals(mappedDeals.slice(0, 48));
       } catch (err) {
         console.error("Error fetching deals:", err);
         setError("Failed to load deals. Please try again later.");
@@ -65,6 +67,10 @@ const Deals = () => {
 
     fetchDeals();
   }, []);
+
+  const loadMore = () => {
+    setDisplayedDeals(deals.slice(0, displayedDeals.length + 48));
+  };
 
   const renderStars = (rating) => {
     const stars = [];
@@ -157,7 +163,7 @@ const Deals = () => {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {deals.map((deal) => (
+            {displayedDeals.map((deal) => (
               <div
                 key={deal.id}
                 className="group bg-white rounded-xl border border-gray-100 hover:border-violet-200 hover:shadow-xl transition-all duration-300 overflow-hidden"
@@ -254,9 +260,9 @@ const Deals = () => {
         )}
 
         {/* Load More */}
-        {deals.length > 0 && (
+        {displayedDeals.length > 0 && displayedDeals.length < deals.length && (
           <div className="mt-16 text-center">
-            <Button variant="outline" className="rounded-lg h-12 px-8 border-2 border-gray-200 text-gray-700 font-semibold hover:bg-gray-50">
+            <Button onClick={loadMore} variant="outline" className="rounded-lg h-12 px-8 border-2 border-gray-200 text-gray-700 font-semibold hover:bg-gray-50">
               Load More Deals <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>

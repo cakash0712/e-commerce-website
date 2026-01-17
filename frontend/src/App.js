@@ -21,6 +21,7 @@ import PrivacyPolicy from "./components/PrivacyPolicy";
 import TermsOfService from "./components/TermsOfService";
 import Cookies from "./components/Cookies";
 import DetailsView from "./components/DetailsView";
+import Auth from "./components/Auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -130,6 +131,10 @@ const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user_phone');
+    localStorage.removeItem('user_email');
+    localStorage.removeItem('user_password');
+    localStorage.removeItem('user_profile');
     setUser(null);
   };
 
@@ -1027,6 +1032,7 @@ function App() {
                   <Route path="/payment" element={<Payment />} />
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/auth" element={<Auth />} />
                   <Route path="*" element={<Home />} />
                 </Routes>
               </BrowserRouter>
