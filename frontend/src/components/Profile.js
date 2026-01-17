@@ -186,26 +186,26 @@ const Profile = () => {
   });
 
    useEffect(() => {
-    if (user) {
-      const savedProfile = localStorage.getItem('user_profile');
-      const profileData = savedProfile ? JSON.parse(savedProfile) : {};
-      
-      // Only update avatar if we don't have a pending local upload
-      const avatarToUse = profileEdit.avatar?.startsWith('data:') 
-        ? profileEdit.avatar 
-        : user.avatar;
-      
-      setProfileEdit({
-        name: profileData.name || user.name,
-        avatar: avatarToUse,
-        email: profileData.email || user.email,
-        gender: profileData.gender || "",
-        dob: profileData.dob || "",
-        address: profileData.address || "",
-        password: localStorage.getItem('user_password') || "",
-      });
-    }
-  }, [user]);
+     if (user) {
+       const savedProfile = localStorage.getItem('user_profile');
+       const profileData = savedProfile ? JSON.parse(savedProfile) : {};
+
+       // Only update avatar if we don't have a pending local upload
+       const avatarToUse = profileEdit.avatar?.startsWith('data:')
+         ? profileEdit.avatar
+         : user.avatar;
+
+       setProfileEdit({
+         name: profileData.name || user.name,
+         avatar: avatarToUse,
+         email: profileData.email || user.email,
+         gender: profileData.gender || "",
+         dob: profileData.dob || "",
+         address: profileData.address || "",
+         password: localStorage.getItem('user_password') || "",
+       });
+     }
+   }, [user, profileEdit.avatar]);
   const handleUpdateProfile = async () => {
     setIsLoading(true);
     try {
