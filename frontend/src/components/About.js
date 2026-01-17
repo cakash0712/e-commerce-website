@@ -49,11 +49,11 @@ const About = () => {
     }
   ];
 
-  const team = [
-    { name: "Adrian Sterling", role: "Founder & CEO", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop" },
-    { name: "Elena Voss", role: "Head of Design", img: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=500&fit=crop" },
-    { name: "Marcus Thorne", role: "Operations Director", img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=500&fit=crop" },
-    { name: "Sophia Lin", role: "Chief Technology Officer", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=500&fit=crop" }
+  const testimonials = [
+    { name: "Sarah Johnson", role: "Verified Customer", quote: "ShopVerse has transformed my shopping experience. The quality and prices are unbeatable!", img: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop" },
+    { name: "Michael Chen", role: "Regular Shopper", quote: "Fast delivery and excellent customer service. I recommend ShopVerse to all my friends.", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop" },
+    { name: "Emily Rodriguez", role: "Fashion Enthusiast", quote: "The product selection is amazing and the website is so easy to navigate. Love it!", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop" },
+    { name: "David Kim", role: "Tech Gadget Lover", quote: "Found all the latest gadgets at great prices. The return policy gave me peace of mind.", img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop" }
   ];
 
   return (
@@ -165,31 +165,38 @@ const About = () => {
         </div>
       </section>
 
-      {/* Team Section */}
+      {/* Testimonials Section */}
       <section className="py-20 md:py-32 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Meet Our Team
+              What Our Customers Say
             </h2>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              The passionate people behind ShopVerse who work tirelessly to serve you better.
+              Don't just take our word for it. Here's what our satisfied customers have to say about their ShopVerse experience.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {team.map((member, i) => (
-              <div key={i} className="group text-center">
-                <div className="relative overflow-hidden rounded-2xl mb-5 aspect-[4/5]">
+            {testimonials.map((testimonial, i) => (
+              <div key={i} className="bg-gray-50 p-6 rounded-2xl hover:bg-violet-50 transition-colors">
+                <div className="flex items-center gap-4 mb-4">
                   <img
-                    src={member.img}
-                    alt={member.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    src={testimonial.img}
+                    alt={testimonial.name}
+                    className="w-12 h-12 rounded-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div>
+                    <h4 className="text-lg font-bold text-gray-900">{testimonial.name}</h4>
+                    <p className="text-sm text-violet-600 font-medium">{testimonial.role}</p>
+                  </div>
                 </div>
-                <h4 className="text-lg font-bold text-gray-900 mb-1">{member.name}</h4>
-                <p className="text-sm text-violet-600 font-medium">{member.role}</p>
+                <p className="text-gray-600 italic leading-relaxed">"{testimonial.quote}"</p>
+                <div className="flex text-yellow-400 mt-4">
+                  {[...Array(5)].map((_, j) => (
+                    <Star key={j} className="w-4 h-4 fill-current" />
+                  ))}
+                </div>
               </div>
             ))}
           </div>

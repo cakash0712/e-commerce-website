@@ -1,6 +1,6 @@
 import { useEffect, useState, createContext, useContext } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import Shop from "./components/Shop";
 import Categories from "./components/Categories";
@@ -55,6 +55,17 @@ import {
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Scroll to Top Component
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
+
 // Auth Context
 const AuthContext = createContext();
 
@@ -74,14 +85,18 @@ const AuthProvider = ({ children }) => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
       if (token) {
-        try {
-          const response = await axios.get('https://api.escuelajs.co/api/v1/auth/profile', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setUser(response.data);
-        } catch (error) {
-          localStorage.removeItem('token');
-        }
+        // Demo check
+        const demoUser = {
+          id: 1,
+          username: 'john',
+          email: 'john@mail.com',
+          name: 'John Doe',
+          firstName: 'John',
+          lastName: 'Doe',
+          gender: 'male',
+          image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John'
+        };
+        setUser(demoUser);
       }
       setLoading(false);
     };
@@ -89,18 +104,24 @@ const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    const response = await axios.post('https://api.escuelajs.co/api/v1/auth/login', { email, password });
-    const { access_token } = response.data;
-    localStorage.setItem('token', access_token);
-    const profileResponse = await axios.get('https://api.escuelajs.co/api/v1/auth/profile', {
-      headers: { Authorization: `Bearer ${access_token}` }
-    });
-    setUser(profileResponse.data);
-    return profileResponse.data;
+    // Demo login
+    const demoUser = {
+      id: 1,
+      username: email,
+      email: email,
+      name: 'John Doe',
+      firstName: 'John',
+      lastName: 'Doe',
+      gender: 'male',
+      image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John'
+    };
+    localStorage.setItem('token', 'demo_token');
+    setUser(demoUser);
+    return demoUser;
   };
 
   const register = async (userData) => {
-    const response = await axios.post('https://api.escuelajs.co/api/v1/users', {
+    const response = await axios.post('https://dummyjson.com/users/add', {
       ...userData,
       avatar: userData.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=John'
     });
@@ -113,13 +134,13 @@ const AuthProvider = ({ children }) => {
   };
 
   const updateUser = async (userId, updates) => {
-    const response = await axios.put(`https://api.escuelajs.co/api/v1/users/${userId}`, updates);
-    setUser(prev => ({ ...prev, ...response.data }));
-    return response.data;
+    // Demo update
+    setUser(prev => ({ ...prev, ...updates }));
+    return { ...updates };
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register, updateUser, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, register, updateUser, loading, setUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -986,6 +1007,7 @@ function App() {
           <WishlistProvider>
             <OrderProvider>
               <BrowserRouter>
+                <ScrollToTop />
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/product/:id" element={<DetailsView />} />

@@ -97,12 +97,12 @@ const Categories = () => {
               </button>
             )}
 
-            <div className="inline-flex items-center gap-2 bg-violet-100 text-violet-600 px-4 py-2 rounded-full text-sm font-semibold mb-6">
+            {/* <div className="inline-flex items-center gap-2 bg-violet-100 text-violet-600 px-4 py-2 rounded-full text-sm font-semibold mb-6">
               <Grid3X3 className="w-4 h-4" />
               {selectedCategory ? selectedCategory.name : "All Categories"}
-            </div>
+            </div> */}
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-4 tracking-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-4 tracking-tight pt-12">
               {selectedCategory ? selectedCategory.name : "Shop by Category"}
             </h1>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">

@@ -74,6 +74,18 @@ const Navigation = () => {
     localStorage.setItem('recentSearches', JSON.stringify(recentSearches));
   }, [recentSearches]);
 
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
   // Update suggestions based on query
   useEffect(() => {
     if (searchQuery.trim().length >= 2) {
@@ -144,7 +156,7 @@ const Navigation = () => {
             <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center">
               <ShoppingCart className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900 hidden sm:block">
+            <span className="text-xl font-bold text-gray-900">
               ShopVerse
             </span>
           </Link>

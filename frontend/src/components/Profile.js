@@ -13,12 +13,11 @@ import Navigation from "./Navigation";
 import Footer from "./Footer";
 
 const Profile = () => {
-  const { user, login, logout, register, updateUser, loading } = useAuth();
+  const { user, login, logout, register, updateUser, loading, setUser } = useAuth();
   const { orders } = useOrders();
   const [activeView, setActiveView] = useState("overview");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
   const fileInputRef = useRef(null);
 
   // Address State
@@ -26,8 +25,8 @@ const Profile = () => {
   const [addresses, setAddresses] = useState(() => {
     const saved = localStorage.getItem('user_addresses');
     return saved ? JSON.parse(saved) : [
-      { id: 1, type: "HOME", name: "Akash", addr: "404 Sky Heights, Sector 72, Bangalore, KA 560102", phone: "+91 98765 43210" },
-      { id: 2, type: "WORK", name: "Akash", addr: "Tech Park East, Block B-12, Gachibowli, Hyderabad, TS 500032", phone: "+91 99887 76655" }
+      { id: 1, type: "HOME", name: "demo", addr: "404 Sky Heights, Sector 72, Bangalore, KA 560102", phone: "+91 98765 43210" },
+      { id: 2, type: "WORK", name: "demo", addr: "Tech Park East, Block B-12, Gachibowli, Hyderabad, TS 500032", phone: "+91 99887 76655" }
     ];
   });
 
@@ -183,24 +182,30 @@ const Profile = () => {
     gender: user?.gender || "",
     dob: user?.dob || "",
     address: user?.address || "",
+    password: "",
   });
 
-  useEffect(() => {
-    // Only overwrite if we don't have a pending local upload (starts with data:)
-    if (user && !profileEdit.avatar?.startsWith('data:')) {
+   useEffect(() => {
+    if (user) {
       const savedProfile = localStorage.getItem('user_profile');
       const profileData = savedProfile ? JSON.parse(savedProfile) : {};
+      
+      // Only update avatar if we don't have a pending local upload
+      const avatarToUse = profileEdit.avatar?.startsWith('data:') 
+        ? profileEdit.avatar 
+        : user.avatar;
+      
       setProfileEdit({
         name: profileData.name || user.name,
-        avatar: user.avatar,
+        avatar: avatarToUse,
         email: profileData.email || user.email,
         gender: profileData.gender || "",
         dob: profileData.dob || "",
         address: profileData.address || "",
+        password: localStorage.getItem('user_password') || "",
       });
     }
   }, [user]);
-
   const handleUpdateProfile = async () => {
     setIsLoading(true);
     try {
@@ -213,6 +218,7 @@ const Profile = () => {
         address: profileEdit.address,
       };
       localStorage.setItem('user_profile', JSON.stringify(profileData));
+      localStorage.setItem('user_password', profileEdit.password);
       setIsEditing(false);
       alert("Profile updated!");
     } catch (err) {
@@ -249,7 +255,7 @@ const Profile = () => {
   const [authStep, setAuthStep] = useState("phone"); // phone, otp, details (for signup)
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpValues, setOtpValues] = useState(["", "", "", "", "", ""]);
-  const [signupData, setSignupData] = useState({ name: "", email: "", gender: "", dob: "", address: "" });
+  const [signupData, setSignupData] = useState({ name: "", email: "", gender: "", dob: "", address: "", password: "" });
   const [otpTimer, setOtpTimer] = useState(0);
   const [generatedOtp, setGeneratedOtp] = useState("");
   const otpInputRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
@@ -267,10 +273,15 @@ const Profile = () => {
       setError("Please enter a valid 10-digit phone number");
       return;
     }
+    const registeredPhone = localStorage.getItem('user_phone');
     if (authMode === "login") {
-      const registeredPhone = localStorage.getItem('user_phone');
       if (!registeredPhone || phoneNumber !== registeredPhone) {
         setError("This number is not registered. Please sign up first.");
+        return;
+      }
+    } else if (authMode === "signup") {
+      if (registeredPhone && phoneNumber === registeredPhone) {
+        setError("This number is already registered. Please sign in instead.");
         return;
       }
     }
@@ -318,9 +329,10 @@ const Profile = () => {
         const registeredPhone = localStorage.getItem('user_phone');
         if (registeredPhone && phoneNumber === registeredPhone) {
           try {
-            await login("john@mail.com", "changeme");
+            await login("kminchelle", "0lelplR");
           } catch (err) {
-            setError("Login successful! (Demo mode)");
+            setError("Login failed. Demo mode activated.");
+
           }
         } else {
           setError("Phone number not registered. Please sign up first.");
@@ -332,24 +344,27 @@ const Profile = () => {
   };
 
   const handleCompleteSignup = async () => {
-    if (!signupData.name.trim() || !signupData.email.trim()) {
-      setError("Please enter your name and email");
+    if (!signupData.name.trim() || !signupData.email.trim() || !signupData.password.trim()) {
+      setError("Please enter your name, email and password");
       return;
     }
+    // Save signup data first
+    const profileData = {
+      name: signupData.name,
+      email: signupData.email,
+      gender: signupData.gender,
+      dob: signupData.dob,
+      address: signupData.address,
+    };
+    localStorage.setItem('user_profile', JSON.stringify(profileData));
+    localStorage.setItem('user_phone', phoneNumber); // Save phone for future login
+    localStorage.setItem('user_password', signupData.password); // Save password for future login
+
     try {
       // In production, this would register the user
-      await login("john@mail.com", "changeme");
-      // After login, update the user name and save profile data
-      await updateUser(1, { name: signupData.name }); // Assuming user id is 1
-      const profileData = {
-        name: signupData.name,
-        email: signupData.email,
-        gender: signupData.gender,
-        dob: signupData.dob,
-        address: signupData.address,
-      };
-      localStorage.setItem('user_profile', JSON.stringify(profileData));
-      localStorage.setItem('user_phone', phoneNumber); // Save phone for future login
+      await login("kminchelle", "0lelplR");
+      // After login, update the user name
+      await updateUser(1, { firstName: signupData.name.split(' ')[0], lastName: signupData.name.split(' ')[1] || '' }); // Assuming user id is 1
     } catch (err) {
       setError("Account created! (Demo mode)");
     }
@@ -359,7 +374,7 @@ const Profile = () => {
     setAuthStep("phone");
     setOtpValues(["", "", "", "", "", ""]);
     setPhoneNumber("");
-    setSignupData({ name: "", email: "", gender: "", dob: "", address: "" });
+    setSignupData({ name: "", email: "", gender: "", dob: "", address: "", password: "" });
     setError("");
   };
 
@@ -550,6 +565,16 @@ const Profile = () => {
                         />
                       </div>
                       <div className="space-y-2">
+                        <Label className="text-sm font-medium text-gray-700">Password *</Label>
+                        <Input
+                          type="password"
+                          placeholder="Create a password"
+                          value={signupData.password}
+                          onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                          className="h-12 rounded-lg border-gray-200 focus:ring-2 focus:ring-violet-600"
+                        />
+                      </div>
+                      <div className="space-y-2">
                         <Label className="text-sm font-medium text-gray-700">Gender</Label>
                         <select
                           value={signupData.gender}
@@ -651,7 +676,7 @@ const Profile = () => {
               </Avatar>
               <div>
                 <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none mb-1">Hello,</p>
-                <h3 className="font-black text-gray-900 text-lg tracking-tight italic">{user.name}</h3>
+                <h3 className="font-black text-gray-900 text-lg tracking-tight italic">{profileEdit.name}</h3>
               </div>
             </Card>
 
@@ -762,13 +787,6 @@ const Profile = () => {
               <div className="space-y-12">
                 <div className="flex items-center justify-between">
                   <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter">Profile Details</h2>
-                  <Button
-                    onClick={() => setIsEditing(!isEditing)}
-                    variant="ghost"
-                    className="text-violet-600 font-black uppercase text-[10px] tracking-widest hover:bg-violet-50"
-                  >
-                    {isEditing ? 'Discard' : 'Edit Logic'}
-                  </Button>
                 </div>
 
                 <div className="space-y-10">
@@ -777,8 +795,7 @@ const Profile = () => {
                       <Label className="uppercase text-[10px] font-black tracking-widest text-gray-400">Full Name</Label>
                       <Input
                         value={profileEdit.name}
-                        onChange={e => setProfileEdit({ ...profileEdit, name: e.target.value })}
-                        disabled={!isEditing}
+                        onChange={e => { const newName = e.target.value; setProfileEdit({ ...profileEdit, name: newName }); setUser(prev => ({ ...prev, name: newName })); const profileData = JSON.parse(localStorage.getItem('user_profile') || '{}'); profileData.name = newName; localStorage.setItem('user_profile', JSON.stringify(profileData)); }}
                         className="h-12 rounded-lg bg-gray-50 border-transparent focus:border-violet-600 focus:bg-white text-base font-bold transition-all"
                       />
                     </div>
@@ -787,7 +804,6 @@ const Profile = () => {
                       <Input
                         value={profileEdit.email}
                         onChange={e => setProfileEdit({ ...profileEdit, email: e.target.value })}
-                        disabled={!isEditing}
                         className="h-12 rounded-lg bg-gray-50 border-transparent focus:border-violet-600 focus:bg-white text-base font-bold transition-all"
                       />
                     </div>
@@ -796,7 +812,6 @@ const Profile = () => {
                       <select
                         value={profileEdit.gender}
                         onChange={e => setProfileEdit({ ...profileEdit, gender: e.target.value })}
-                        disabled={!isEditing}
                         className="h-12 w-full rounded-lg bg-gray-50 border-transparent focus:border-violet-600 focus:bg-white text-base font-bold transition-all"
                       >
                         <option value="">Select Gender</option>
@@ -811,7 +826,6 @@ const Profile = () => {
                         type="date"
                         value={profileEdit.dob}
                         onChange={e => setProfileEdit({ ...profileEdit, dob: e.target.value })}
-                        disabled={!isEditing}
                         className="h-12 rounded-lg bg-gray-50 border-transparent focus:border-violet-600 focus:bg-white text-base font-bold transition-all"
                       />
                     </div>
@@ -821,20 +835,19 @@ const Profile = () => {
                     <Input
                       value={profileEdit.address}
                       onChange={e => setProfileEdit({ ...profileEdit, address: e.target.value })}
-                      disabled={!isEditing}
+                      className="h-12 rounded-lg bg-gray-50 border-transparent focus:border-violet-600 focus:bg-white text-base font-bold transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="uppercase text-[10px] font-black tracking-widest text-gray-400">Password</Label>
+                    <Input
+                      type="password"
+                      value={profileEdit.password}
+                      onChange={e => setProfileEdit({ ...profileEdit, password: e.target.value })}
                       className="h-12 rounded-lg bg-gray-50 border-transparent focus:border-violet-600 focus:bg-white text-base font-bold transition-all"
                     />
                   </div>
 
-                  {isEditing && (
-                    <Button
-                      onClick={handleUpdateProfile}
-                      disabled={isLoading}
-                      className="bg-violet-600 hover:bg-violet-700 h-14 px-12 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-violet-100"
-                    >
-                      Save Changes
-                    </Button>
-                  )}
 
                   <div className="pt-12 border-t border-gray-100">
                     <h3 className="text-xl font-black italic tracking-tighter mb-8">Identification Graphics</h3>
