@@ -14,12 +14,14 @@ const Footer = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <Link to="/" className="flex items-center space-x-2 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold">ZippyCart</span>
-            </Link>
+             <Link to="/" className="flex items-center space-x-0 shrink-0">
+            <img
+              src="/assets/zlogo1.png"
+              alt="ZippyCart Logo"
+              className="w-40 h-40 object-contain"
+            />
+            
+          </Link>
             <p className="text-gray-400 mb-6">
               Your one-stop destination for premium products at unbeatable
               prices.

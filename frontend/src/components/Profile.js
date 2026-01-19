@@ -13,13 +13,13 @@ import Navigation from "./Navigation";
 import Footer from "./Footer";
 
 const Profile = () => {
-   const navigate = useNavigate();
-   const { user, login, logout, register, updateUser, loading, setUser } = useAuth();
-   const { orders } = useOrders();
-   const [activeView, setActiveView] = useState("overview");
-   const [isLoading, setIsLoading] = useState(false);
-   const [error, setError] = useState("");
-   const fileInputRef = useRef(null);
+  const navigate = useNavigate();
+  const { user, login, logout, register, updateUser, loading, setUser } = useAuth();
+  const { orders } = useOrders();
+  const [activeView, setActiveView] = useState("overview");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const fileInputRef = useRef(null);
 
   // Address State
   // Address State
@@ -183,44 +183,55 @@ const Profile = () => {
     gender: user?.gender || "",
     dob: user?.dob || "",
     address: user?.address || "",
-    password: "",
   });
 
-   useEffect(() => {
-     if (user) {
-       const savedProfile = localStorage.getItem('user_profile');
-       const profileData = savedProfile ? JSON.parse(savedProfile) : {};
+  useEffect(() => {
+    if (user) {
+      const savedProfile = localStorage.getItem('user_profile');
+      const profileData = savedProfile ? JSON.parse(savedProfile) : {};
 
-       // Only update avatar if we don't have a pending local upload
-       const avatarToUse = profileEdit.avatar?.startsWith('data:')
-         ? profileEdit.avatar
-         : user.avatar;
+      // Get signup data for pre-filling
+      const signupData = JSON.parse(localStorage.getItem('signup_data') || '{}');
 
-       setProfileEdit({
-         name: profileData.name || user.name,
-         avatar: avatarToUse,
-         email: profileData.email || user.email,
-         gender: profileData.gender || "",
-         dob: profileData.dob || "",
-         address: profileData.address || "",
-         password: localStorage.getItem('user_password') || "",
-       });
-     }
-   }, [user, profileEdit.avatar]);
+      // Only update avatar if we don't have a pending local upload
+      const avatarToUse = profileEdit.avatar?.startsWith('data:')
+        ? profileEdit.avatar
+        : user.avatar;
+
+      setProfileEdit({
+        name: profileData.name || user.name,
+        avatar: avatarToUse,
+        email: profileData.email || user.email,
+        phone: profileData.phone || user.phone || "",
+        gender: profileData.gender || user.gender || signupData.gender || "",
+        dob: profileData.dob || user.dob || signupData.dob || "",
+        address: profileData.address || user.address || signupData.address || "",
+      });
+    }
+  }, [user, profileEdit.avatar]);
   const handleUpdateProfile = async () => {
     setIsLoading(true);
     try {
-      await updateUser(user.id, { name: profileEdit.name });
-      const profileData = {
+      await updateUser(user.id, {
         name: profileEdit.name,
         email: profileEdit.email,
+        phone: profileEdit.phone,
         gender: profileEdit.gender,
         dob: profileEdit.dob,
         address: profileEdit.address,
+        avatar: profileEdit.avatar // Include avatar if it was updated
+      });
+      const profileData = {
+        name: profileEdit.name,
+        email: profileEdit.email,
+        phone: profileEdit.phone,
+        gender: profileEdit.gender,
+        dob: profileEdit.dob,
+        address: profileEdit.address,
+        avatar: profileEdit.avatar,
       };
       localStorage.setItem('user_profile', JSON.stringify(profileData));
-      localStorage.setItem('user_password', profileEdit.password);
-      setIsEditing(false);
+      setUser(prev => ({ ...prev, ...profileData }));
       alert("Profile updated!");
     } catch (err) {
       alert("Error updating profile.");
@@ -250,171 +261,6 @@ const Profile = () => {
   const logoutAndRedirect = () => {
     logout();
     navigate("/auth");
-  };
-
-
-  // OTP Timer
-  useEffect(() => {
-    if (otpTimer > 0) {
-      const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [otpTimer]);
-
-  const handleSendOtp = () => {
-    let identifier = loginMethod === "phone" ? phoneNumber : email;
-    let isValid = false;
-    if (loginMethod === "phone") {
-      isValid = identifier.length === 10 && /^\d+$/.test(identifier);
-      if (!isValid) {
-        setError("Please enter a valid 10-digit phone number");
-        return;
-      }
-    } else {
-      isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-      if (!isValid) {
-        setError("Please enter a valid email address");
-        return;
-      }
-    }
-
-    const registeredPhone = localStorage.getItem('user_phone');
-    const registeredEmail = localStorage.getItem('user_email');
-    const storedPassword = localStorage.getItem('user_password');
-
-    if (authMode === "login") {
-      if (loginMethod === "phone") {
-        if (!registeredPhone || identifier !== registeredPhone) {
-          setError("This number is not registered. Please sign up first.");
-          return;
-        }
-      } else {
-        if (!registeredEmail || identifier !== registeredEmail) {
-          setError("This email is not registered. Please sign up first.");
-          return;
-        }
-      }
-      if (password !== storedPassword) {
-        setError("Incorrect password.");
-        return;
-      }
-      // For login, send OTP after credentials
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedOtp(otp);
-      console.log("Generated OTP:", otp); // For testing purposes
-      setAuthStep("otp");
-      setOtpTimer(30);
-      setError("");
-    } else if (authMode === "signup") {
-      if (loginMethod === "phone") {
-        if (registeredPhone && identifier === registeredPhone) {
-          setError("This number is already registered. Please sign in instead.");
-          return;
-        }
-      } else {
-        if (registeredEmail && identifier === registeredEmail) {
-          setError("This email is already registered. Please sign in instead.");
-          return;
-        }
-      }
-      // For signup, go to details after credentials validation
-      setAuthStep("details");
-      setError("");
-    }
-  };
-
-  const handleSendOtpFromDetails = () => {
-    // Send OTP after personal details
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(otp);
-    console.log("Generated OTP:", otp); // For testing purposes
-    setAuthStep("otp");
-    setOtpTimer(30);
-    setError("");
-  };
-
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) return;
-    const newOtp = [...otpValues];
-    newOtp[index] = value;
-    setOtpValues(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      otpInputRefs[index + 1].current?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otpValues[index] && index > 0) {
-      otpInputRefs[index - 1].current?.focus();
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    const enteredOtp = otpValues.join("");
-    if (enteredOtp.length !== 6) {
-      setError("Please enter the complete 6-digit OTP");
-      return;
-    }
-
-    // For demo: accept any 6-digit OTP or the generated one
-    if (enteredOtp === generatedOtp || enteredOtp === "123456") {
-      if (authMode === "signup") {
-        setAuthStep("details");
-        setError("");
-      } else {
-        // Login: already checked in handleSendOtp, so proceed to login
-        try {
-          await login("kminchelle", "0lelplR");
-        } catch (err) {
-          setError("Login failed. Demo mode activated.");
-        }
-      }
-    } else {
-      setError("Invalid OTP. Please try again. (Hint: Use 123456 for demo)");
-    }
-  };
-
-  const handleCompleteSignup = async () => {
-    if (!signupData.name.trim() || !signupData.email.trim() || !signupData.password.trim()) {
-      setError("Please enter your name, email and password");
-      return;
-    }
-    // Save signup data first
-    const profileData = {
-      name: signupData.name,
-      email: signupData.email,
-      gender: signupData.gender,
-      dob: signupData.dob,
-      address: signupData.address,
-    };
-    localStorage.setItem('user_profile', JSON.stringify(profileData));
-    if (loginMethod === "phone") {
-      localStorage.setItem('user_phone', phoneNumber);
-    } else {
-      localStorage.setItem('user_email', email);
-    }
-    localStorage.setItem('user_password', signupData.password); // Save password for future login
-
-    try {
-      // In production, this would register the user
-      await login("kminchelle", "0lelplR");
-      // After login, update the user name
-      await updateUser(1, { firstName: signupData.name.split(' ')[0], lastName: signupData.name.split(' ')[1] || '' }); // Assuming user id is 1
-    } catch (err) {
-      setError("Account created! (Demo mode)");
-    }
-  };
-
-  const resetAuth = () => {
-    setAuthStep("credentials");
-    setOtpValues(["", "", "", "", "", ""]);
-    setPhoneNumber("");
-    setEmail("");
-    setPassword("");
-    setSignupData({ name: "", email: "", gender: "", dob: "", address: "", password: "" });
-    setError("");
   };
 
   const SidebarGroup = ({ title, icon: Icon, children }) => (
@@ -449,6 +295,10 @@ const Profile = () => {
     return <Navigate to="/auth" />;
   }
 
+  if (user.user_type === "vendor") {
+    return <Navigate to="/vendor" />;
+  }
+
   return (
     <div className="min-h-screen bg-[#f1f3f6] flex flex-col pt-20">
       <Navigation />
@@ -461,15 +311,26 @@ const Profile = () => {
           <aside className="w-full lg:w-80 space-y-4 shrink-0">
             {/* User Header Card */}
             <Card className="border-0 shadow-sm rounded-none bg-white p-4 flex items-center gap-4">
-              <Avatar className="w-12 h-12">
-                <AvatarImage src={profileEdit.avatar || user.avatar} />
-                <AvatarFallback className="bg-violet-100 text-violet-600 font-black italic">
-                  {user.name.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
+              <div
+                className="relative group cursor-pointer"
+                onClick={() => fileInputRef.current.click()}
+              >
+                <Avatar className="w-14 h-14 ring-2 ring-violet-50 group-hover:ring-violet-200 transition-all">
+                  <AvatarImage src={profileEdit.avatar || user.avatar} />
+                  <AvatarFallback className="bg-violet-100 text-violet-600 font-black italic">
+                    {user.name.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                  <Camera className="w-5 h-5 text-white" />
+                </div>
+              </div>
               <div>
                 <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none mb-1">Hello,</p>
-                <h3 className="font-black text-gray-900 text-lg tracking-tight italic">{profileEdit.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-black text-gray-900 text-lg tracking-tight italic">{profileEdit.name}</h3>
+                  <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] font-bold">VERIFIED</Badge>
+                </div>
               </div>
             </Card>
 
@@ -588,24 +449,24 @@ const Profile = () => {
                       <Label className="uppercase text-[10px] font-black tracking-widest text-gray-400">Full Name</Label>
                       <Input
                         value={profileEdit.name}
-                        onChange={e => { const newName = e.target.value; setProfileEdit({ ...profileEdit, name: newName }); setUser(prev => ({ ...prev, name: newName })); const profileData = JSON.parse(localStorage.getItem('user_profile') || '{}'); profileData.name = newName; localStorage.setItem('user_profile', JSON.stringify(profileData)); }}
-                        className="h-12 rounded-lg bg-gray-50 border-transparent focus:border-violet-600 focus:bg-white text-base font-bold transition-all"
+                        readOnly
+                        className="h-12 rounded-lg bg-gray-50 border-transparent text-gray-600 cursor-not-allowed text-base font-bold"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label className="uppercase text-[10px] font-black tracking-widest text-gray-400">Email Address</Label>
                       <Input
                         value={profileEdit.email}
-                        onChange={e => setProfileEdit({ ...profileEdit, email: e.target.value })}
-                        className="h-12 rounded-lg bg-gray-50 border-transparent focus:border-violet-600 focus:bg-white text-base font-bold transition-all"
+                        readOnly
+                        className="h-12 rounded-lg bg-gray-50 border-transparent text-gray-600 cursor-not-allowed text-base font-bold"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label className="uppercase text-[10px] font-black tracking-widest text-gray-400">Gender</Label>
                       <select
                         value={profileEdit.gender}
-                        onChange={e => setProfileEdit({ ...profileEdit, gender: e.target.value })}
-                        className="h-12 w-full rounded-lg bg-gray-50 border-transparent focus:border-violet-600 focus:bg-white text-base font-bold transition-all"
+                        disabled
+                        className="h-12 w-full rounded-lg bg-gray-50 border-transparent text-gray-600 cursor-not-allowed text-base font-bold"
                       >
                         <option value="">Select Gender</option>
                         <option value="male">Male</option>
@@ -618,27 +479,36 @@ const Profile = () => {
                       <Input
                         type="date"
                         value={profileEdit.dob}
-                        onChange={e => setProfileEdit({ ...profileEdit, dob: e.target.value })}
-                        className="h-12 rounded-lg bg-gray-50 border-transparent focus:border-violet-600 focus:bg-white text-base font-bold transition-all"
+                        readOnly
+                        className="h-12 rounded-lg bg-gray-50 border-transparent text-gray-600 cursor-not-allowed text-base font-bold"
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="uppercase text-[10px] font-black tracking-widest text-gray-400">Address</Label>
-                    <Input
-                      value={profileEdit.address}
-                      onChange={e => setProfileEdit({ ...profileEdit, address: e.target.value })}
-                      className="h-12 rounded-lg bg-gray-50 border-transparent focus:border-violet-600 focus:bg-white text-base font-bold transition-all"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 mt-8">
+                    <div className="space-y-2">
+                      <Label className="uppercase text-[10px] font-black tracking-widest text-gray-400">Phone Number</Label>
+                      <Input
+                        value={profileEdit.phone}
+                        readOnly
+                        className="h-12 rounded-lg bg-gray-50 border-transparent text-gray-600 cursor-not-allowed text-base font-bold"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="uppercase text-[10px] font-black tracking-widest text-gray-400">Address</Label>
+                      <Input
+                        value={profileEdit.address}
+                        readOnly
+                        className="h-12 rounded-lg bg-gray-50 border-transparent text-gray-600 cursor-not-allowed text-base font-bold"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="uppercase text-[10px] font-black tracking-widest text-gray-400">Password</Label>
-                    <Input
-                      type="password"
-                      value={profileEdit.password}
-                      onChange={e => setProfileEdit({ ...profileEdit, password: e.target.value })}
-                      className="h-12 rounded-lg bg-gray-50 border-transparent focus:border-violet-600 focus:bg-white text-base font-bold transition-all"
-                    />
+
+                  <div className="bg-violet-50 p-6 rounded-2xl border border-violet-100 flex items-start gap-4 mt-12">
+                    <Shield className="w-6 h-6 text-violet-600 shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-bold text-violet-900 mb-1">Information Security</h4>
+                      <p className="text-xs text-violet-700 leading-relaxed font-medium">To maintain account integrity, personal details cannot be changed directly after verification. Please contact support if you need to update your primary contact information.</p>
+                    </div>
                   </div>
 
 

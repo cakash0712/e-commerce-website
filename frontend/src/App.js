@@ -9,6 +9,8 @@ import About from "./components/About";
 import Cart from "./components/Cart";
 import Wishlist from "./components/Wishlist";
 import Profile from "./components/Profile";
+import Admin from "./components/Admin";
+import Vendor from "./components/Vendor";
 import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
 import Payment from "./components/Payment";
@@ -26,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import {
   ShoppingCart,
   Star,
@@ -83,54 +86,56 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuth = () => {
       const token = localStorage.getItem('token');
-      if (token) {
-        // Demo check
-        const demoUser = {
-          id: 1,
-          username: 'john',
-          email: 'john@mail.com',
-          name: 'John Doe',
-          firstName: 'John',
-          lastName: 'Doe',
-          gender: 'male',
-          image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John'
-        };
-        setUser(demoUser);
+      const savedUser = localStorage.getItem('user_data');
+      if (token && savedUser) {
+        try {
+          setUser(JSON.parse(savedUser));
+        } catch (e) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user_data');
+        }
       }
       setLoading(false);
     };
     checkAuth();
   }, []);
 
-  const login = async (email, password) => {
-    // Demo login
-    const demoUser = {
-      id: 1,
-      username: email,
-      email: email,
-      name: 'John Doe',
-      firstName: 'John',
-      lastName: 'Doe',
-      gender: 'male',
-      image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John'
-    };
-    localStorage.setItem('token', 'demo_token');
-    setUser(demoUser);
-    return demoUser;
+  const login = async (identifier, password, userType = "user") => {
+    try {
+      const response = await axios.post(`${API}/users/login`, {
+        identifier,
+        password,
+        user_type: userType
+      });
+      const userData = response.data;
+      localStorage.setItem('token', 'user_token');
+      localStorage.setItem('user_data', JSON.stringify(userData));
+      setUser(userData);
+      return userData;
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
+    }
   };
 
   const register = async (userData) => {
-    const response = await axios.post('https://dummyjson.com/users/add', {
-      ...userData,
-      avatar: userData.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=John'
-    });
-    return response.data;
+    try {
+      const response = await axios.post(`${API}/users/signup`, {
+        ...userData,
+        avatar: userData.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=John'
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
+    }
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user_data');
     localStorage.removeItem('user_phone');
     localStorage.removeItem('user_email');
     localStorage.removeItem('user_password');
@@ -139,9 +144,19 @@ const AuthProvider = ({ children }) => {
   };
 
   const updateUser = async (userId, updates) => {
-    // Demo update
-    setUser(prev => ({ ...prev, ...updates }));
-    return { ...updates };
+    try {
+      await axios.put(`${API}/users/${userId}`, updates);
+    } catch (error) {
+      console.error('Backend update failed, updating locally only:', error);
+    }
+
+    // Always update local state and storage
+    setUser(prev => {
+      const updatedUser = { ...prev, ...updates };
+      localStorage.setItem('user_data', JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+    return updates;
   };
 
   return (
@@ -321,7 +336,7 @@ const OrderProvider = ({ children }) => {
 // Hero Section
 const HeroSection = () => {
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-violet-900 via-indigo-900 to-purple-900">
+    <section className="relative min-h-[70vh] flex items-center overflow-hidden bg-gradient-to-br from-violet-900 via-indigo-900 to-purple-900">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-20">
         <div className="absolute top-20 left-20 w-72 h-72 bg-violet-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
@@ -329,7 +344,7 @@ const HeroSection = () => {
         <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-500"></div>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 lg:py-40">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Content */}
           <div className="text-center lg:text-left space-y-8">
@@ -389,15 +404,44 @@ const HeroSection = () => {
             </div>
           </div>
 
-          {/* Right Content - Hero Image */}
+          {/* Right Content - Hero Image Slider */}
           <div className="relative hidden lg:block">
             <div className="relative">
               <div className="absolute -inset-4 bg-gradient-to-r from-violet-500 to-indigo-500 rounded-3xl blur-2xl opacity-30"></div>
-              <img
-                src="https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=600&h=500&fit=crop"
-                alt="Modern tech products"
-                className="relative rounded-3xl shadow-2xl w-full h-[500px] object-cover"
-              />
+              <Carousel className="relative rounded-3xl shadow-2xl w-full h-[400px] overflow-hidden">
+                <CarouselContent>
+                  <CarouselItem>
+                    <img
+                      src="https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=600&h=400&fit=crop"
+                      alt="Modern tech products"
+                      className="w-full h-[400px] object-cover"
+                    />
+                  </CarouselItem>
+                  <CarouselItem>
+                    <img
+                      src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=400&fit=crop"
+                      alt="Premium watches"
+                      className="w-full h-[400px] object-cover"
+                    />
+                  </CarouselItem>
+                  <CarouselItem>
+                    <img
+                      src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=400&fit=crop"
+                      alt="Audio equipment"
+                      className="w-full h-[400px] object-cover"
+                    />
+                  </CarouselItem>
+                  <CarouselItem>
+                    <img
+                      src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&h=400&fit=crop"
+                      alt="Fashion items"
+                      className="w-full h-[400px] object-cover"
+                    />
+                  </CarouselItem>
+                </CarouselContent>
+                <CarouselPrevious className="left-4" />
+                <CarouselNext className="right-4" />
+              </Carousel>
             </div>
             {/* Floating Cards */}
             <div className="absolute -left-8 top-20 bg-white rounded-2xl p-4 shadow-xl animate-bounce-slow">
@@ -1032,6 +1076,8 @@ function App() {
                   <Route path="/payment" element={<Payment />} />
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/vendor" element={<Vendor />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="*" element={<Home />} />
                 </Routes>

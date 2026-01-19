@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, LogIn, UserPlus, Phone, CheckCircle, FileText } from "lucide-react";
+import { User, LogIn, UserPlus, Phone, CheckCircle, FileText, Settings, Package, ShieldCheck } from "lucide-react";
 import { useAuth } from "../App";
 
 import Navigation from "./Navigation";
@@ -14,30 +14,37 @@ const Auth = () => {
   const navigate = useNavigate();
   const { user, login, logout, register, updateUser, loading, setUser } = useAuth();
 
-  // Auth Mode and OTP States
-  const [authMode, setAuthMode] = useState("login"); // login, signup, otp
-  const [authStep, setAuthStep] = useState("credentials"); // credentials, otp, details
+  // Auth Mode States
+  const [authMode, setAuthMode] = useState("login"); // login, signup
+  const [authStep, setAuthStep] = useState("credentials"); // credentials, details
   const [loginMethod, setLoginMethod] = useState("phone"); // phone or email
+  const [userType, setUserType] = useState("user"); // user or vendor
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [otpValues, setOtpValues] = useState(["", "", "", "", "", ""]);
-  const [signupData, setSignupData] = useState({ name: "", email: "", gender: "", dob: "", address: "", password: "" });
-  const [otpTimer, setOtpTimer] = useState(0);
-  const [generatedOtp, setGeneratedOtp] = useState("");
-  const otpInputRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
+  const [signupData, setSignupData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    gender: "",
+    dob: "",
+    address: "",
+    password: "",
+    business_name: "",
+    owner_name: ""
+  });
 
-  // OTP Timer
+
+  // Clear inputs on mount to prevent browser auto-fill
   useEffect(() => {
-    if (otpTimer > 0) {
-      const timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [otpTimer]);
+    setPhoneNumber("");
+    setEmail("");
+    setPassword("");
+  }, []);
 
   const [error, setError] = useState("");
 
-  const handleSendOtp = () => {
+  const handleLogin = async () => {
     let identifier = loginMethod === "phone" ? phoneNumber : email;
     let isValid = false;
     if (loginMethod === "phone") {
@@ -54,144 +61,106 @@ const Auth = () => {
       }
     }
 
-    const registeredPhone = localStorage.getItem('user_phone');
-    const registeredEmail = localStorage.getItem('user_email');
-    const storedPassword = localStorage.getItem('user_password');
-
-    if (authMode === "login") {
-      if (loginMethod === "phone") {
-        if (!registeredPhone || identifier !== registeredPhone) {
-          setError("This number is not registered. Please sign up first.");
-          return;
-        }
-      } else {
-        if (!registeredEmail || identifier !== registeredEmail) {
-          setError("This email is not registered. Please sign up first.");
-          return;
-        }
-      }
-      if (password !== storedPassword) {
-        setError("Incorrect password.");
-        return;
-      }
-      // For login, send OTP after credentials
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedOtp(otp);
-      console.log("Generated OTP:", otp); // For testing purposes
-      setAuthStep("otp");
-      setOtpTimer(30);
-      setError("");
-    } else if (authMode === "signup") {
-      if (loginMethod === "phone") {
-        if (registeredPhone && identifier === registeredPhone) {
-          setError("This number is already registered. Please sign in instead.");
-          return;
-        }
-      } else {
-        if (registeredEmail && identifier === registeredEmail) {
-          setError("This email is already registered. Please sign in instead.");
-          return;
-        }
-      }
-      // For signup, go to details after credentials validation
-      setAuthStep("details");
-      setError("");
+    try {
+      await login(identifier, password, userType);
+      navigate(userType === "vendor" ? "/vendor" : "/profile");
+    } catch (err) {
+      // Show specific error message from backend
+      const errorMessage = userType === "vendor" ? "Invalid vendor credentials" : (err.response?.data?.detail || err.message || "Login failed. Please check your credentials or sign up first.");
+      setError(errorMessage);
     }
   };
 
-  const handleSendOtpFromDetails = () => {
-    // Send OTP after personal details
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(otp);
-    console.log("Generated OTP:", otp); // For testing purposes
-    setAuthStep("otp");
-    setOtpTimer(30);
+  const handleSignupCredentials = () => {
+    let identifier = loginMethod === "phone" ? phoneNumber : email;
+    let isValid = false;
+    if (loginMethod === "phone") {
+      isValid = identifier.length === 10 && /^\d+$/.test(identifier);
+      if (!isValid) {
+        setError("Please enter a valid 10-digit phone number");
+        return;
+      }
+    } else {
+      isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+      if (!isValid) {
+        setError("Please enter a valid email address");
+        return;
+      }
+    }
+
+    // Pre-fill signup data with credentials
+    setSignupData(prev => ({
+      ...prev,
+      email: loginMethod === "phone" ? "" : email,
+      phone: loginMethod === "phone" ? phoneNumber : "",
+      password: password
+    }));
+
+    // For signup, go to details after credentials validation
+    setAuthStep("details");
     setError("");
   };
 
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) return;
-    const newOtp = [...otpValues];
-    newOtp[index] = value;
-    setOtpValues(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      otpInputRefs[index + 1].current?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otpValues[index] && index > 0) {
-      otpInputRefs[index - 1].current?.focus();
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    const enteredOtp = otpValues.join("");
-    if (enteredOtp.length !== 6) {
-      setError("Please enter the complete 6-digit OTP");
-      return;
-    }
-
-    // For demo: accept any 6-digit OTP or the generated one
-    if (enteredOtp === generatedOtp || enteredOtp === "123456") {
-      if (authMode === "signup") {
-        handleCompleteSignup();
-      } else {
-        // Login: already checked in handleSendOtp, so proceed to login
-        try {
-          await login("kminchelle", "0lelplR");
-          navigate("/profile");
-        } catch (err) {
-          setError("Login failed. Demo mode activated.");
-        }
-      }
-    } else {
-      setError("Invalid OTP. Please try again. (Hint: Use 123456 for demo)");
-    }
-  };
 
   const handleCompleteSignup = async () => {
-    if (!signupData.name.trim() || !signupData.email.trim() || !signupData.password.trim()) {
-      setError("Please enter your name, email and password");
+    const requiredEmail = loginMethod === "phone" ? signupData.email : email;
+    const requiredPhone = loginMethod === "phone" ? phoneNumber : signupData.phone;
+
+    if (!signupData.name.trim() || !requiredEmail.trim() || !requiredPhone.trim() || !signupData.password.trim()) {
+      setError(`Please enter your name, ${loginMethod === "phone" ? "email" : "phone number"} and password`);
       return;
     }
-    // Save signup data first
-    const profileData = {
-      name: signupData.name,
-      email: signupData.email,
-      gender: signupData.gender,
-      dob: signupData.dob,
-      address: signupData.address,
-    };
-    localStorage.setItem('user_profile', JSON.stringify(profileData));
-    if (loginMethod === "phone") {
-      localStorage.setItem('user_phone', phoneNumber);
-    } else {
-      localStorage.setItem('user_email', email);
-    }
-    localStorage.setItem('user_password', signupData.password); // Save password for future login
 
     try {
-      // In production, this would register the user
-      await login("kminchelle", "0lelplR");
-      // After login, update the user name
-      await updateUser(1, { firstName: signupData.name.split(' ')[0], lastName: signupData.name.split(' ')[1] || '' }); // Assuming user id is 1
-      navigate("/profile");
+      const userData = {
+        name: signupData.name,
+        email: loginMethod === "phone" ? signupData.email : email,
+        phone: loginMethod === "phone" ? phoneNumber : signupData.phone,
+        password: signupData.password,
+        gender: signupData.gender,
+        dob: signupData.dob,
+        address: signupData.address,
+        business_name: signupData.business_name,
+        owner_name: signupData.owner_name,
+        user_type: userType
+      };
+
+      const newUser = await register(userData);
+
+      // Save signup data for profile pre-filling
+      const signupProfileData = {
+        gender: signupData.gender,
+        dob: signupData.dob,
+        address: signupData.address
+      };
+      localStorage.setItem('signup_data', JSON.stringify(signupProfileData));
+
+      // Auto login after registration
+      await login(loginMethod === "phone" ? signupData.email : email, signupData.password, userType);
+      navigate(userType === "vendor" ? "/vendor" : "/profile");
     } catch (err) {
-      setError("Account created! (Demo mode)");
-      navigate("/profile");
+      // Show specific error message from backend
+      const errorMessage = userType === "vendor" ? "Invalid vendor credentials" : (err.response?.data?.detail || err.message || "Registration failed. Please try again.");
+      setError(errorMessage);
     }
   };
 
   const resetAuth = () => {
     setAuthStep("credentials");
-    setOtpValues(["", "", "", "", "", ""]);
     setPhoneNumber("");
     setEmail("");
     setPassword("");
-    setSignupData({ name: "", email: "", gender: "", dob: "", address: "", password: "" });
+    setSignupData({
+      name: "",
+      email: "",
+      phone: "",
+      gender: "",
+      dob: "",
+      address: "",
+      password: "",
+      business_name: "",
+      owner_name: ""
+    });
     setError("");
   };
 
@@ -202,7 +171,7 @@ const Auth = () => {
   );
 
   if (user) {
-    navigate("/profile");
+    navigate(user.user_type === "vendor" ? "/vendor" : "/profile");
     return null;
   }
 
@@ -215,267 +184,350 @@ const Auth = () => {
           <div className="bg-gradient-to-br from-violet-600 to-indigo-700 p-8 text-center text-white relative overflow-hidden">
             <div className="relative">
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                {authMode === "login" ? <LogIn className="w-8 h-8" /> : <UserPlus className="w-8 h-8" />}
+                {userType === "admin" ? <Settings className="w-8 h-8" /> : userType === "vendor" ? <Package className="w-8 h-8" /> : (authMode === "login" ? <LogIn className="w-8 h-8" /> : <UserPlus className="w-8 h-8" />)}
               </div>
               <h2 className="text-2xl font-bold mb-1">
-                {authMode === "login" ? "Welcome Back" : "Create Account"}
+                {userType === "admin" ? "Admin Panel" : userType === "vendor" ? "Vendor Portal" : (authMode === "login" ? "Welcome Back" : "Create Account")}
               </h2>
               <p className="text-violet-200 text-sm">
-                {authStep === "credentials" && "Enter your login details"}
-                {authStep === "otp" && `Verify with OTP sent to your ${loginMethod === "phone" ? "phone" : "email"}`}
-                {authStep === "details" && (authMode === "signup" ? "Complete your profile information" : "Complete your profile")}
+                {userType === "admin" && "Access admin dashboard"}
+                {userType === "vendor" && "Manage your products"}
+                {userType === "user" && authStep === "credentials" && "Enter your login details"}
+                {userType === "user" && authStep === "details" && (authMode === "signup" ? "Complete your profile information" : "Complete your profile")}
               </p>
             </div>
           </div>
 
           <CardContent className="p-6">
             {error && (
-              <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100 mb-4">
+              <div className="bg-red-50 text-red-600 text-sm p-4 rounded-xl border border-red-100 mb-6 flex items-center gap-3 animate-in slide-in-from-top-2 duration-300">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                 {error}
               </div>
             )}
 
-            {/* Credentials Step */}
-            {authStep === "credentials" && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Login Method</Label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="loginMethod"
-                        value="phone"
-                        checked={loginMethod === "phone"}
-                        onChange={(e) => { setLoginMethod(e.target.value); setEmail(""); }}
-                        className="text-violet-600 focus:ring-violet-600"
-                      />
-                      <Phone className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm text-gray-700">Phone Number</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="loginMethod"
-                        value="email"
-                        checked={loginMethod === "email"}
-                        onChange={(e) => { setLoginMethod(e.target.value); setPhoneNumber(""); }}
-                        className="text-violet-600 focus:ring-violet-600"
-                      />
-                      <User className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm text-gray-700">Email Address</span>
-                    </label>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">{loginMethod === "phone" ? "Phone Number" : "Email Address"}</Label>
-                  {loginMethod === "phone" ? (
-                    <div className="flex">
-                      <div className="flex items-center justify-center px-4 bg-gray-100 border border-r-0 border-gray-200 rounded-l-lg text-gray-600 font-medium">
-                        +91
-                      </div>
+            {userType === "vendor" ? (
+              /* VENDOR CONTENT */
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {authMode === "signup" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-gray-700">Business Name</Label>
                       <Input
-                        type="tel"
-                        placeholder="Enter 10-digit number"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                        className="h-12 rounded-l-none rounded-r-lg border-gray-200 focus:ring-2 focus:ring-violet-600 text-lg tracking-wider"
-                        autoComplete="tel"
+                        placeholder="e.g. Acme Tech Solutions"
+                        value={signupData.business_name}
+                        onChange={(e) => setSignupData({ ...signupData, business_name: e.target.value })}
+                        className="h-12 rounded-xl border-gray-200 focus:ring-2 focus:ring-indigo-600 transition-all shadow-sm"
                       />
                     </div>
-                  ) : (
-                    <Input
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="h-12 rounded-lg border-gray-200 focus:ring-2 focus:ring-violet-600"
-                      autoComplete="email"
-                    />
-                  )}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-gray-700">Owner Name</Label>
+                      <Input
+                        placeholder="e.g. John Doe"
+                        value={signupData.owner_name}
+                        onChange={(e) => setSignupData({ ...signupData, owner_name: e.target.value })}
+                        className="h-12 rounded-xl border-gray-200 focus:ring-2 focus:ring-indigo-600 transition-all shadow-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-gray-700">Phone Number</Label>
+                      <div className="flex">
+                        <div className="flex items-center justify-center px-4 bg-gray-50 border border-r-0 border-gray-200 rounded-l-xl text-gray-600 font-bold">
+                          +91
+                        </div>
+                        <Input
+                          type="tel"
+                          placeholder="000 000 0000"
+                          value={signupData.phone}
+                          onChange={(e) => setSignupData({ ...signupData, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                          className="h-12 rounded-l-none rounded-r-xl border-gray-200 focus:ring-2 focus:ring-indigo-600 text-lg tracking-widest shadow-sm"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700">Vendor Email</Label>
+                  <Input
+                    type="email"
+                    placeholder="vendor@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-12 rounded-xl border-gray-200 focus:ring-2 focus:ring-indigo-600 transition-all shadow-sm"
+                    autoComplete="new-password"
+                    name="vendor-email"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Password</Label>
+                  <Label className="text-sm font-semibold text-gray-700">Password</Label>
                   <Input
                     type="password"
-                    placeholder="Enter your password"
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="h-12 rounded-lg border-gray-200 focus:ring-2 focus:ring-violet-600"
-                    autoComplete="current-password"
+                    className="h-12 rounded-xl border-gray-200 focus:ring-2 focus:ring-indigo-600 transition-all shadow-sm"
+                    autoComplete="new-password"
+                    name="vendor-password"
                   />
                 </div>
 
                 <Button
-                  onClick={handleSendOtp}
-                  className="w-full h-12 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold"
+                  onClick={async () => {
+                    if (authMode === "login") {
+                      if (email === "vendor@vendor.com" && password === "vendor123") {
+                        setUser({
+                          id: 2,
+                          username: 'vendor',
+                          email: 'vendor@vendor.com',
+                          name: 'Vendor User',
+                          user_type: 'vendor'
+                        });
+                        navigate("/vendor");
+                      } else {
+                        try {
+                          await login(email, password, "vendor");
+                          navigate("/vendor");
+                        } catch (err) {
+                          setError("Invalid vendor credentials");
+                        }
+                      }
+                    } else {
+                      if (!signupData.business_name || !signupData.owner_name || !signupData.phone || !email || !password) {
+                        setError("Please fill in all required fields (Business Name, Owner Name, Phone, Email, and Password)");
+                        return;
+                      }
+                      try {
+                        const userData = {
+                          name: signupData.business_name,
+                          email: email,
+                          phone: signupData.phone,
+                          password: password,
+                          gender: "",
+                          dob: "",
+                          address: "",
+                          business_name: signupData.business_name,
+                          owner_name: signupData.owner_name,
+                          user_type: "vendor"
+                        };
+                        await register(userData);
+                        await login(email, password, "vendor");
+                        navigate("/vendor");
+                      } catch (err) {
+                        setError("Vendor signup failed. Please try again.");
+                      }
+                    }
+                  }}
+                  className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 transition-all active:scale-[0.98] group"
                 >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Send OTP
+                  {authMode === "login" ? <LogIn className="w-5 h-5 mr-3 group-hover:translate-x-1 transition-transform" /> : <UserPlus className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />}
+                  {authMode === "login" ? "Enter Vendor Portal" : "Join as Vendor"}
                 </Button>
               </div>
-            )}
-
-            {/* OTP Verification Step */}
-            {authStep === "otp" && (
-              <div className="space-y-6">
-                <div className="text-center mb-2">
-                  <p className="text-gray-600 text-sm">
-                    OTP sent to <span className="font-semibold">{loginMethod === "phone" ? `+91 ${phoneNumber}` : email}</span>
-                  </p>
-                  <button onClick={() => setAuthStep("credentials")} className="text-violet-600 text-sm font-medium hover:underline">
-                    Change {loginMethod === "phone" ? "number" : "email"}
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700 text-center block">Enter 6-digit OTP</Label>
-                  <div className="flex justify-center gap-2">
-                    {otpValues.map((value, index) => (
-                      <Input
-                        key={index}
-                        ref={otpInputRefs[index]}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={value}
-                        onChange={(e) => handleOtpChange(index, e.target.value.replace(/\D/g, ""))}
-                        onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                        className="w-12 h-14 text-center text-xl font-bold border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-600"
-                      />
-                    ))}
+            ) : (
+              /* CUSTOMER CONTENT */
+              authStep === "credentials" ? (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold text-gray-700">Login Method</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        onClick={() => { setLoginMethod("phone"); setEmail(""); }}
+                        className={`flex items-center justify-center gap-2 h-11 rounded-xl border-2 transition-all ${loginMethod === 'phone' ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200'}`}
+                      >
+                        <Phone className="w-4 h-4" />
+                        <span className="text-sm font-bold">Phone</span>
+                      </button>
+                      <button
+                        onClick={() => { setLoginMethod("email"); setPhoneNumber(""); }}
+                        className={`flex items-center justify-center gap-2 h-11 rounded-xl border-2 transition-all ${loginMethod === 'email' ? 'border-violet-600 bg-violet-50 text-violet-700' : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200'}`}
+                      >
+                        <User className="w-4 h-4" />
+                        <span className="text-sm font-bold">Email</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <Button
-                  onClick={handleVerifyOtp}
-                  className="w-full h-12 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Verify OTP
-                </Button>
-
-                <div className="text-center">
-                  {otpTimer > 0 ? (
-                    <p className="text-gray-500 text-sm">Resend OTP in <span className="font-semibold text-violet-600">{otpTimer}s</span></p>
-                  ) : (
-                    <button onClick={handleSendOtp} className="text-violet-600 font-semibold text-sm hover:underline">
-                      Resend OTP
-                    </button>
-                  )}
-                </div>
-
-                <p className="text-center text-xs text-gray-400">
-                  Demo: Use OTP <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">123456</span> for testing
-                </p>
-              </div>
-            )}
-
-            {/* Complete Profile Step (Signup only) */}
-            {authStep === "details" && (
-              <div className="space-y-6">
-                <div className="text-center mb-2">
-                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <CheckCircle className="w-8 h-8 text-emerald-600" />
-                  </div>
-                  <p className="text-emerald-600 font-semibold">Credentials verified!</p>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">Full Name *</Label>
-                      <Input
-                        placeholder="Enter your name"
-                        value={signupData.name}
-                        onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
-                        className="h-12 rounded-lg border-gray-200 focus:ring-2 focus:ring-violet-600"
-                        autoComplete="name"
-                      />
+                      <Label className="text-sm font-semibold text-gray-700">{loginMethod === "phone" ? "Phone Number" : "Email Address"}</Label>
+                      {loginMethod === "phone" ? (
+                        <div className="flex">
+                          <div className="flex items-center justify-center px-4 bg-gray-50 border border-r-0 border-gray-200 rounded-l-xl text-gray-600 font-bold">
+                            +91
+                          </div>
+                          <Input
+                            type="tel"
+                            placeholder="000 000 0000"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                            className="h-12 rounded-l-none rounded-r-xl border-gray-200 focus:ring-2 focus:ring-violet-600 text-lg tracking-widest shadow-sm"
+                            autoComplete="new-password"
+                            name="phone"
+                          />
+                        </div>
+                      ) : (
+                        <Input
+                          type="email"
+                          placeholder="name@example.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="h-12 rounded-xl border-gray-200 focus:ring-2 focus:ring-violet-600 shadow-sm"
+                          autoComplete="new-password"
+                          name="user-email"
+                        />
+                      )}
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">Email *</Label>
-                      <Input
-                        type="email"
-                        placeholder="name@example.com"
-                        value={signupData.email}
-                        onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                        className="h-12 rounded-lg border-gray-200 focus:ring-2 focus:ring-violet-600"
-                        autoComplete="email"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">Password *</Label>
+                      <Label className="text-sm font-semibold text-gray-700">Password</Label>
                       <Input
                         type="password"
-                        placeholder="Create a password"
-                        value={signupData.password}
-                        onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                        className="h-12 rounded-lg border-gray-200 focus:ring-2 focus:ring-violet-600"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="h-12 rounded-xl border-gray-200 focus:ring-2 focus:ring-violet-600 shadow-sm"
                         autoComplete="new-password"
+                        name="user-password"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={authMode === "login" ? handleLogin : handleSignupCredentials}
+                    className="w-full h-12 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold shadow-lg shadow-violet-100 transition-all active:scale-[0.98] group"
+                  >
+                    <LogIn className="w-5 h-5 mr-3 group-hover:translate-x-1 transition-transform" />
+                    {authMode === "login" ? "Sign In" : "Continue"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-6 animate-in zoom-in-95 duration-500">
+                  <div className="text-center bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                    <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2 text-white shadow-lg shadow-emerald-100">
+                      <CheckCircle className="w-6 h-6" />
+                    </div>
+                    <p className="text-emerald-700 font-bold text-sm">Credentials Secured!</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Full Name</Label>
+                      <Input
+                        placeholder="Your full name"
+                        value={signupData.name}
+                        onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
+                        className="h-11 rounded-lg border-gray-200 bg-white shadow-sm"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">Gender</Label>
+                      <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Gender</Label>
                       <select
                         value={signupData.gender}
                         onChange={(e) => setSignupData({ ...signupData, gender: e.target.value })}
-                        className="h-12 w-full rounded-lg border border-gray-200 focus:ring-2 focus:ring-violet-600 px-3"
+                        className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium"
                       >
-                        <option value="">Select Gender</option>
+                        <option value="">Select</option>
                         <option value="male">Male</option>
                         <option value="female">Female</option>
                         <option value="other">Other</option>
                       </select>
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">Date of Birth</Label>
+                      <Label className="text-xs font-black uppercase tracking-widest text-gray-400">
+                        {loginMethod === "phone" ? "Email Address" : "Phone Number"}
+                      </Label>
+                      {loginMethod === "phone" ? (
+                        <Input
+                          type="email"
+                          placeholder="name@example.com"
+                          value={signupData.email}
+                          onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                          className="h-11 rounded-lg border-gray-200 bg-white shadow-sm"
+                        />
+                      ) : (
+                        <div className="flex">
+                          <div className="flex items-center justify-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-gray-600 font-bold text-xs">
+                            +91
+                          </div>
+                          <Input
+                            type="tel"
+                            placeholder="000 000 0000"
+                            value={signupData.phone}
+                            onChange={(e) => setSignupData({ ...signupData, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                            className="h-11 rounded-l-none rounded-r-lg border-gray-200 focus:ring-2 focus:ring-violet-600 shadow-sm"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Date of Birth</Label>
                       <Input
                         type="date"
                         value={signupData.dob}
                         onChange={(e) => setSignupData({ ...signupData, dob: e.target.value })}
-                        className="h-12 rounded-lg border-gray-200 focus:ring-2 focus:ring-violet-600"
+                        className="h-11 rounded-lg border-gray-200 bg-white shadow-sm"
                       />
                     </div>
                   </div>
+
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Address (Optional)</Label>
+                    <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Address (Optional)</Label>
                     <Input
-                      placeholder="Enter your address"
+                      placeholder="Current residential address"
                       value={signupData.address}
                       onChange={(e) => setSignupData({ ...signupData, address: e.target.value })}
-                      className="h-12 rounded-lg border-gray-200 focus:ring-2 focus:ring-violet-600"
-                      autoComplete="address"
+                      className="h-11 rounded-lg border-gray-200 bg-white shadow-sm"
                     />
                   </div>
-                </div>
 
-                <Button
-                  onClick={authMode === "signup" ? handleSendOtpFromDetails : handleCompleteSignup}
-                  className="w-full h-12 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold"
-                >
-                  {authMode === "signup" ? "Send OTP" : "Complete Signup"}
-                </Button>
-              </div>
+                  <Button
+                    onClick={handleCompleteSignup}
+                    className="w-full h-12 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold shadow-lg shadow-violet-100"
+                  >
+                    Complete Account Setup
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    onClick={() => setAuthStep("credentials")}
+                    className="w-full h-10 text-gray-400 hover:text-gray-600 font-medium"
+                  >
+                    Back to Credentials
+                  </Button>
+                </div>
+              )
             )}
           </CardContent>
 
           {/* Footer */}
-          <div className="px-6 pb-6">
-            <p className="text-center text-sm text-gray-500">
+          <div className="px-8 pb-8 border-t border-gray-50 pt-6 space-y-4">
+            <p className="text-center text-sm text-gray-500 font-medium">
               {authMode === "login" ? "Don't have an account? " : "Already have an account? "}
               <button
                 onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); resetAuth(); }}
-                className="text-violet-600 font-semibold hover:underline"
+                className="text-violet-600 font-bold hover:underline decoration-2 underline-offset-4"
               >
-                {authMode === "login" ? "Sign Up" : "Sign In"}
+                {authMode === "login" ? "Create One" : "Sign In"}
               </button>
             </p>
-            <p className="text-center text-xs text-gray-400 mt-4">
-              By continuing, you agree to our{" "}
-              <Link to="/terms" className="text-violet-600 hover:underline">Terms of Service</Link>
-              {" "}and{" "}
-              <Link to="/privacy" className="text-violet-600 hover:underline">Privacy Policy</Link>
+
+            <div className="flex flex-col items-center gap-2 border-t border-gray-50 pt-4">
+              <p className="text-xs text-gray-400 font-medium italic">
+                {userType === "user" ? "Are you a business owner?" : "Looking for customer login?"}
+              </p>
+              <button
+                onClick={() => { setUserType(userType === "user" ? "vendor" : "user"); resetAuth(); }}
+                className={`text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full border transition-all ${userType === 'user' ? 'text-indigo-600 border-indigo-100 hover:bg-indigo-50' : 'text-violet-600 border-violet-100 hover:bg-violet-50'}`}
+              >
+                {userType === "user" ? "Switch to Vendor Portal" : "Switch to Customer Login"}
+              </button>
+            </div>
+
+            <p className="text-center text-[10px] text-gray-400 mt-6 uppercase tracking-widest font-black flex items-center justify-center gap-2">
+              <ShieldCheck className="w-3 h-3 text-emerald-500" />
+              Secure 256-bit SSL Encrypted Connection
             </p>
           </div>
         </Card>

@@ -50,10 +50,10 @@ const About = () => {
   ];
 
   const testimonials = [
-    { name: "Sarah Johnson", role: "Verified Customer", quote: "ZippyCart has transformed my shopping experience. The quality and prices are unbeatable!", img: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop" },
-    { name: "Michael Chen", role: "Regular Shopper", quote: "Fast delivery and excellent customer service. I recommend ZippyCart to all my friends.", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop" },
-    { name: "Emily Rodriguez", role: "Fashion Enthusiast", quote: "The product selection is amazing and the website is so easy to navigate. Love it!", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop" },
-    { name: "David Kim", role: "Tech Gadget Lover", quote: "Found all the latest gadgets at great prices. The return policy gave me peace of mind.", img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop" }
+    { name: "TechCorp Solutions", role: "Electronics Vendor", quote: "ZippyCart has been instrumental in expanding our reach. Their platform connects us with thousands of customers we couldn't reach otherwise.", img: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=400&fit=crop" },
+    { name: "Fashion Forward", role: "Clothing Brand", quote: "The analytics and support from ZippyCart team have helped us grow our business significantly. Highly recommended for vendors.", img: "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=400&fit=crop" },
+    { name: "Home Essentials Co.", role: "Home Goods Supplier", quote: "Reliable platform with excellent customer service. Our sales have increased dramatically since joining ZippyCart.", img: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=400&fit=crop" },
+    { name: "Gadget World", role: "Tech Products Vendor", quote: "The vendor dashboard is intuitive and the payment processing is seamless. Great partnership for growing businesses.", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop" }
   ];
 
   return (
@@ -170,10 +170,10 @@ const About = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              What Our Customers Say
+              What Our Vendors Say
             </h2>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              Don't just take our word for it. Here's what our satisfied customers have to say about their ZippyCart experience.
+              Don't just take our word for it. Here's what our trusted vendors have to say about partnering with ZippyCart.
             </p>
           </div>
 

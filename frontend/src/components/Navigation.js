@@ -158,7 +158,7 @@ const Navigation = () => {
               alt="ZippyCart Logo"
               className="w-40 h-40 object-contain"
             />
-            
+
           </Link>
 
           {/* Desktop Navigation */}
@@ -329,26 +329,24 @@ const Navigation = () => {
                 )}
               </Button>
             </Link>
-            {user ? (
-              <Link to="/profile">
-                <Avatar className="w-9 h-9 border-2 border-transparent hover:border-violet-600 transition-all cursor-pointer">
-                  <AvatarImage src={user.avatar} />
-                  <AvatarFallback className="bg-violet-100 text-violet-600 font-bold text-sm">
-                    {user.name?.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-              </Link>
-            ) : (
-              <Link to="/auth">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-gray-600 hover:bg-gray-100"
-                >
+            <Link to={user ? (user.user_type === "vendor" ? "/vendor" : "/profile") : "/auth"}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-gray-600 hover:bg-gray-100"
+              >
+                {user ? (
+                  <Avatar className="w-5 h-5">
+                    <AvatarImage src={user.avatar} />
+                    <AvatarFallback className="bg-violet-100 text-violet-600 text-xs">
+                      {user.name?.charAt(0)?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
                   <User className="w-5 h-5" />
-                </Button>
-              </Link>
-            )}
+                )}
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile Actions */}
@@ -450,12 +448,21 @@ const Navigation = () => {
                 )}
               </Link>
               <Link
-                to={user ? '/profile' : '/auth'}
+                to={user ? (user.user_type === "vendor" ? "/vendor" : "/profile") : "/auth"}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 text-gray-700 hover:text-violet-600 bg-gray-50 rounded-lg transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <User className="w-4 h-4" />
-                <span className="text-sm font-medium">{user ? 'Profile' : 'Sign In'}</span>
+                {user ? (
+                  <Avatar className="w-4 h-4">
+                    <AvatarImage src={user.avatar} />
+                    <AvatarFallback className="bg-violet-100 text-violet-600 text-xs">
+                      {user.name?.charAt(0)?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <User className="w-4 h-4" />
+                )}
+                <span className="text-sm font-medium">{user ? (user.user_type === "vendor" ? "Vendor" : "Profile") : "Login"}</span>
               </Link>
             </div>
           </div>
