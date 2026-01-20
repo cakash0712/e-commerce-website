@@ -6,18 +6,21 @@ import {
   CheckCircle,
   Globe,
   Zap,
-  Package,
   ArrowRight,
   Users,
   Award,
   Truck,
   Headphones,
-  Star
+  Star,
+  Package,
+  Clock,
+  MapPin
 } from "lucide-react";
 
 import Navigation from "./Navigation";
 import Footer from "./Footer";
 
+// About Page - Professional Formal Violet Style
 const About = () => {
   const stats = [
     { number: "50K+", label: "Happy Customers", icon: Users },
@@ -30,30 +33,30 @@ const About = () => {
     {
       icon: Shield,
       title: "Quality Assurance",
-      description: "Every product undergoes rigorous quality checks before reaching you. We stand behind everything we sell."
-    },
-    {
-      icon: Heart,
-      title: "Customer First",
-      description: "Your satisfaction is our priority. We're committed to providing an exceptional shopping experience."
+      description: "Every product undergoes rigorous quality checks before reaching you."
     },
     {
       icon: Truck,
       title: "Fast Delivery",
-      description: "Quick and reliable shipping to your doorstep. Track your orders in real-time."
+      description: "Quick and reliable shipping to your doorstep across India."
+    },
+    {
+      icon: Heart,
+      title: "Customer First",
+      description: "Your satisfaction is our priority with hassle-free returns."
     },
     {
       icon: Zap,
       title: "Best Prices",
-      description: "We work directly with manufacturers to bring you the best prices without compromising quality."
+      description: "We work directly with manufacturers for the best prices."
     }
   ];
 
-  const testimonials = [
-    { name: "TechCorp Solutions", role: "Electronics Vendor", quote: "ZippyCart has been instrumental in expanding our reach. Their platform connects us with thousands of customers we couldn't reach otherwise.", img: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=400&fit=crop" },
-    { name: "Fashion Forward", role: "Clothing Brand", quote: "The analytics and support from ZippyCart team have helped us grow our business significantly. Highly recommended for vendors.", img: "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=400&fit=crop" },
-    { name: "Home Essentials Co.", role: "Home Goods Supplier", quote: "Reliable platform with excellent customer service. Our sales have increased dramatically since joining ZippyCart.", img: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=400&fit=crop" },
-    { name: "Gadget World", role: "Tech Products Vendor", quote: "The vendor dashboard is intuitive and the payment processing is seamless. Great partnership for growing businesses.", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop" }
+  const milestones = [
+    { year: "2018", title: "Company Founded", desc: "Started with a vision to make quality products accessible" },
+    { year: "2020", title: "10K+ Customers", desc: "Reached our first major customer milestone" },
+    { year: "2022", title: "Pan-India Delivery", desc: "Expanded delivery to all major cities" },
+    { year: "2024", title: "50K+ Customers", desc: "Celebrating 50,000+ happy customers" },
   ];
 
   return (
@@ -61,169 +64,169 @@ const About = () => {
       <Navigation />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-violet-50 to-white border-b border-violet-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 bg-violet-100 text-violet-600 px-4 py-2 rounded-full text-sm font-semibold mb-6">
-              <Globe className="w-4 h-4" />
-              About Us
-            </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-6 tracking-tight">
-              Redefining Online <span className="text-violet-600">Shopping</span>
+      <section className="relative bg-white pt-20 overflow-hidden">
+        <div className="absolute top-0 right-0 w-1/3 h-full bg-violet-50 skew-x-[-20deg] translate-x-1/2 -z-10" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+          <div className="max-w-3xl">
+            <nav className="text-sm text-gray-400 mb-6">
+              <Link to="/" className="hover:text-violet-600">Home</Link>
+              <span className="mx-2">›</span>
+              <span className="text-gray-900 font-medium">About Us</span>
+            </nav>
+            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+              Elevating the Future of <br />
+              <span className="text-violet-600">Digital Commerce</span>
             </h1>
-            <p className="text-gray-600 text-lg md:text-xl leading-relaxed max-w-2xl mx-auto">
-              We're more than just an e-commerce platform. We're your trusted partner in finding quality products at amazing prices.
+            <p className="text-xl text-gray-500 mb-10 leading-relaxed max-w-2xl">
+              We're dedicated to bridging the gap between quality products and conscious consumers through a seamless, brand-focused shopping experience.
             </p>
+            <div className="flex flex-wrap gap-4">
+              <Link to="/shop">
+                <Button className="bg-violet-600 hover:bg-violet-700 text-white font-bold px-10 h-14 rounded-xl text-lg shadow-lg shadow-violet-200">
+                  Explore Products <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
+              <Link to="/contact">
+                <Button variant="outline" className="border-gray-200 text-gray-600 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 px-10 h-14 rounded-xl text-lg">
+                  Learn More
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-white border-b border-gray-100">
+      <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {stats.map((stat, i) => (
-              <div key={i} className="text-center p-6 rounded-2xl bg-gray-50 hover:bg-violet-50 transition-colors">
-                <div className="w-14 h-14 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <div key={i} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow">
+                <div className="w-14 h-14 bg-violet-100 rounded-2xl flex items-center justify-center text-violet-600 mx-auto mb-6">
                   <stat.icon className="w-7 h-7" />
                 </div>
-                <h3 className="text-3xl font-bold text-gray-900 mb-1">{stat.number}</h3>
-                <p className="text-sm text-gray-500 font-medium">{stat.label}</p>
+                <h3 className="text-3xl font-bold text-gray-900 mb-2">{stat.number}</h3>
+                <p className="text-gray-500 font-medium">{stat.label}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Our Story */}
-      <section className="py-20 md:py-32">
+      {/* Story Section */}
+      <section className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="relative">
-              <img
-                src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=600&fit=crop"
-                alt="Our Office"
-                className="rounded-2xl shadow-2xl"
-              />
-              <div className="absolute -bottom-6 -right-6 bg-violet-600 text-white p-6 rounded-2xl shadow-xl hidden md:block">
-                <p className="text-3xl font-bold">6+</p>
-                <p className="text-sm opacity-90">Years of Excellence</p>
+              <div className="aspect-square bg-violet-600 rounded-[3rem] overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80"
+                  alt="Team collaboration"
+                  className="w-full h-full object-cover mix-blend-multiply opacity-80"
+                />
               </div>
+              <div className="absolute -bottom-8 -right-8 w-64 h-64 bg-violet-100 rounded-full blur-3xl -z-10" />
             </div>
-            <div className="space-y-6">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
+            <div className="space-y-8">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-violet-100 text-violet-600 text-sm font-bold uppercase tracking-wider">
                 Our Story
+              </div>
+              <h2 className="text-3xl md:text-5xl font-bold text-gray-900">
+                Driven by passion, defined by <span className="text-violet-600">purpose</span>.
               </h2>
-              <p className="text-gray-600 text-lg leading-relaxed">
-                Founded in 2018, ZippyCart began with a simple mission: make quality products accessible to everyone. What started as a small team with big dreams has grown into a trusted destination for thousands of customers.
+              <p className="text-lg text-gray-600 leading-relaxed">
+                Founded in 2018, our journey began with a simple yet powerful goal: to create a platform where quality meets convenience. We believe that everyone deserves access to authentic, high-quality products without compromise.
               </p>
-              <p className="text-gray-600 text-lg leading-relaxed">
-                We believe shopping should be enjoyable, not stressful. That's why we've built a platform that combines curated selections, competitive prices, and exceptional customer service.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-500" />
-                  <span className="text-gray-700 font-medium">Verified Products</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-500" />
-                  <span className="text-gray-700 font-medium">Secure Payments</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-500" />
-                  <span className="text-gray-700 font-medium">Easy Returns</span>
-                </div>
+              <div className="space-y-4">
+                {[
+                  "Curated selection of global brands",
+                  "Ethical sourcing and logistics",
+                  "Customer-centric return policy",
+                  "Secure and encrypted payments"
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <CheckCircle className="w-6 h-6 text-violet-600" />
+                    <span className="text-gray-700 font-medium">{item}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Our Values */}
-      <section className="py-20 bg-gray-50">
+      {/* Values Section */}
+      <section className="py-24 bg-violet-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Why Choose Us
-            </h2>
-            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              We're committed to providing the best shopping experience possible.
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">Our Core Values</h2>
+            <p className="text-violet-100 text-lg">
+              The principles that guide us every day in building a better shopping experience.
             </p>
           </div>
-
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {values.map((value, i) => (
-              <div key={i} className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-violet-200">
-                <div className="w-14 h-14 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center mb-6">
-                  <value.icon className="w-7 h-7" />
+              <div key={i} className="bg-white/10 backdrop-blur-sm p-8 rounded-2xl border border-white/10 hover:bg-white/20 transition-colors">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-6">
+                  <value.icon className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{value.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{value.description}</p>
+                <h3 className="text-xl font-bold mb-3">{value.title}</h3>
+                <p className="text-violet-100 leading-relaxed">{value.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-20 md:py-32 bg-white">
+      {/* Timeline Section */}
+      <section className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              What Our Vendors Say
-            </h2>
-            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              Don't just take our word for it. Here's what our trusted vendors have to say about partnering with ZippyCart.
-            </p>
+            <h2 className="text-3xl font-bold text-gray-900">Our Journey So Far</h2>
           </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {testimonials.map((testimonial, i) => (
-              <div key={i} className="bg-gray-50 p-6 rounded-2xl hover:bg-violet-50 transition-colors">
-                <div className="flex items-center gap-4 mb-4">
-                  <img
-                    src={testimonial.img}
-                    alt={testimonial.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div>
-                    <h4 className="text-lg font-bold text-gray-900">{testimonial.name}</h4>
-                    <p className="text-sm text-violet-600 font-medium">{testimonial.role}</p>
+          <div className="relative">
+            <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-px bg-gray-200 hidden md:block" />
+            <div className="space-y-12">
+              {milestones.map((item, i) => (
+                <div key={i} className={`flex flex-col md:flex-row items-center gap-8 ${i % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
+                  <div className="flex-1 text-center md:text-right w-full">
+                    {i % 2 === 0 && (
+                      <div>
+                        <span className="text-violet-600 font-bold text-xl">{item.year}</span>
+                        <h4 className="text-lg font-bold text-gray-900 mt-1">{item.title}</h4>
+                        <p className="text-gray-500 mt-2">{item.desc}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="w-4 h-4 rounded-full bg-violet-600 border-4 border-white shadow-[0_0_0_4px_rgba(124,58,237,0.1)] z-10" />
+                  <div className="flex-1 text-center md:text-left w-full">
+                    {i % 2 === 1 && (
+                      <div>
+                        <span className="text-violet-600 font-bold text-xl">{item.year}</span>
+                        <h4 className="text-lg font-bold text-gray-900 mt-1">{item.title}</h4>
+                        <p className="text-gray-500 mt-2">{item.desc}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <p className="text-gray-600 italic leading-relaxed">"{testimonial.quote}"</p>
-                <div className="flex text-yellow-400 mt-4">
-                  {[...Array(5)].map((_, j) => (
-                    <Star key={j} className="w-4 h-4 fill-current" />
-                  ))}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-violet-600">
+      <section className="py-20 bg-gray-50 border-t border-gray-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Ready to Start Shopping?
-          </h2>
-          <p className="text-violet-100 text-lg mb-10 max-w-2xl mx-auto">
-            Join thousands of happy customers and discover quality products at unbeatable prices.
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">Ready to Experience Quality?</h2>
+          <p className="text-gray-500 text-lg mb-10">
+            Join thousands of happy customers who trust us for their daily essentials and lifestyle products.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/shop">
-              <Button className="bg-white text-violet-600 hover:bg-gray-100 h-14 px-10 rounded-xl text-lg font-semibold transition-all">
-                Explore Products <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </Link>
-            <Link to="/contact">
-              <Button variant="outline" className="border-2 border-white text-white hover:bg-white/10 h-14 px-10 rounded-xl text-lg font-semibold transition-all">
-                Contact Us
-              </Button>
-            </Link>
-          </div>
+          <Link to="/shop">
+            <Button className="bg-violet-600 hover:bg-violet-700 text-white font-bold px-12 h-14 rounded-xl text-lg shadow-lg shadow-violet-200">
+              Go to Store
+            </Button>
+          </Link>
         </div>
       </section>
 

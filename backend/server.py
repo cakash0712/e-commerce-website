@@ -143,6 +143,34 @@ class Notification(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # Add your routes to the router instead of directly to app
+
+# Dependency for Protected Routes
+async def get_current_user(authorization: Annotated[Optional[str], Header()] = None):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header missing.")
+
+    try:
+        token = authorization.split(" ")[1]
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        version: int = payload.get("version")
+
+        # Verify user in DB and check block status/version
+        user = await db.users.find_one({"id": user_id}) or await db.vendors.find_one({"id": user_id})
+
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid identity.")
+
+        if user.get('is_blocked', False):
+            raise HTTPException(status_code=403, detail="Account suspended.")
+
+        if user.get('token_version', 1) != version:
+            raise HTTPException(status_code=401, detail="Session expired. Re-authentication required.")
+
+        return user
+    except Exception:
+        raise HTTPException(status_code=401, detail="Session protocol corrupted.")
+
 @api_router.get("/")
 async def root():
     return {"message": "Hello World"}
@@ -252,33 +280,6 @@ async def login_user(login_data: UserLogin, request: Request):
     # Return user data with token, without password
     user_data = {k: v for k, v in user.items() if k != 'password' and k != '_id'}
     return {**user_data, "token": token}
-
-# Dependency for Protected Routes
-async def get_current_user(authorization: Annotated[Optional[str], Header()] = None):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization header missing.")
-    
-    try:
-        token = authorization.split(" ")[1]
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        version: int = payload.get("version")
-        
-        # Verify user in DB and check block status/version
-        user = await db.users.find_one({"id": user_id}) or await db.vendors.find_one({"id": user_id})
-        
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid identity.")
-        
-        if user.get('is_blocked', False):
-            raise HTTPException(status_code=403, detail="Account suspended.")
-            
-        if user.get('token_version', 1) != version:
-            raise HTTPException(status_code=401, detail="Session expired. Re-authentication required.")
-            
-        return user
-    except Exception:
-        raise HTTPException(status_code=401, detail="Session protocol corrupted.")
 
 # Admin Moderation Endpoints
 @api_router.post("/admin/moderation/block/{user_id}")

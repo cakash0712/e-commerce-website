@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useCart, useWishlist } from "../App";
 import {
   ShoppingBag,
@@ -10,22 +9,28 @@ import {
   Heart,
   Clock,
   Zap,
-  Percent,
-  ArrowRight,
-  Timer,
-  TrendingDown
+  ChevronDown,
+  Filter,
+  Grid3X3,
+  List,
+  TrendingDown,
+  ChevronRight,
+  Eye,
+  Plus
 } from "lucide-react";
 
 import Navigation from "./Navigation";
 import Footer from "./Footer";
 
-// Deals Page Component
+// Deals Page Component - Clean Formal Violet Style
 const Deals = () => {
   const navigate = useNavigate();
   const [deals, setDeals] = useState([]);
   const [displayedDeals, setDisplayedDeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sortBy, setSortBy] = useState("featured");
+  const [viewMode, setViewMode] = useState("grid");
 
   useEffect(() => {
     const fetchDeals = async () => {
@@ -56,7 +61,7 @@ const Deals = () => {
             };
           });
         setDeals(mappedDeals);
-        setDisplayedDeals(mappedDeals.slice(0, 48));
+        setDisplayedDeals(mappedDeals.slice(0, 24));
       } catch (err) {
         console.error("Error fetching deals:", err);
         setError("Failed to load deals. Please try again later.");
@@ -69,203 +74,187 @@ const Deals = () => {
   }, []);
 
   const loadMore = () => {
-    setDisplayedDeals(deals.slice(0, displayedDeals.length + 48));
-  };
-
-  const renderStars = (rating) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(<Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />);
-    }
-    if (rating % 1 !== 0) {
-      stars.push(<Star key="half" className="w-3.5 h-3.5 fill-amber-400/50 text-amber-400" />);
-    }
-    return stars;
+    setDisplayedDeals(deals.slice(0, displayedDeals.length + 24));
   };
 
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navigation />
 
-      {/* Hero Header */}
-      <div className="bg-gradient-to-b from-rose-50 to-white border-b border-rose-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-          <div className="text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 bg-rose-100 text-rose-600 px-4 py-2 rounded-full text-sm font-semibold mb-6">
-              <Zap className="w-4 h-4" />
-              Limited Time Offers
-            </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-6 tracking-tight">
-              Today's Best <span className="text-rose-600">Deals</span>
-            </h1>
-            <p className="text-gray-600 text-lg max-w-2xl mx-auto leading-relaxed">
-              Discover incredible savings on premium products. New deals added daily - don't miss out!
-            </p>
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 pt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <nav className="text-sm text-gray-500 mb-3">
+            <Link to="/" className="hover:text-violet-600">Home</Link>
+            <span className="mx-2">›</span>
+            <span className="text-gray-900 font-medium font-medium">Deals & Offers</span>
+          </nav>
+          <div className="flex items-center gap-3">
+            <Zap className="w-8 h-8 text-violet-600" />
+            <h1 className="text-2xl font-bold text-gray-900">Limited Time Offers</h1>
           </div>
+        </div>
+      </div>
 
-          {/* Deal Stats */}
-          <div className="mt-12 flex flex-wrap justify-center gap-8">
-            <div className="flex items-center gap-3 bg-white px-6 py-3 rounded-xl shadow-sm border border-gray-100">
-              <div className="w-10 h-10 bg-violet-100 rounded-full flex items-center justify-center">
-                <Percent className="w-5 h-5 text-violet-600" />
+      {/* Toolbar */}
+      <div className="bg-white border-b border-gray-200 sticky top-16 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="hidden sm:flex items-center gap-2">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-violet-100 text-violet-600' : 'text-gray-400 hover:bg-gray-100'}`}
+                >
+                  <Grid3X3 className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-violet-100 text-violet-600' : 'text-gray-400 hover:bg-gray-100'}`}
+                >
+                  <List className="w-5 h-5" />
+                </button>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">Up to 70%</p>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Discount</p>
-              </div>
+              <p className="text-sm text-gray-500 font-medium">{deals.length} active deals</p>
             </div>
-            <div className="flex items-center gap-3 bg-white px-6 py-3 rounded-xl shadow-sm border border-gray-100">
-              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                <Timer className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{deals.length}+</p>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Active Deals</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 bg-white px-6 py-3 rounded-xl shadow-sm border border-gray-100">
-              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                <TrendingDown className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">Daily</p>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">New Offers</p>
+
+            <div className="flex items-center gap-3">
+              <div className="relative group">
+                <button className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-violet-300 transition-colors">
+                  <TrendingDown className="w-4 h-4" />
+                  Sort By: <span className="text-violet-600 capitalize">{sortBy}</span>
+                  <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
+                </button>
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20">
+                  {['featured', 'highest-discount', 'price-low', 'price-high'].map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => setSortBy(opt)}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-violet-50 hover:text-violet-600 first:rounded-t-lg last:rounded-b-lg capitalize"
+                    >
+                      {opt.replace('-', ' ')}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Deals Grid */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24">
-            <div className="w-12 h-12 border-4 border-violet-600 border-t-transparent rounded-full animate-spin mb-6"></div>
-            <p className="text-gray-500 font-medium">Loading deals...</p>
+            <div className="w-10 h-10 border-4 border-violet-600 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-gray-500">Curating best deals for you...</p>
           </div>
         ) : error ? (
           <div className="text-center py-24">
-            <div className="bg-red-50 text-red-600 px-6 py-4 rounded-xl inline-block mb-6">
-              {error}
-            </div>
-            <br />
-            <Button onClick={() => window.location.reload()} className="bg-violet-600 hover:bg-violet-700 rounded-lg">
-              Try Again
-            </Button>
-          </div>
-        ) : deals.length === 0 ? (
-          <div className="text-center py-24">
-            <p className="text-gray-500 text-xl">No deals available at the moment.</p>
+            <p className="text-red-500 mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()} className="bg-violet-600">Retry</Button>
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {displayedDeals.map((deal) => (
-              <div
-                key={deal.id}
-                className="group bg-white rounded-xl border border-gray-100 hover:border-violet-200 hover:shadow-xl transition-all duration-300 overflow-hidden"
-              >
-                {/* Image Container */}
-                <div className="relative aspect-square overflow-hidden bg-gray-50">
-                  <img
-                    src={deal.image}
-                    alt={deal.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    loading="lazy"
-                  />
-
-                  {/* Discount Badge */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-2">
-                    <span className="bg-rose-500 text-white px-3 py-1.5 text-sm font-bold rounded-lg shadow-lg flex items-center gap-1">
-                      <TrendingDown className="w-4 h-4" />
-                      {deal.discount}% OFF
-                    </span>
-                    {deal.isFlashDeal && (
-                      <span className="bg-amber-500 text-white px-2.5 py-1 text-xs font-bold rounded-lg flex items-center gap-1">
-                        <Zap className="w-3 h-3" /> Flash
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Timer */}
-                  <div className="absolute top-3 right-3 bg-gray-900/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-amber-400" />
-                    {deal.timeLeft}
-                  </div>
-
-                  {/* Wishlist Button */}
-                  <button
-                    onClick={() => isInWishlist(deal.id) ? removeFromWishlist(deal.id) : addToWishlist(deal)}
-                    className="absolute bottom-3 right-3 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+          <div className="space-y-8">
+            {/* Deals Grid */}
+            <div className={viewMode === 'grid'
+              ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4"
+              : "space-y-4"
+            }>
+              {displayedDeals.map((deal) => (
+                <div
+                  key={deal.id}
+                  className={`group bg-white rounded-xl border border-gray-200 transition-all duration-300 hover:shadow-xl hover:border-violet-200 overflow-hidden ${viewMode === 'list' ? 'flex flex-row h-48' : 'flex flex-col'
+                    }`}
+                >
+                  <Link
+                    to={`/product/${deal.id}`}
+                    className={`relative bg-gray-50 overflow-hidden ${viewMode === 'list' ? 'w-48 h-full shrink-0' : 'aspect-square'}`}
                   >
-                    <Heart className={`w-5 h-5 transition-colors ${isInWishlist(deal.id) ? 'fill-rose-500 text-rose-500' : 'text-gray-600'}`} />
-                  </button>
-                </div>
-
-                {/* Content */}
-                <div className="p-4">
-                  <p className="text-[10px] uppercase tracking-widest text-violet-600 font-semibold mb-1">
-                    {deal.category}
-                  </p>
-
-                  <Link to={`/product/${deal.id}`}>
-                    <h3 className="font-semibold text-gray-900 leading-snug line-clamp-2 mb-2 hover:text-violet-600 transition-colors">
-                      {deal.name}
-                    </h3>
+                    <img
+                      src={deal.image}
+                      alt={deal.name}
+                      className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <div className="absolute top-2 left-2 flex flex-col gap-2">
+                      <span className="bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
+                        -{deal.discount}%
+                      </span>
+                      {deal.isFlashDeal && (
+                        <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                          <Zap className="w-3 h-3 fill-current" /> Flash
+                        </span>
+                      )}
+                    </div>
+                    {/* Image Overlay Actions */}
+                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          isInWishlist(deal.id) ? removeFromWishlist(deal.id) : addToWishlist(deal);
+                        }}
+                        className={`w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center transition-all hover:scale-110 ${isInWishlist(deal.id) ? 'text-rose-500' : 'text-gray-600 hover:text-rose-500'}`}
+                      >
+                        <Heart className={`w-5 h-5 ${isInWishlist(deal.id) ? 'fill-current' : ''}`} />
+                      </button>
+                    </div>
                   </Link>
 
-                  {/* Rating */}
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <div className="flex items-center gap-0.5">
-                      {renderStars(deal.rating)}
+                  <div className="p-4 flex flex-col flex-1 justify-between">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-violet-600 font-bold mb-1 line-clamp-1">{deal.category}</p>
+                      <Link to={`/product/${deal.id}`}>
+                        <h3 className="text-sm font-semibold text-gray-900 group-hover:text-violet-600 transition-colors line-clamp-2 mb-2 leading-tight">
+                          {deal.name}
+                        </h3>
+                      </Link>
+                      <div className="flex items-center gap-1 mb-2">
+                        <div className="flex text-amber-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`w-3 h-3 ${i < Math.floor(deal.rating) ? 'fill-current' : 'text-gray-200'}`} />
+                          ))}
+                        </div>
+                        <span className="text-[10px] text-gray-400 font-medium">({deal.reviews})</span>
+                      </div>
                     </div>
-                    <span className="text-xs text-gray-500">({deal.reviews})</span>
-                  </div>
 
-                  {/* Price */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="text-xl font-bold text-gray-900">
-                      ₹{deal.price.toLocaleString()}
-                    </span>
-                    <span className="text-sm text-gray-400 line-through">
-                      ₹{deal.originalPrice.toLocaleString()}
-                    </span>
-                    <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                      Save ₹{(deal.originalPrice - deal.price).toLocaleString()}
-                    </span>
-                  </div>
+                    <div>
+                      <div className="flex items-baseline gap-2 mb-3">
+                        <span className="text-lg font-bold text-gray-900">₹{deal.price.toLocaleString()}</span>
+                        <span className="text-xs text-gray-400 line-through">₹{deal.originalPrice.toLocaleString()}</span>
+                      </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-2">
-                    <Button
-                      className="flex-1 bg-violet-600 hover:bg-violet-700 text-white rounded-lg h-11 font-semibold transition-all"
-                      onClick={() => addToCart(deal)}
-                    >
-                      <ShoppingBag className="w-4 h-4 mr-2" /> Add to Cart
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="rounded-lg h-11 px-4 border-2 border-violet-200 text-violet-700 font-semibold hover:bg-violet-50 transition-all"
-                      onClick={() => { addToCart(deal); navigate('/payment'); }}
-                    >
-                      Buy
-                    </Button>
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-rose-500 mb-3 bg-rose-50 px-2 py-1 rounded-lg w-fit">
+                        <Clock className="w-3 h-3" />
+                        Ends in: {deal.timeLeft}
+                      </div>
+
+                      <Button
+                        onClick={() => addToCart({ ...deal, quantity: 1 })}
+                        className="w-full h-9 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-lg shadow-sm"
+                      >
+                        <ShoppingBag className="w-4 h-4 mr-2" />
+                        Add to Cart
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
 
-        {/* Load More */}
-        {displayedDeals.length > 0 && displayedDeals.length < deals.length && (
-          <div className="mt-16 text-center">
-            <Button onClick={loadMore} variant="outline" className="rounded-lg h-12 px-8 border-2 border-gray-200 text-gray-700 font-semibold hover:bg-gray-50">
-              Load More Deals <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+            {displayedDeals.length < deals.length && (
+              <div className="flex justify-center py-10">
+                <Button
+                  variant="outline"
+                  onClick={loadMore}
+                  className="px-10 h-12 border-2 border-violet-100 text-violet-600 hover:bg-violet-50 font-bold rounded-xl"
+                >
+                  Load More Deals
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </main>

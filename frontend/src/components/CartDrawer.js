@@ -44,16 +44,16 @@ const CartDrawer = ({ children }) => {
             <SheetTrigger asChild>
                 {children}
             </SheetTrigger>
-            <SheetContent className="w-full sm:max-w-md flex flex-col p-0 border-l border-slate-100 bg-white shadow-2xl">
-                <SheetHeader className="p-8 border-b border-slate-50">
+            <SheetContent className="w-full sm:max-w-md flex flex-col p-0 border-l border-gray-100 bg-white shadow-[0_0_50px_rgba(0,0,0,0.1)]">
+                <SheetHeader className="p-8 border-b border-gray-50 bg-white">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-lg">
-                                <ShoppingCart className="w-5 h-5" />
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-violet-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-violet-100">
+                                <ShoppingCart className="w-6 h-6" />
                             </div>
-                            <div>
-                                <SheetTitle className="text-xl font-bold tracking-tight">Shopping Cart</SheetTitle>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{cartItems.length} Consolidated Items</p>
+                            <div className="text-left">
+                                <SheetTitle className="text-2xl font-bold tracking-tight text-gray-900 leading-none mb-1">Your Cart</SheetTitle>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">{cartItems.length} Authorized Items</p>
                             </div>
                         </div>
                     </div>
@@ -63,13 +63,13 @@ const CartDrawer = ({ children }) => {
                     {cartItems.length > 0 ? (
                         <div className="space-y-10">
                             {cartItems.map((item) => (
-                                <div key={item.id} className="flex gap-6 group">
+                                <div key={item.id} className="flex gap-6 group text-left">
                                     <div className="relative shrink-0">
-                                        <div className="w-24 h-24 rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 group-hover:border-violet-100 transition-colors">
+                                        <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 group-hover:border-violet-200 transition-all duration-500">
                                             <img
                                                 src={item.image}
                                                 alt={item.name}
-                                                className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-500"
+                                                className="w-full h-full object-contain p-2 mix-blend-multiply group-hover:scale-110 transition-transform duration-700"
                                             />
                                         </div>
                                     </div>
@@ -78,40 +78,40 @@ const CartDrawer = ({ children }) => {
                                         <div>
                                             <div className="flex justify-between items-start gap-4">
                                                 <Link to={`/product/${item.id}`} className="hover:text-violet-600 transition-colors">
-                                                    <h3 className="text-sm font-bold text-slate-900 leading-tight line-clamp-2 uppercase tracking-tight">{item.name}</h3>
+                                                    <h3 className="text-sm font-bold text-gray-900 leading-tight line-clamp-2 transition-colors">{item.name}</h3>
                                                 </Link>
                                                 <button
                                                     onClick={() => removeFromCart(item.id)}
-                                                    className="text-slate-300 hover:text-red-500 transition-colors"
+                                                    className="w-7 h-7 flex items-center justify-center text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">{item.category}</p>
+                                            <p className="text-[10px] font-bold text-violet-400 uppercase tracking-widest mt-2">{item.category}</p>
                                         </div>
 
                                         <div className="flex items-center justify-between mt-4">
-                                            <div className="flex items-center gap-1 bg-slate-50 rounded-lg border border-slate-100 p-0.5">
+                                            <div className="flex items-center gap-2 bg-gray-50 rounded-xl border border-gray-100 p-1">
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
                                                     disabled={item.quantity <= 1}
                                                     onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                                    className="w-7 h-7 rounded-md hover:bg-white text-slate-400 hover:text-slate-900 shadow-none"
+                                                    className="w-8 h-8 rounded-lg hover:bg-white text-gray-400 hover:text-violet-600 shadow-none border-0"
                                                 >
-                                                    <Minus className="w-3 h-3" />
+                                                    <Minus className="w-3.5 h-3.5" />
                                                 </Button>
-                                                <span className="w-8 text-center text-[11px] font-black text-slate-900">{item.quantity}</span>
+                                                <span className="w-6 text-center text-xs font-bold text-gray-900">{item.quantity}</span>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
                                                     onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                                    className="w-7 h-7 rounded-md hover:bg-white text-slate-400 hover:text-slate-900 shadow-none"
+                                                    className="w-8 h-8 rounded-lg hover:bg-white text-gray-400 hover:text-violet-600 shadow-none border-0"
                                                 >
-                                                    <Plus className="w-3 h-3" />
+                                                    <Plus className="w-3.5 h-3.5" />
                                                 </Button>
                                             </div>
-                                            <span className="text-sm font-black text-slate-900 font-mono">₹{item.price.toLocaleString()}</span>
+                                            <span className="text-base font-black text-gray-900 font-sans tracking-tight">₹{item.price.toLocaleString()}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -119,47 +119,49 @@ const CartDrawer = ({ children }) => {
                         </div>
                     ) : (
                         <div className="h-[60vh] flex flex-col items-center justify-center text-center">
-                            <div className="w-20 h-20 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mb-6">
-                                <ShoppingBag className="w-10 h-10 text-slate-200" />
+                            <div className="w-20 h-20 bg-violet-50 rounded-[2rem] flex items-center justify-center mb-8 text-violet-600">
+                                <ShoppingBag className="w-10 h-10" />
                             </div>
-                            <h3 className="text-lg font-bold text-slate-900 uppercase tracking-tight">Cart is empty</h3>
-                            <p className="text-slate-400 text-sm mt-2 max-w-[200px] font-medium leading-relaxed">Your procurement list is currently vacant.</p>
+                            <h3 className="text-2xl font-bold text-gray-900 tracking-tight leading-none mb-3">Cart is Vacant</h3>
+                            <p className="text-gray-400 text-sm font-medium leading-relaxed max-w-[200px] mb-10">Your procurement queue is currently empty.</p>
                             <SheetClose asChild>
-                                <Button className="mt-8 bg-slate-900 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest px-8">Return to Shop</Button>
+                                <Button className="h-14 px-10 bg-gray-900 hover:bg-violet-600 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all">Initialize Shopping</Button>
                             </SheetClose>
                         </div>
                     )}
                 </ScrollArea>
 
                 {cartItems.length > 0 && (
-                    <div className="p-8 bg-slate-50 border-t border-slate-100">
-                        <div className="space-y-4 mb-8">
-                            <div className="flex justify-between items-center text-slate-500">
-                                <span className="text-[10px] uppercase font-black tracking-[0.15em]">Order Subtotal</span>
-                                <span className="text-sm font-black text-slate-900 font-mono">₹{subtotal.toLocaleString()}</span>
+                    <div className="p-8 bg-gray-50 border-t border-gray-100">
+                        <div className="space-y-4 mb-8 text-left">
+                            <div className="flex justify-between items-center text-gray-500">
+                                <span className="text-[10px] uppercase font-bold tracking-[0.2em]">Procurement Subtotal</span>
+                                <span className="text-sm font-bold text-gray-900">₹{subtotal.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between items-center text-slate-500">
-                                <span className="text-[10px] uppercase font-black tracking-[0.15em]">Standard Tax (18%)</span>
-                                <span className="text-sm font-black text-slate-900 font-mono">₹{Math.round(tax).toLocaleString()}</span>
+                            <div className="flex justify-between items-center text-gray-500">
+                                <span className="text-[10px] uppercase font-bold tracking-[0.2em]">Compliance Tax (18%)</span>
+                                <span className="text-sm font-bold text-gray-900">₹{Math.round(tax).toLocaleString()}</span>
                             </div>
-                            <Separator className="bg-slate-200" />
-                            <div className="flex justify-between items-center">
-                                <span className="text-base font-black text-slate-900 uppercase tracking-tight">Total Value</span>
-                                <span className="text-2xl font-black text-slate-900 font-mono">₹{Math.round(total).toLocaleString()}</span>
+                            <Separator className="bg-gray-200/50 h-0.5" />
+                            <div className="flex justify-between items-end pt-2">
+                                <div className="text-left">
+                                    <p className="text-[10px] uppercase font-black tracking-[0.2em] text-violet-600 mb-1">Authorize Grand Total</p>
+                                    <span className="text-3xl font-black text-gray-900 tracking-tighter">₹{Math.round(total).toLocaleString()}</span>
+                                </div>
                             </div>
                         </div>
 
                         <Button
                             onClick={handleCheckout}
-                            className="w-full h-16 bg-slate-900 hover:bg-violet-600 text-white rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] shadow-2xl transition-all duration-300 group"
+                            className="w-full h-16 bg-violet-600 hover:bg-violet-700 text-white rounded-[2rem] font-bold uppercase text-[12px] tracking-[0.2em] shadow-2xl shadow-violet-100 transition-all active:scale-95 flex items-center justify-center group"
                         >
-                            Initialize Checkout
+                            Confirm & Checkout
                             <ChevronRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </Button>
 
-                        <div className="flex items-center justify-center gap-2 mt-6">
-                            <Lock className="w-3 h-3 text-slate-300" />
-                            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.15em]">Secure Procurement Protocol Active</p>
+                        <div className="flex items-center justify-center gap-2 mt-8">
+                            <Lock className="w-3.5 h-3.5 text-gray-300" />
+                            <p className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em]">Secure Checkout Protocol Enabled</p>
                         </div>
                     </div>
                 )}

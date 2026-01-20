@@ -39,33 +39,31 @@ const TrackOrder = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#fafbfc] flex flex-col font-sans">
+        <div className="min-h-screen bg-white flex flex-col font-sans">
             <Navigation />
 
-            <main className="flex-1 pt-32 pb-24">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-
-                    {/* Professional Search Header */}
-                    <div className="text-center mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                        <Badge className="bg-slate-100 text-slate-800 border-slate-200 font-black text-[9px] tracking-[0.2em] px-3 py-1 rounded-sm uppercase mb-6">
-                            LOGISTICS MONITORING SYSTEM v4.2
+            <main className="flex-1 pt-20">
+                {/* Hero Header */}
+                <section className="bg-gray-50 border-b border-gray-100">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center">
+                        <Badge className="bg-violet-100 text-violet-600 border-none font-bold text-[10px] tracking-[0.3em] px-4 py-1.5 rounded-full uppercase mb-6">
+                            Order Tracking
                         </Badge>
-                        <h1 className="text-4xl lg:text-6xl font-black text-slate-900 mb-6 tracking-tight">
-                            Consignment <span className="text-violet-600">Verification.</span>
+                        <h1 className="text-4xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight">
+                            Track Your <span className="text-violet-600">Shipment.</span>
                         </h1>
-                        <p className="text-slate-500 text-lg font-medium max-w-2xl mx-auto mb-12">
-                            Access our global fulfillment orchestration network to monitor your shipment's
-                            real-time progression and delivery authentication.
+                        <p className="text-gray-500 text-lg font-medium max-w-2xl mx-auto mb-12">
+                            Enter your tracking number below to get real-time updates on your order's status and expected delivery time.
                         </p>
 
-                        <Card className="border-0 shadow-2xl rounded-2xl overflow-hidden bg-white border border-slate-100 max-w-2xl mx-auto">
-                            <CardContent className="p-2">
+                        <div className="max-w-2xl mx-auto">
+                            <Card className="border border-gray-200 shadow-2xl rounded-2xl overflow-hidden bg-white p-2">
                                 <form onSubmit={handleTrack} className="flex flex-col md:flex-row gap-2">
-                                    <div className="flex-1 relative group">
-                                        <FileText className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 w-5 h-5 transition-colors" />
+                                    <div className="flex-1 relative">
+                                        <FileText className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                                         <Input
-                                            placeholder="Consignment Reference ID (e.g. ZP-99210)"
-                                            className="h-16 pl-14 pr-6 rounded-xl bg-white border-0 text-base font-bold placeholder:text-slate-300 focus:ring-0 focus:bg-slate-50 transition-all"
+                                            placeholder="Enter Tracking ID (e.g. ZP-99210)"
+                                            className="h-16 pl-14 pr-6 rounded-xl bg-white border-0 text-base font-bold placeholder:text-gray-300 focus:ring-0 focus:bg-gray-50 transition-all outline-none"
                                             value={trackingId}
                                             onChange={(e) => setTrackingId(e.target.value)}
                                             required
@@ -74,101 +72,103 @@ const TrackOrder = () => {
                                     <Button
                                         disabled={loading}
                                         type="submit"
-                                        className="h-16 px-10 bg-slate-900 hover:bg-violet-600 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-lg transition-all active:scale-[0.98] border-0 group"
+                                        className="h-16 px-10 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-violet-100 transition-all active:scale-[0.98] border-0 flex items-center gap-2"
                                     >
                                         {loading ? (
                                             <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                                         ) : (
-                                            <>Track Shipment <ArrowRight className="ml-3 w-4 h-4 group-hover:translate-x-1 transition-transform" /></>
+                                            <>Track Now <ArrowRight className="w-4 h-4" /></>
                                         )}
                                     </Button>
                                 </form>
-                            </CardContent>
-                        </Card>
+                            </Card>
+                        </div>
                     </div>
+                </section>
 
+                <section className="py-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                     {showStatus && (
-                        <div className="space-y-8 animate-in slide-in-from-bottom-12 duration-1000">
-                            {/* Order Status Overview */}
-                            <Card className="border-0 shadow-xl rounded-3xl overflow-hidden bg-white border border-slate-100">
-                                <CardContent className="p-0">
-                                    <div className="bg-slate-50 p-10 lg:p-12 border-b border-slate-200">
+                        <div className="space-y-8 animate-in slide-in-from-bottom duration-700">
+                            {/* Order Status Card */}
+                            <Card className="border border-gray-100 shadow-xl rounded-3xl overflow-hidden bg-white">
+                                <CardContent className="p-0 text-left">
+                                    <div className="bg-gray-50/50 p-10 border-b border-gray-100">
                                         <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-                                            <div className="text-center md:text-left space-y-1">
-                                                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em]">Shipment Reference</p>
-                                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">ZP-99210-2026-HQ</h3>
+                                            <div className="text-center md:text-left">
+                                                <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest mb-1">Tracking Number</p>
+                                                <h3 className="text-2xl font-black text-gray-900 tracking-tight">ZP-99210-2026</h3>
                                             </div>
-                                            <div className="flex items-center gap-4 bg-white px-8 py-4 rounded-xl border border-slate-200 shadow-sm">
+                                            <div className="flex items-center gap-4 bg-white px-6 py-3 rounded-2xl border border-gray-200 shadow-sm">
                                                 <div className="relative">
-                                                    <div className="w-3 h-3 bg-emerald-500 rounded-full animate-ping opacity-40" />
-                                                    <div className="absolute inset-0 w-3 h-3 bg-emerald-500 rounded-full" />
+                                                    <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-ping opacity-40" />
+                                                    <div className="absolute inset-0 w-2.5 h-2.5 bg-green-500 rounded-full" />
                                                 </div>
-                                                <p className="text-slate-800 font-black text-xs uppercase tracking-[0.2em]">Operational Pulse: Active</p>
+                                                <p className="text-gray-700 font-bold text-xs uppercase tracking-widest">In Transit</p>
                                             </div>
-                                            <div className="text-center md:text-right space-y-1">
-                                                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em]">Estimated Fulfillment</p>
-                                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Jan 22, 2026</h3>
+                                            <div className="text-center md:text-right">
+                                                <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest mb-1">Estimated Delivery</p>
+                                                <h3 className="text-2xl font-black text-gray-900 tracking-tight">Jan 22, 2026</h3>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="p-10 lg:p-16">
-                                        {/* Professional Stepper */}
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-20 relative">
-                                            <div className="hidden md:block absolute top-[28px] left-[10%] right-[10%] h-[2px] bg-slate-100" />
-                                            <div className="hidden md:block absolute top-[28px] left-[10%] w-2/5 h-[2px] bg-violet-600" />
+                                        {/* Delivery Stepper */}
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-20 relative text-center">
+                                            <div className="hidden md:block absolute top-7 left-[10%] right-[10%] h-[2px] bg-gray-100" />
+                                            <div className="hidden md:block absolute top-7 left-[10%] w-2/5 h-[2px] bg-violet-600" />
 
                                             {[
-                                                { label: "Ordered", sub: "Signature Verified", icon: FileText, state: 'complete' },
-                                                { label: "Processed", sub: "QC Standard Check", icon: Box, state: 'complete' },
-                                                { label: "Dispatched", sub: "Carrier Assigned", icon: Truck, state: 'active' },
-                                                { label: "Delivered", sub: "ID Required", icon: CheckCircle2, state: 'pending' }
+                                                { label: "Ordered", date: "Jan 18", icon: FileText, state: 'complete' },
+                                                { label: "Processed", date: "Jan 18", icon: Box, state: 'complete' },
+                                                { label: "In Transit", date: "Jan 19", icon: Truck, state: 'active' },
+                                                { label: "Delivered", date: "Pending", icon: CheckCircle2, state: 'pending' }
                                             ].map((step, i) => (
-                                                <div key={i} className="flex flex-col items-center text-center gap-4 relative z-10">
-                                                    <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-700 border-4 border-white shadow-xl ${step.state === 'complete' ? 'bg-violet-600 text-white' :
-                                                            step.state === 'active' ? 'bg-white text-violet-600 border-violet-600' : 'bg-slate-50 text-slate-300'
+                                                <div key={i} className="flex flex-col items-center gap-4 relative z-10">
+                                                    <div className={`w-14 h-14 rounded-full flex items-center justify-center border-4 border-white shadow-lg transition-all ${step.state === 'complete' ? 'bg-violet-600 text-white' :
+                                                        step.state === 'active' ? 'bg-white text-violet-600 border-violet-600' : 'bg-gray-50 text-gray-300'
                                                         }`}>
                                                         <step.icon className={`w-6 h-6 ${step.state === 'active' ? 'animate-pulse' : ''}`} />
                                                     </div>
                                                     <div>
-                                                        <p className={`text-[11px] font-black uppercase tracking-widest ${step.state !== 'pending' ? 'text-slate-900' : 'text-slate-400'}`}>{step.label}</p>
-                                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">{step.sub}</p>
+                                                        <p className={`text-xs font-bold uppercase tracking-widest ${step.state !== 'pending' ? 'text-gray-900' : 'text-gray-400'}`}>{step.label}</p>
+                                                        <p className="text-[10px] font-medium text-gray-400 mt-1 uppercase tracking-tight">{step.date}</p>
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
 
-                                        <div className="max-w-2xl mx-auto">
-                                            <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
-                                                <h4 className="font-black text-slate-900 text-sm uppercase tracking-widest flex items-center gap-2">
-                                                    <History className="w-4 h-4 text-slate-400" />
-                                                    Chain of Custody
+                                        {/* Shipment Logs */}
+                                        <div className="max-w-2xl mx-auto text-left">
+                                            <div className="flex items-center justify-between mb-10 pb-4 border-b border-gray-100">
+                                                <h4 className="font-bold text-gray-900 text-sm uppercase tracking-widest flex items-center gap-2">
+                                                    <History className="w-4 h-4 text-gray-400" />
+                                                    Shipment History
                                                 </h4>
-                                                <Badge className="bg-slate-100 text-slate-500 text-[9px] px-2 font-black uppercase tracking-widest">Internal logs</Badge>
                                             </div>
 
-                                            <div className="space-y-10">
+                                            <div className="space-y-12">
                                                 {[
-                                                    { status: "Departure Authorized", loc: "Regional Logistic Center - RLC-99", date: "Jan 19, 2026 • 14:32", active: true },
-                                                    { status: "Package Consolidating", loc: "Main Distribution Hub", date: "Jan 18, 2026 • 11:20", active: false },
-                                                    { status: "Verification Complete", loc: "Processing Facility B-12", date: "Jan 18, 2026 • 09:15", active: false }
+                                                    { status: "Departure Authorized", loc: "Regional Logistic Center, Bangalore", date: "Jan 19, 2026 • 14:32", active: true },
+                                                    { status: "Package Processed", loc: "Main Distribution Center", date: "Jan 18, 2026 • 11:20", active: false },
+                                                    { status: "Order Confirmed", loc: "Zippy Fulfillment Hub", date: "Jan 18, 2026 • 09:15", active: false }
                                                 ].map((log, i) => (
-                                                    <div key={i} className="flex gap-8 items-start relative lg:pl-4">
-                                                        {i < 2 && <div className="absolute left-[31px] lg:left-[47px] top-8 bottom-[-40px] w-[2px] border-l-2 border-dashed border-slate-200" />}
+                                                    <div key={i} className="flex gap-8 items-start relative pl-4">
+                                                        {i < 2 && <div className="absolute left-[31px] top-8 bottom-[-48px] w-[2px] border-l-2 border-dashed border-gray-200" />}
 
-                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-slate-200 ${log.active ? 'bg-violet-600 text-white border-violet-600 shadow-lg shadow-violet-100' : 'bg-white text-slate-400'}`}>
+                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-gray-200 ${log.active ? 'bg-violet-600 text-white border-violet-600 shadow-lg' : 'bg-white text-gray-400'}`}>
                                                             <MapPin className="w-4 h-4" />
                                                         </div>
 
-                                                        <div className="flex-1 text-left pb-1">
+                                                        <div className="flex-1">
                                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
-                                                                <h5 className={`font-black text-sm uppercase tracking-tight ${log.active ? 'text-violet-600' : 'text-slate-900'}`}>
+                                                                <h5 className={`font-bold text-sm uppercase tracking-tight ${log.active ? 'text-violet-600' : 'text-gray-900'}`}>
                                                                     {log.status}
                                                                 </h5>
-                                                                <span className="text-[10px] font-bold text-slate-400 uppercase">{log.date}</span>
+                                                                <span className="text-[10px] font-bold text-gray-400 uppercase">{log.date}</span>
                                                             </div>
-                                                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-widest flex items-center gap-1.5">
-                                                                <Building2 className="w-3 h-3" /> {log.loc}
+                                                            <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest flex items-center gap-1.5">
+                                                                {log.loc}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -179,31 +179,31 @@ const TrackOrder = () => {
                                 </CardContent>
                             </Card>
 
-                            <div className="grid md:grid-cols-2 gap-8">
-                                <Card className="border-0 shadow-sm rounded-2xl p-8 bg-white border border-slate-100 flex gap-6 items-start text-left">
-                                    <div className="p-4 bg-slate-50 text-slate-900 rounded-xl border border-slate-200">
+                            <div className="grid md:grid-cols-2 gap-8 text-left">
+                                <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-8 flex gap-6 items-start">
+                                    <div className="p-4 bg-violet-50 text-violet-600 rounded-xl">
                                         <MapPin className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Authenticated Destination</p>
-                                        <h4 className="font-bold text-slate-900 text-sm">Residency Road, Area 51, Bangalore</h4>
-                                        <p className="text-slate-400 text-xs font-medium mt-1">Karnataka, India 560001</p>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Delivery Address</p>
+                                        <h4 className="font-bold text-gray-900 text-sm">Residency Road, Area 51, Bangalore</h4>
+                                        <p className="text-gray-500 text-xs font-medium mt-1">Karnataka, India 560001</p>
                                     </div>
-                                </Card>
-                                <Card className="border-0 shadow-sm rounded-2xl p-8 bg-white border border-slate-100 flex gap-6 items-start text-left">
-                                    <div className="p-4 bg-slate-50 text-slate-900 rounded-xl border border-slate-200">
-                                        <Building2 className="w-5 h-5" />
+                                </div>
+                                <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-8 flex gap-6 items-start">
+                                    <div className="p-4 bg-violet-50 text-violet-600 rounded-xl">
+                                        <Truck className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Assigned Carrier</p>
-                                        <h4 className="font-bold text-slate-900 text-sm">Zippy Logistics Express Limited</h4>
-                                        <button className="text-violet-600 font-black text-[10px] uppercase tracking-widest mt-2 hover:underline">Contact Handler</button>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Carrier Information</p>
+                                        <h4 className="font-bold text-gray-900 text-sm">Zippy Logistics Express</h4>
+                                        <button className="text-violet-600 font-bold text-[10px] uppercase tracking-widest mt-2 hover:underline">Track on Carrier Site</button>
                                     </div>
-                                </Card>
+                                </div>
                             </div>
                         </div>
                     )}
-                </div>
+                </section>
             </main>
 
             <Footer />
