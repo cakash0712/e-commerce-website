@@ -174,6 +174,7 @@ const Deals = () => {
                     src={deal.image}
                     alt={deal.name}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    loading="lazy"
                   />
 
                   {/* Discount Badge */}

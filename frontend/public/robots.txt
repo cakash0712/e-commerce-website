@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /account
+Disallow: /admin
+Disallow: /vendor
+Disallow: /payment
+
+Sitemap: https://zippycart.netlify.app/sitemap.xml

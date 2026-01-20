@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCart } from "../App";
+import { useCart, useCoupons } from "../App";
 import {
   Minus,
   Plus,
@@ -13,7 +13,8 @@ import {
   ArrowLeft,
   ArrowRight,
   Tag,
-  CreditCard
+  CreditCard,
+  XCircle
 } from "lucide-react";
 
 import Navigation from "./Navigation";
@@ -21,24 +22,38 @@ import Footer from "./Footer";
 
 const Cart = () => {
   const { cartItems, updateQuantity, removeFromCart } = useCart();
+  const { validateCoupon } = useCoupons();
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponError, setCouponError] = useState('');
+
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const applyCoupon = () => {
-    if (couponCode.toLowerCase() === 'save500') {
-      setAppliedCoupon({ code: 'SAVE500', discount: 500 });
-    } else if (couponCode.toLowerCase() === 'free') {
-      setAppliedCoupon({ code: 'FREE', discount: 2000 });
+    setCouponError('');
+    const result = validateCoupon(couponCode, cartItems, subtotal);
+    if (result.valid) {
+      setAppliedCoupon(result.coupon);
+      setCouponCode('');
     } else {
+      setCouponError(result.message);
       setAppliedCoupon(null);
     }
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shippingThreshold = 499;
   const shipping = subtotal > shippingThreshold ? 0 : 99;
   const tax = subtotal * 0.18;
-  const discount = appliedCoupon ? Math.min(appliedCoupon.discount, subtotal) : 0;
+
+  const calculateDiscount = () => {
+    if (!appliedCoupon) return 0;
+    if (appliedCoupon.type === 'percentage') {
+      return (subtotal * appliedCoupon.value) / 100;
+    }
+    return appliedCoupon.value;
+  };
+
+  const discount = calculateDiscount();
   const total = subtotal + shipping + tax - discount;
 
   return (
@@ -169,7 +184,12 @@ const Cart = () => {
                   </div>
                   {appliedCoupon && (
                     <p className="text-sm text-emerald-600 mt-2 font-medium">
-                      ✓ Code "{appliedCoupon.code}" applied - ₹{appliedCoupon.discount} off
+                      ✓ Protocol "{appliedCoupon.code}" active - ₹{Math.round(discount).toLocaleString()} discount authorized.
+                    </p>
+                  )}
+                  {couponError && (
+                    <p className="text-sm text-red-500 mt-2 font-medium flex items-center gap-1.5">
+                      <XCircle className="w-4 h-4" /> {couponError}
                     </p>
                   )}
                 </div>

@@ -117,15 +117,12 @@ const Shop = () => {
   const categories = Array.from(new Set(products.map(p => p.category)));
 
   const renderStars = (rating) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(<Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />);
-    }
-    if (rating % 1 !== 0) {
-      stars.push(<Star key="half" className="w-3.5 h-3.5 fill-amber-400/50 text-amber-400" />);
-    }
-    return stars;
+    return [...Array(5)].map((_, i) => (
+      <Star
+        key={i}
+        className={`w-3.5 h-3.5 ${i < Math.floor(rating) ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`}
+      />
+    ));
   };
 
   return (
@@ -321,6 +318,7 @@ const Shop = () => {
                             alt={product.name}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                             onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop" }}
+                            loading="lazy"
                           />
 
                           {/* Badges */}
@@ -421,6 +419,7 @@ const Shop = () => {
                             alt={product.name}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                             onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop" }}
+                            loading="lazy"
                           />
 
                           {/* Badges */}

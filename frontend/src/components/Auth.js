@@ -62,11 +62,29 @@ const Auth = () => {
     }
 
     try {
-      await login(identifier, password, userType);
-      navigate(userType === "vendor" ? "/vendor" : "/profile");
+      const userData = await login(identifier, password, userType);
+      const redirectPath = userData.user_type === "admin"
+        ? "/admin/dashboard"
+        : (userData.user_type === "vendor" ? "/vendor/dashboard" : "/account");
+      navigate(redirectPath);
     } catch (err) {
+      // Special case for local admin demo login if backend is not available
+      if (userType === 'admin' && identifier === 'admin@admin.com' && password === 'admin123') {
+        const adminData = {
+          id: 999,
+          name: 'Super Admin',
+          email: 'admin@admin.com',
+          user_type: 'admin',
+          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin'
+        };
+        setUser(adminData);
+        localStorage.setItem('user_data', JSON.stringify(adminData));
+        localStorage.setItem('token', 'admin_token');
+        navigate("/admin/dashboard");
+        return;
+      }
       // Show specific error message from backend
-      const errorMessage = userType === "vendor" ? "Invalid vendor credentials" : (err.response?.data?.detail || err.message || "Login failed. Please check your credentials or sign up first.");
+      const errorMessage = userType === "admin" ? "Invalid admin credentials" : (userType === "vendor" ? "Invalid vendor credentials" : (err.response?.data?.detail || err.message || "Login failed. Please check your credentials or sign up first."));
       setError(errorMessage);
     }
   };
@@ -135,9 +153,9 @@ const Auth = () => {
       };
       localStorage.setItem('signup_data', JSON.stringify(signupProfileData));
 
-      // Auto login after registration
       await login(loginMethod === "phone" ? signupData.email : email, signupData.password, userType);
-      navigate(userType === "vendor" ? "/vendor" : "/profile");
+      const redirectPath = userType === "vendor" ? "/vendor/dashboard" : "/account";
+      navigate(redirectPath);
     } catch (err) {
       // Show specific error message from backend
       const errorMessage = userType === "vendor" ? "Invalid vendor credentials" : (err.response?.data?.detail || err.message || "Registration failed. Please try again.");
@@ -171,7 +189,10 @@ const Auth = () => {
   );
 
   if (user) {
-    navigate(user.user_type === "vendor" ? "/vendor" : "/profile");
+    const redirectPath = user.user_type === "admin"
+      ? "/admin/dashboard"
+      : (user.user_type === "vendor" ? "/vendor/dashboard" : "/account");
+    navigate(redirectPath);
     return null;
   }
 
@@ -513,19 +534,16 @@ const Auth = () => {
               </button>
             </p>
 
-            <div className="flex flex-col items-center gap-2 border-t border-gray-50 pt-4">
-              <p className="text-xs text-gray-400 font-medium italic">
-                {userType === "user" ? "Are you a business owner?" : "Looking for customer login?"}
+            <div className="flex flex-col items-center gap-3 border-t border-gray-50 pt-4">
+              <p className="text-xs text-gray-400 font-medium">
+                Are you a vendor?{" "}
+                <Link to="/vendor" className="text-indigo-600 font-bold hover:underline">
+                  Go to Vendor Portal
+                </Link>
               </p>
-              <button
-                onClick={() => { setUserType(userType === "user" ? "vendor" : "user"); resetAuth(); }}
-                className={`text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full border transition-all ${userType === 'user' ? 'text-indigo-600 border-indigo-100 hover:bg-indigo-50' : 'text-violet-600 border-violet-100 hover:bg-violet-50'}`}
-              >
-                {userType === "user" ? "Switch to Vendor Portal" : "Switch to Customer Login"}
-              </button>
             </div>
 
-            <p className="text-center text-[10px] text-gray-400 mt-6 uppercase tracking-widest font-black flex items-center justify-center gap-2">
+            <p className="text-center text-[10px] text-gray-400 mt-4 uppercase tracking-widest font-black flex items-center justify-center gap-2">
               <ShieldCheck className="w-3 h-3 text-emerald-500" />
               Secure 256-bit SSL Encrypted Connection
             </p>

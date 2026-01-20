@@ -15,7 +15,13 @@ import {
   ChevronDown,
   Clock,
   TrendingUp,
+  Bell,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Info
 } from "lucide-react";
+import CartDrawer from "./CartDrawer";
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -35,6 +41,63 @@ const Navigation = () => {
   const { getWishlistCount } = useWishlist();
   const cartCount = getCartCount();
   const wishlistCount = getWishlistCount();
+
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
+
+  // Fetch notifications for authenticated user
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  const fetchNotifications = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/notifications`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setNotifications(response.data);
+    } catch (e) {
+      console.error("Failed to fetch notifications:", e);
+    }
+  };
+
+  const markAsRead = async (notificationId) => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      await axios.post(`${API_BASE}/api/notifications/read/${notificationId}`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    } catch (e) {
+      console.error("Failed to mark notification as read:", e);
+    }
+  };
+
+  // Handle click outside to close notifications
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'success': return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+      case 'warning': return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+      case 'error': return <XCircle className="w-4 h-4 text-red-500" />;
+      default: return <Info className="w-4 h-4 text-blue-500" />;
+    }
+  };
 
   // Fetch products for suggestions
   useEffect(() => {
@@ -315,7 +378,59 @@ const Navigation = () => {
                 )}
               </Button>
             </Link>
-            <Link to="/cart">
+
+            {/* Notification Bell */}
+            {user && (
+              <div ref={notificationRef} className="relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-gray-600 hover:bg-gray-100 relative"
+                  onClick={() => setShowNotifications(!showNotifications)}
+                >
+                  <Bell className="w-5 h-5" />
+                  {notifications.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
+                      {notifications.length}
+                    </span>
+                  )}
+                </Button>
+
+                {showNotifications && (
+                  <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50">
+                    <div className="p-4 border-b border-gray-100 bg-gray-50">
+                      <h4 className="text-sm font-black uppercase tracking-widest text-gray-700">Notifications</h4>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <Bell className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                          <p className="text-xs text-gray-400 font-medium">No new notifications</p>
+                        </div>
+                      ) : (
+                        notifications.map(n => (
+                          <div
+                            key={n.id}
+                            className="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                            onClick={() => markAsRead(n.id)}
+                          >
+                            <div className="flex gap-3">
+                              <div className="mt-0.5">{getNotificationIcon(n.type)}</div>
+                              <div className="flex-1">
+                                <p className="text-sm font-bold text-gray-900">{n.title}</p>
+                                <p className="text-xs text-gray-500 mt-1">{n.message}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <CartDrawer>
               <Button
                 variant="ghost"
                 size="icon"
@@ -328,8 +443,8 @@ const Navigation = () => {
                   </span>
                 )}
               </Button>
-            </Link>
-            <Link to={user ? (user.user_type === "vendor" ? "/vendor" : "/profile") : "/auth"}>
+            </CartDrawer>
+            <Link to={user ? (user.user_type === "admin" ? "/admin/dashboard" : (user.user_type === "vendor" ? "/vendor/dashboard" : "/account")) : "/auth"}>
               <Button
                 variant="ghost"
                 size="icon"
@@ -351,7 +466,7 @@ const Navigation = () => {
 
           {/* Mobile Actions */}
           <div className="flex lg:hidden items-center space-x-2">
-            <Link to="/cart">
+            <CartDrawer>
               <Button
                 variant="ghost"
                 size="icon"
@@ -364,7 +479,7 @@ const Navigation = () => {
                   </span>
                 )}
               </Button>
-            </Link>
+            </CartDrawer>
             <Button
               variant="ghost"
               size="icon"
@@ -448,7 +563,7 @@ const Navigation = () => {
                 )}
               </Link>
               <Link
-                to={user ? (user.user_type === "vendor" ? "/vendor" : "/profile") : "/auth"}
+                to={user ? (user.user_type === "admin" ? "/admin/dashboard" : (user.user_type === "vendor" ? "/vendor/dashboard" : "/account")) : "/auth"}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 text-gray-700 hover:text-violet-600 bg-gray-50 rounded-lg transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
@@ -462,7 +577,9 @@ const Navigation = () => {
                 ) : (
                   <User className="w-4 h-4" />
                 )}
-                <span className="text-sm font-medium">{user ? (user.user_type === "vendor" ? "Vendor" : "Profile") : "Login"}</span>
+                <span className="text-sm font-medium">
+                  {user ? (user.user_type === "admin" ? "Admin" : (user.user_type === "vendor" ? "Vendor" : "Profile")) : "Login"}
+                </span>
               </Link>
             </div>
           </div>

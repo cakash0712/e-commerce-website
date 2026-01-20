@@ -16,7 +16,10 @@ import {
     Clock,
     Info,
     ShieldCheck,
-    Globe
+    Globe,
+    Building2,
+    FileText,
+    History
 } from "lucide-react";
 
 const TrackOrder = () => {
@@ -36,7 +39,7 @@ const TrackOrder = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#fcfdfe] flex flex-col">
+        <div className="min-h-screen bg-[#fafbfc] flex flex-col font-sans">
             <Navigation />
 
             <main className="flex-1 pt-32 pb-24">
@@ -44,25 +47,25 @@ const TrackOrder = () => {
 
                     {/* Professional Search Header */}
                     <div className="text-center mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                        <Badge className="bg-violet-50 text-violet-600 border-none font-bold text-[10px] tracking-[0.3em] px-4 py-1.5 rounded-full uppercase mb-6">
-                            Operational Hub
+                        <Badge className="bg-slate-100 text-slate-800 border-slate-200 font-black text-[9px] tracking-[0.2em] px-3 py-1 rounded-sm uppercase mb-6">
+                            LOGISTICS MONITORING SYSTEM v4.2
                         </Badge>
-                        <h1 className="text-4xl lg:text-7xl font-bold text-gray-900 mb-8 tracking-tighter italicLeading">
-                            Track Your <span className="text-violet-600 font-extrabold italic">Artifact.</span>
+                        <h1 className="text-4xl lg:text-6xl font-black text-slate-900 mb-6 tracking-tight">
+                            Consignment <span className="text-violet-600">Verification.</span>
                         </h1>
-                        <p className="text-gray-500 text-lg font-medium max-w-2xl mx-auto mb-12 italicLeading">
-                            Enter your unique logistics identifier for real-time synchronization with our
-                            global fulfillment network.
+                        <p className="text-slate-500 text-lg font-medium max-w-2xl mx-auto mb-12">
+                            Access our global fulfillment orchestration network to monitor your shipment's
+                            real-time progression and delivery authentication.
                         </p>
 
-                        <Card className="border-0 shadow-2xl rounded-[2.5rem] overflow-hidden bg-white border border-gray-100 max-w-3xl mx-auto">
-                            <CardContent className="p-4 lg:p-6">
-                                <form onSubmit={handleTrack} className="flex flex-col md:flex-row gap-4">
+                        <Card className="border-0 shadow-2xl rounded-2xl overflow-hidden bg-white border border-slate-100 max-w-2xl mx-auto">
+                            <CardContent className="p-2">
+                                <form onSubmit={handleTrack} className="flex flex-col md:flex-row gap-2">
                                     <div className="flex-1 relative group">
-                                        <Box className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-violet-600 w-5 h-5 transition-colors" />
+                                        <FileText className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 w-5 h-5 transition-colors" />
                                         <Input
-                                            placeholder="Enter Logistical ID (e.g. SV-99210)"
-                                            className="h-16 pl-14 pr-6 rounded-2xl bg-gray-50 border-none text-base font-bold placeholder:text-gray-300 focus:ring-2 focus:ring-violet-600 transition-all shadow-inner"
+                                            placeholder="Consignment Reference ID (e.g. ZP-99210)"
+                                            className="h-16 pl-14 pr-6 rounded-xl bg-white border-0 text-base font-bold placeholder:text-slate-300 focus:ring-0 focus:bg-slate-50 transition-all"
                                             value={trackingId}
                                             onChange={(e) => setTrackingId(e.target.value)}
                                             required
@@ -71,12 +74,12 @@ const TrackOrder = () => {
                                     <Button
                                         disabled={loading}
                                         type="submit"
-                                        className="h-16 px-10 bg-gray-900 hover:bg-violet-600 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-xl transition-all active:scale-[0.98] border-0 group"
+                                        className="h-16 px-10 bg-slate-900 hover:bg-violet-600 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-lg transition-all active:scale-[0.98] border-0 group"
                                     >
                                         {loading ? (
                                             <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                                         ) : (
-                                            <>Locate Asset <ArrowRight className="ml-3 w-4 h-4 group-hover:translate-x-1 transition-transform" /></>
+                                            <>Track Shipment <ArrowRight className="ml-3 w-4 h-4 group-hover:translate-x-1 transition-transform" /></>
                                         )}
                                     </Button>
                                 </form>
@@ -87,104 +90,114 @@ const TrackOrder = () => {
                     {showStatus && (
                         <div className="space-y-8 animate-in slide-in-from-bottom-12 duration-1000">
                             {/* Order Status Overview */}
-                            <Card className="border-0 shadow-xl rounded-[3rem] overflow-hidden bg-white border border-gray-100">
+                            <Card className="border-0 shadow-xl rounded-3xl overflow-hidden bg-white border border-slate-100">
                                 <CardContent className="p-0">
-                                    <div className="bg-gray-50 p-10 lg:p-12 border-b border-gray-100">
+                                    <div className="bg-slate-50 p-10 lg:p-12 border-b border-slate-200">
                                         <div className="flex flex-col md:flex-row justify-between items-center gap-8">
                                             <div className="text-center md:text-left space-y-1">
-                                                <p className="text-[10px] uppercase font-bold text-violet-400 tracking-[0.3em]">Logistical ID</p>
-                                                <h3 className="text-3xl font-black text-gray-900 tracking-tighter italic">#SV-99210-PRO</h3>
+                                                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em]">Shipment Reference</p>
+                                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">ZP-99210-2026-HQ</h3>
                                             </div>
-                                            <div className="flex items-center gap-4 bg-white px-8 py-4 rounded-2xl border border-violet-100 shadow-sm">
+                                            <div className="flex items-center gap-4 bg-white px-8 py-4 rounded-xl border border-slate-200 shadow-sm">
                                                 <div className="relative">
-                                                    <div className="w-3 h-3 bg-violet-600 rounded-full animate-ping opacity-40" />
-                                                    <div className="absolute inset-0 w-3 h-3 bg-violet-600 rounded-full" />
+                                                    <div className="w-3 h-3 bg-emerald-500 rounded-full animate-ping opacity-40" />
+                                                    <div className="absolute inset-0 w-3 h-3 bg-emerald-500 rounded-full" />
                                                 </div>
-                                                <p className="text-violet-700 font-black text-sm uppercase tracking-[0.2em]">Asset in Transit</p>
+                                                <p className="text-slate-800 font-black text-xs uppercase tracking-[0.2em]">Operational Pulse: Active</p>
                                             </div>
                                             <div className="text-center md:text-right space-y-1">
-                                                <p className="text-[10px] uppercase font-bold text-violet-400 tracking-[0.3em]">Projected Arrival</p>
-                                                <h3 className="text-3xl font-black text-gray-900 tracking-tighter italic">Jan 16, 2026</h3>
+                                                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em]">Estimated Fulfillment</p>
+                                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Jan 22, 2026</h3>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="p-10 lg:p-16">
-                                        <div className="grid md:grid-cols-4 gap-4 mb-16 relative">
-                                            {/* Horizontal line for progress */}
-                                            <div className="hidden md:block absolute top-[27px] left-[50px] right-[50px] h-[2px] bg-gray-100" />
-                                            <div className="hidden md:block absolute top-[27px] left-[50px] w-1/3 h-[2px] bg-violet-600" />
+                                        {/* Professional Stepper */}
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-20 relative">
+                                            <div className="hidden md:block absolute top-[28px] left-[10%] right-[10%] h-[2px] bg-slate-100" />
+                                            <div className="hidden md:block absolute top-[28px] left-[10%] w-2/5 h-[2px] bg-violet-600" />
 
                                             {[
-                                                { label: "Authorized", icon: ShieldCheck, active: true },
-                                                { label: "Dispatched", icon: Box, active: true },
-                                                { label: "In Transit", icon: Truck, active: true, pulse: true },
-                                                { label: "Delivered", icon: CheckCircle2, active: false }
+                                                { label: "Ordered", sub: "Signature Verified", icon: FileText, state: 'complete' },
+                                                { label: "Processed", sub: "QC Standard Check", icon: Box, state: 'complete' },
+                                                { label: "Dispatched", sub: "Carrier Assigned", icon: Truck, state: 'active' },
+                                                { label: "Delivered", sub: "ID Required", icon: CheckCircle2, state: 'pending' }
                                             ].map((step, i) => (
-                                                <div key={i} className="flex flex-col items-center gap-4 relative z-10">
-                                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-700 ${step.active ? 'bg-violet-600 text-white shadow-lg shadow-violet-100' : 'bg-gray-100 text-gray-300'}`}>
-                                                        <step.icon className={`w-6 h-6 ${step.pulse ? 'animate-pulse' : ''}`} />
+                                                <div key={i} className="flex flex-col items-center text-center gap-4 relative z-10">
+                                                    <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-700 border-4 border-white shadow-xl ${step.state === 'complete' ? 'bg-violet-600 text-white' :
+                                                            step.state === 'active' ? 'bg-white text-violet-600 border-violet-600' : 'bg-slate-50 text-slate-300'
+                                                        }`}>
+                                                        <step.icon className={`w-6 h-6 ${step.state === 'active' ? 'animate-pulse' : ''}`} />
                                                     </div>
-                                                    <p className={`text-[10px] font-black uppercase tracking-widest ${step.active ? 'text-gray-900' : 'text-gray-400'}`}>{step.label}</p>
+                                                    <div>
+                                                        <p className={`text-[11px] font-black uppercase tracking-widest ${step.state !== 'pending' ? 'text-slate-900' : 'text-slate-400'}`}>{step.label}</p>
+                                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">{step.sub}</p>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
 
-                                        <div className="space-y-12 max-w-2xl mx-auto">
-                                            <div className="flex items-center gap-4 text-left border-b border-gray-50 pb-4">
-                                                <Badge className="bg-violet-50 text-violet-600 text-[10px] px-3">History</Badge>
-                                                <h4 className="font-bold text-gray-900">Transit Logs</h4>
+                                        <div className="max-w-2xl mx-auto">
+                                            <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
+                                                <h4 className="font-black text-slate-900 text-sm uppercase tracking-widest flex items-center gap-2">
+                                                    <History className="w-4 h-4 text-slate-400" />
+                                                    Chain of Custody
+                                                </h4>
+                                                <Badge className="bg-slate-100 text-slate-500 text-[9px] px-2 font-black uppercase tracking-widest">Internal logs</Badge>
                                             </div>
 
-                                            {[
-                                                { status: "Hub Arrival", loc: "Sector 07 Redistribution Hub", date: "Jan 12, 04:15 PM", current: true },
-                                                { status: "Package Verified", loc: "Central Distribution Center", date: "Jan 12, 11:30 AM", current: false },
-                                                { status: "Dispatch Authorized", loc: "Origin Facility", date: "Jan 11, 09:00 AM", current: false }
-                                            ].map((log, i) => (
-                                                <div key={i} className="flex gap-6 items-start relative pl-10">
-                                                    {/* Vertical line */}
-                                                    {i < 2 && <div className="absolute left-[7px] top-6 bottom-[-48px] w-[2px] bg-gray-50" />}
+                                            <div className="space-y-10">
+                                                {[
+                                                    { status: "Departure Authorized", loc: "Regional Logistic Center - RLC-99", date: "Jan 19, 2026 • 14:32", active: true },
+                                                    { status: "Package Consolidating", loc: "Main Distribution Hub", date: "Jan 18, 2026 • 11:20", active: false },
+                                                    { status: "Verification Complete", loc: "Processing Facility B-12", date: "Jan 18, 2026 • 09:15", active: false }
+                                                ].map((log, i) => (
+                                                    <div key={i} className="flex gap-8 items-start relative lg:pl-4">
+                                                        {i < 2 && <div className="absolute left-[31px] lg:left-[47px] top-8 bottom-[-40px] w-[2px] border-l-2 border-dashed border-slate-200" />}
 
-                                                    <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-4 border-white shadow-sm ${log.current ? 'bg-violet-600' : 'bg-gray-200'}`} />
-
-                                                    <div className="flex-1 space-y-1 text-left">
-                                                        <div className="flex items-center justify-between">
-                                                            <h5 className={`font-bold text-sm ${log.current ? 'text-violet-600' : 'text-gray-900'}`}>{log.status}</h5>
-                                                            <span className="text-[10px] font-black text-gray-300">{log.date}</span>
+                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-slate-200 ${log.active ? 'bg-violet-600 text-white border-violet-600 shadow-lg shadow-violet-100' : 'bg-white text-slate-400'}`}>
+                                                            <MapPin className="w-4 h-4" />
                                                         </div>
-                                                        <p className="text-gray-400 text-xs font-medium">{log.loc}</p>
+
+                                                        <div className="flex-1 text-left pb-1">
+                                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+                                                                <h5 className={`font-black text-sm uppercase tracking-tight ${log.active ? 'text-violet-600' : 'text-slate-900'}`}>
+                                                                    {log.status}
+                                                                </h5>
+                                                                <span className="text-[10px] font-bold text-slate-400 uppercase">{log.date}</span>
+                                                            </div>
+                                                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-widest flex items-center gap-1.5">
+                                                                <Building2 className="w-3 h-3" /> {log.loc}
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            {/* Additional Logistics Info */}
                             <div className="grid md:grid-cols-2 gap-8">
-                                <Card className="border-0 shadow-sm rounded-3xl p-8 bg-white border border-gray-100 flex gap-6 items-start text-left">
-                                    <div className="p-4 bg-violet-50 text-violet-600 rounded-2xl flex-shrink-0">
-                                        <Globe className="w-6 h-6" />
+                                <Card className="border-0 shadow-sm rounded-2xl p-8 bg-white border border-slate-100 flex gap-6 items-start text-left">
+                                    <div className="p-4 bg-slate-50 text-slate-900 rounded-xl border border-slate-200">
+                                        <MapPin className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-gray-900 mb-1 leading-none">Destination Sector</h4>
-                                        <p className="text-gray-400 text-xs font-medium leading-relaxed">
-                                            Residency Road, Area 51, <br />
-                                            Bangalore, KA 560001
-                                        </p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Authenticated Destination</p>
+                                        <h4 className="font-bold text-slate-900 text-sm">Residency Road, Area 51, Bangalore</h4>
+                                        <p className="text-slate-400 text-xs font-medium mt-1">Karnataka, India 560001</p>
                                     </div>
                                 </Card>
-                                <Card className="border-0 shadow-sm rounded-3xl p-8 bg-white border border-gray-100 flex gap-6 items-start text-left">
-                                    <div className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl flex-shrink-0">
-                                        <Info className="w-6 h-6" />
+                                <Card className="border-0 shadow-sm rounded-2xl p-8 bg-white border border-slate-100 flex gap-6 items-start text-left">
+                                    <div className="p-4 bg-slate-50 text-slate-900 rounded-xl border border-slate-200">
+                                        <Building2 className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-gray-900 mb-1 leading-none">Logistics Support</h4>
-                                        <p className="text-gray-400 text-xs font-medium leading-relaxed">
-                                            Require manual intervention? <br />
-                                            <button className="text-violet-600 font-bold hover:underline">Contact Fleet Manager</button>
-                                        </p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Assigned Carrier</p>
+                                        <h4 className="font-bold text-slate-900 text-sm">Zippy Logistics Express Limited</h4>
+                                        <button className="text-violet-600 font-black text-[10px] uppercase tracking-widest mt-2 hover:underline">Contact Handler</button>
                                     </div>
                                 </Card>
                             </div>
