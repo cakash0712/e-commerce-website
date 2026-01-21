@@ -1,8 +1,7 @@
 import { useEffect, useState, createContext, useContext } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import axios from "axios";
-import { HelmetProvider, Helmet } from 'react-helmet-async';
 import Shop from "./components/Shop";
 import Categories from "./components/Categories";
 import Deals from "./components/Deals";
@@ -25,8 +24,6 @@ import TermsOfService from "./components/TermsOfService";
 import Cookies from "./components/Cookies";
 import DetailsView from "./components/DetailsView";
 import Auth from "./components/Auth";
-import AdminLogin from "./components/AdminLogin";
-import VendorLogin from "./components/VendorLogin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +54,6 @@ import {
   Mail,
   MapPin,
   Phone,
-  CreditCard,
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -96,8 +92,6 @@ const AuthProvider = ({ children }) => {
       if (token && savedUser) {
         try {
           setUser(JSON.parse(savedUser));
-          // Configure axios for authenticated requests
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         } catch (e) {
           localStorage.removeItem('token');
           localStorage.removeItem('user_data');
@@ -105,22 +99,7 @@ const AuthProvider = ({ children }) => {
       }
       setLoading(false);
     };
-
-    // Axios Security Interceptor
-    const interceptor = axios.interceptors.response.use(
-      response => response,
-      error => {
-        if (error.response && [401, 403].includes(error.response.status)) {
-          // Force logout on security breach or expiration
-          logout();
-          window.location.href = '/auth';
-        }
-        return Promise.reject(error);
-      }
-    );
-
     checkAuth();
-    return () => axios.interceptors.response.eject(interceptor);
   }, []);
 
   const login = async (identifier, password, userType = "user") => {
@@ -131,16 +110,10 @@ const AuthProvider = ({ children }) => {
         user_type: userType
       });
       const userData = response.data;
-      const { token, ...data } = userData;
-
-      localStorage.setItem('token', token);
-      localStorage.setItem('user_data', JSON.stringify(data));
-
-      // Update default headers
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-      setUser(data);
-      return data;
+      localStorage.setItem('token', 'user_token');
+      localStorage.setItem('user_data', JSON.stringify(userData));
+      setUser(userData);
+      return userData;
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -163,7 +136,10 @@ const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user_data');
-    delete axios.defaults.headers.common['Authorization'];
+    localStorage.removeItem('user_phone');
+    localStorage.removeItem('user_email');
+    localStorage.removeItem('user_password');
+    localStorage.removeItem('user_profile');
     setUser(null);
   };
 
@@ -211,6 +187,18 @@ export const useWishlist = () => {
   }
   return context;
 };
+
+// Orders Context
+const OrderContext = createContext();
+
+export const useOrders = () => {
+  const context = useContext(OrderContext);
+  if (!context) {
+    throw new Error('useOrders must be used within an OrderProvider');
+  }
+  return context;
+};
+
 // Coupon Context
 const CouponContext = createContext();
 
@@ -218,59 +206,6 @@ export const useCoupons = () => {
   const context = useContext(CouponContext);
   if (!context) {
     throw new Error('useCoupons must be used within a CouponProvider');
-  }
-  return context;
-};
-
-const CouponProvider = ({ children }) => {
-  const [availableCoupons, setAvailableCoupons] = useState([
-    { id: 1, code: 'ZIPPY20', value: 20, type: 'percentage', target: 'global', minOrder: 1000, expiry: '2026-12-31', limit: 100, used: 45 },
-    { id: 2, code: 'TECH500', value: 500, type: 'fixed', target: 'category', category: 'electronics', minOrder: 5000, expiry: '2026-02-15', limit: 50, used: 12 },
-    { id: 3, code: 'VEND99', value: 15, type: 'percentage', target: 'vendor', vendorId: 'Global Partners', minOrder: 0, expiry: '2026-06-01', limit: 200, used: 8 },
-  ]);
-
-  const validateCoupon = (code, cartItems, subtotal) => {
-    const coupon = availableCoupons.find(c => c.code.toUpperCase() === code.toUpperCase());
-
-    if (!coupon) return { valid: false, message: 'Invalid protocol identifier.' };
-
-    if (new Date(coupon.expiry) < new Date()) {
-      return { valid: false, message: 'Coupon protocol has expired.' };
-    }
-
-    if (coupon.used >= coupon.limit) {
-      return { valid: false, message: 'Usage threshold exceeded.' };
-    }
-
-    if (subtotal < coupon.minOrder) {
-      return { valid: false, message: `Minimum commitment of ₹${coupon.minOrder} required.` };
-    }
-
-    if (coupon.target === 'category') {
-      const hasCategoryItem = cartItems.some(item => item.category?.toLowerCase() === coupon.category.toLowerCase());
-      if (!hasCategoryItem) return { valid: false, message: `Only valid for ${coupon.category} inventory.` };
-    }
-
-    if (coupon.target === 'vendor') {
-      const hasVendorItem = cartItems.some(item => item.vendor === coupon.vendorId);
-      if (!hasVendorItem) return { valid: false, message: `Valid only for ${coupon.vendorId} assets.` };
-    }
-
-    return { valid: true, coupon };
-  };
-
-  return (
-    <CouponContext.Provider value={{ availableCoupons, validateCoupon }}>
-      {children}
-    </CouponContext.Provider>
-  );
-};// Orders Context
-const OrderContext = createContext();
-
-export const useOrders = () => {
-  const context = useContext(OrderContext);
-  if (!context) {
-    throw new Error('useOrders must be used within an OrderProvider');
   }
   return context;
 };
@@ -409,298 +344,248 @@ const OrderProvider = ({ children }) => {
   );
 };
 
-// Hero Section - Professional E-commerce Style
+const CouponProvider = ({ children }) => {
+  const [availableCoupons, setAvailableCoupons] = useState([
+    { id: 1, code: 'ZIPPY20', value: 20, type: 'percentage', target: 'global', minOrder: 1000, expiry: '2026-12-31', limit: 100, used: 45 },
+    { id: 2, code: 'TECH500', value: 500, type: 'fixed', target: 'category', category: 'electronics', minOrder: 5000, expiry: '2026-02-15', limit: 50, used: 12 },
+    { id: 3, code: 'VEND99', value: 15, type: 'percentage', target: 'vendor', vendorId: 'Global Partners', minOrder: 0, expiry: '2026-06-01', limit: 200, used: 8 },
+  ]);
+
+  const validateCoupon = (code, cartItems, subtotal) => {
+    const coupon = availableCoupons.find(c => c.code.toUpperCase() === code.toUpperCase());
+
+    if (!coupon) return { valid: false, message: 'Invalid protocol identifier.' };
+
+    if (new Date(coupon.expiry) < new Date()) {
+      return { valid: false, message: 'Coupon protocol has expired.' };
+    }
+
+    if (coupon.used >= coupon.limit) {
+      return { valid: false, message: 'Usage threshold exceeded.' };
+    }
+
+    if (subtotal < coupon.minOrder) {
+      return { valid: false, message: `Minimum commitment of ₹${coupon.minOrder} required.` };
+    }
+
+    if (coupon.target === 'category') {
+      const hasCategoryItem = cartItems.some(item => item.category?.toLowerCase() === coupon.category.toLowerCase());
+      if (!hasCategoryItem) return { valid: false, message: `Only valid for ${coupon.category} inventory.` };
+    }
+
+    if (coupon.target === 'vendor') {
+      const hasVendorItem = cartItems.some(item => item.vendor === coupon.vendorId);
+      if (!hasVendorItem) return { valid: false, message: `Valid only for ${coupon.vendorId} assets.` };
+    }
+
+    return { valid: true, coupon };
+  };
+
+  return (
+    <CouponContext.Provider value={{ availableCoupons, validateCoupon }}>
+      {children}
+    </CouponContext.Provider>
+  );
+};
+
+// Hero Section
 const HeroSection = () => {
-  const categories = [
-    { name: "Electronics", icon: Laptop, link: "/shop?category=electronics" },
-    { name: "Fashion", icon: Shirt, link: "/shop?category=fashion" },
-    { name: "Home & Kitchen", icon: HomeIcon, link: "/shop?category=home-decoration" },
-    { name: "Sports", icon: Dumbbell, link: "/shop?category=sports" },
-    { name: "Books", icon: BookOpen, link: "/shop?category=books" },
-    { name: "Accessories", icon: Watch, link: "/shop?category=accessories" },
-  ];
-
   return (
-    <section className="bg-gradient-to-br from-violet-700 via-indigo-700 to-purple-800">
-      {/* Main Banner Carousel */}
-      <div className="relative">
-        <Carousel className="w-full">
-          <CarouselContent>
-            <CarouselItem>
-              <div className="relative h-[300px] md:h-[400px] bg-gradient-to-r from-violet-800 to-indigo-800">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid md:grid-cols-2 gap-8 items-center">
-                    <div className="text-white space-y-4">
-                      <p className="text-violet-300 font-medium text-sm uppercase tracking-wider">New Arrivals</p>
-                      <h1 className="text-3xl md:text-5xl font-bold leading-tight">
-                        Premium Products at <span className="text-amber-400">Best Prices</span>
-                      </h1>
-                      <p className="text-gray-300 text-lg">Shop from thousands of products with fast delivery</p>
-                      <Link to="/shop">
-                        <Button className="bg-violet-500 hover:bg-violet-600 text-white font-bold px-8 h-12 rounded-lg shadow-lg">
-                          Shop Now <ArrowRight className="ml-2 w-5 h-5" />
-                        </Button>
-                      </Link>
-                    </div>
-                    <div className="hidden md:block">
-                      <img
-                        src="https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=500&h=350&fit=crop"
-                        alt="Featured products"
-                        className="rounded-lg shadow-2xl"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CarouselItem>
-            <CarouselItem>
-              <div className="relative h-[300px] md:h-[400px] bg-gradient-to-r from-indigo-800 to-violet-800">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid md:grid-cols-2 gap-8 items-center">
-                    <div className="text-white space-y-4">
-                      <p className="text-violet-300 font-medium text-sm uppercase tracking-wider">Flash Sale</p>
-                      <h1 className="text-3xl md:text-5xl font-bold leading-tight">
-                        Up to <span className="text-amber-400">50% Off</span> on Electronics
-                      </h1>
-                      <p className="text-gray-300 text-lg">Limited time offer. Don't miss out!</p>
-                      <Link to="/deals">
-                        <Button className="bg-violet-500 hover:bg-violet-600 text-white font-bold px-8 h-12 rounded-lg shadow-lg">
-                          View Deals <ArrowRight className="ml-2 w-5 h-5" />
-                        </Button>
-                      </Link>
-                    </div>
-                    <div className="hidden md:block">
-                      <img
-                        src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=350&fit=crop"
-                        alt="Electronics sale"
-                        className="rounded-lg shadow-2xl"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CarouselItem>
-            <CarouselItem>
-              <div className="relative h-[300px] md:h-[400px] bg-gradient-to-r from-purple-800 to-violet-800">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid md:grid-cols-2 gap-8 items-center">
-                    <div className="text-white space-y-4">
-                      <p className="text-violet-300 font-medium text-sm uppercase tracking-wider">Free Shipping</p>
-                      <h1 className="text-3xl md:text-5xl font-bold leading-tight">
-                        Free Delivery on Orders <span className="text-amber-400">₹500+</span>
-                      </h1>
-                      <p className="text-gray-300 text-lg">Fast & reliable shipping across India</p>
-                      <Link to="/shop">
-                        <Button className="bg-violet-500 hover:bg-violet-600 text-white font-bold px-8 h-12 rounded-lg shadow-lg">
-                          Start Shopping <ArrowRight className="ml-2 w-5 h-5" />
-                        </Button>
-                      </Link>
-                    </div>
-                    <div className="hidden md:block">
-                      <img
-                        src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&h=350&fit=crop"
-                        alt="Fast delivery"
-                        className="rounded-lg shadow-2xl"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CarouselItem>
-          </CarouselContent>
-          <CarouselPrevious className="left-4 bg-white/90 hover:bg-white border-none shadow-lg" />
-          <CarouselNext className="right-4 bg-white/90 hover:bg-white border-none shadow-lg" />
-        </Carousel>
-
-        {/* Gradient fade at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-gray-50 to-transparent"></div>
+    <section className="relative min-h-[70vh] flex items-center overflow-hidden bg-gradient-to-br from-violet-900 via-indigo-900 to-purple-900">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-violet-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-500"></div>
       </div>
 
-      {/* Category Quick Links Strip */}
-      <div className="bg-white border-b border-gray-200 py-4">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center gap-2 md:gap-8 overflow-x-auto pb-2 scrollbar-hide">
-            {categories.map((cat, i) => (
-              <Link
-                key={i}
-                to={cat.link}
-                className="flex flex-col items-center gap-2 px-4 py-2 rounded-lg hover:bg-violet-50 transition-colors min-w-[80px] group"
-              >
-                <div className="w-12 h-12 bg-violet-100 rounded-full flex items-center justify-center group-hover:bg-violet-200 transition-colors">
-                  <cat.icon className="w-6 h-6 text-violet-600" />
-                </div>
-                <span className="text-xs font-medium text-gray-700 text-center whitespace-nowrap">{cat.name}</span>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Left Content */}
+          <div className="text-center lg:text-left space-y-8">
+            <Badge className="bg-white/10 text-white border-white/20 px-4 py-1.5 text-sm">
+              <Sparkles className="w-4 h-4 mr-2" />
+              Summer Collection 2025
+            </Badge>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight">
+              Discover Your
+              <span className="block bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 bg-clip-text text-transparent">
+                Perfect Style
+              </span>
+            </h1>
+            <p className="text-lg lg:text-xl text-white/70 max-w-xl mx-auto lg:mx-0">
+              Explore thousands of premium products with exclusive deals,
+              lightning-fast delivery, and unmatched customer service.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+              <Link to="/shop">
+                <Button
+                  size="lg"
+                  className="bg-white text-violet-900 hover:bg-white/90 px-8 py-6 text-lg group"
+                  data-testid="shop-now-btn"
+                >
+                  Shop Now
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
               </Link>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
-
-// Featured Categories Section - Professional Style
-const FeaturedCategoriesSection = () => {
-  const categories = [
-    { name: "Electronics", icon: Laptop, image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=300&h=200&fit=crop", link: "/shop?category=electronics" },
-    { name: "Fashion", icon: Shirt, image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=300&h=200&fit=crop", link: "/shop?category=fashion" },
-    { name: "Home & Kitchen", icon: HomeIcon, image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&h=200&fit=crop", link: "/shop?category=home-decoration" },
-    { name: "Sports", icon: Dumbbell, image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=200&fit=crop", link: "/shop?category=sports" },
-  ];
-
-  return (
-    <section className="py-10 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {categories.map((cat, i) => (
-            <div key={i} className="bg-white p-5 rounded-xl shadow-sm hover:shadow-lg transition-shadow border border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900 mb-3">{cat.name}</h3>
-              <Link to={cat.link} className="block group">
-                <div className="aspect-[3/2] overflow-hidden rounded-lg mb-3">
-                  <img
-                    src={cat.image}
-                    alt={cat.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </div>
-                <span className="text-sm text-violet-600 hover:text-violet-700 hover:underline font-medium">
-                  Shop now
-                </span>
+              <Link to="/categories">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-white/30 text-white hover:bg-white/10 px-8 py-6 text-lg"
+                  data-testid="explore-btn"
+                >
+                  Explore Collections
+                </Button>
               </Link>
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
 
-// Flash Deals Section - Professional Style
-const FlashDealsSection = () => {
-  const { addToCart } = useCart();
-  const [deals, setDeals] = useState([]);
-  const [timeLeft, setTimeLeft] = useState({ h: 12, m: 45, s: 30 });
-
-  useEffect(() => {
-    const fetchDeals = async () => {
-      try {
-        const response = await axios.get('https://dummyjson.com/products?limit=6&skip=20');
-        setDeals(response.data.products.map(p => ({
-          ...p,
-          discountPrice: Math.round(p.price * 83),
-          originalPrice: Math.round(p.price * 83 * 1.5),
-          rating: p.rating,
-          reviews: Math.floor(Math.random() * 200) + 50,
-          discount: Math.round(p.discountPercentage)
-        })));
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    fetchDeals();
-
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.s > 0) return { ...prev, s: prev.s - 1 };
-        if (prev.m > 0) return { ...prev, m: prev.m - 1, s: 59 };
-        if (prev.h > 0) return { h: prev.h - 1, m: 59, s: 59 };
-        return prev;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <section className="py-10 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-4">
-            <div className="flex items-center gap-4">
-              <h2 className="text-xl font-bold text-gray-900">⚡ Limited Time Offer</h2>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-500">Ends in:</span>
-                <div className="flex items-center gap-1">
-                  <span className="bg-violet-600 text-white px-2 py-1 rounded text-sm font-bold">
-                    {timeLeft.h.toString().padStart(2, '0')}
-                  </span>
-                  <span className="text-violet-600 font-bold">:</span>
-                  <span className="bg-violet-600 text-white px-2 py-1 rounded text-sm font-bold">
-                    {timeLeft.m.toString().padStart(2, '0')}
-                  </span>
-                  <span className="text-violet-600 font-bold">:</span>
-                  <span className="bg-violet-600 text-white px-2 py-1 rounded text-sm font-bold">
-                    {timeLeft.s.toString().padStart(2, '0')}
-                  </span>
-                </div>
+            {/* Trust Badges */}
+            <div className="flex items-center gap-8 justify-center lg:justify-start pt-8">
+              <div className="text-center">
+                <p className="text-3xl font-bold text-white">50K+</p>
+                <p className="text-white/60 text-sm">Happy Customers</p>
+              </div>
+              <div className="w-px h-12 bg-white/20"></div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-white">10K+</p>
+                <p className="text-white/60 text-sm">Products</p>
+              </div>
+              <div className="w-px h-12 bg-white/20"></div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-white">99%</p>
+                <p className="text-white/60 text-sm">Satisfaction</p>
               </div>
             </div>
-            <Link to="/deals" className="text-sm text-violet-600 hover:text-violet-700 hover:underline font-medium">
-              See all deals
-            </Link>
           </div>
 
-          {/* Deals Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {deals.map(p => (
-              <Link key={p.id} to={`/product/${p.id}`} className="group block">
-                <div className="text-center">
-                  <div className="relative aspect-square mb-3 overflow-hidden rounded-lg bg-gray-50">
+          {/* Right Content - Hero Image Slider */}
+          <div className="relative hidden lg:block">
+            <div className="relative">
+              <div className="absolute -inset-4 bg-gradient-to-r from-violet-500 to-indigo-500 rounded-3xl blur-2xl opacity-30"></div>
+              <Carousel className="relative rounded-3xl shadow-2xl w-full h-[400px] overflow-hidden">
+                <CarouselContent>
+                  <CarouselItem>
                     <img
-                      src={p.thumbnail}
-                      alt={p.title}
-                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
+                      src="https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=600&h=400&fit=crop"
+                      alt="Modern tech products"
+                      className="w-full h-[400px] object-cover"
                     />
-                    <div className="absolute top-2 left-2">
-                      <span className="bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded">
-                        {p.discount}% off
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-center gap-1">
-                      <span className="text-violet-600 text-lg font-bold">₹{p.discountPrice.toLocaleString()}</span>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      M.R.P: <span className="line-through">₹{p.originalPrice.toLocaleString()}</span>
-                    </p>
-                    <p className="text-sm text-gray-900 line-clamp-2 font-medium">{p.title}</p>
-                  </div>
+                  </CarouselItem>
+                  <CarouselItem>
+                    <img
+                      src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=400&fit=crop"
+                      alt="Premium watches"
+                      className="w-full h-[400px] object-cover"
+                    />
+                  </CarouselItem>
+                  <CarouselItem>
+                    <img
+                      src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=400&fit=crop"
+                      alt="Audio equipment"
+                      className="w-full h-[400px] object-cover"
+                    />
+                  </CarouselItem>
+                  <CarouselItem>
+                    <img
+                      src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&h=400&fit=crop"
+                      alt="Fashion items"
+                      className="w-full h-[400px] object-cover"
+                    />
+                  </CarouselItem>
+                </CarouselContent>
+                <CarouselPrevious className="left-4" />
+                <CarouselNext className="right-4" />
+              </Carousel>
+            </div>
+            {/* Floating Cards */}
+            <div className="absolute -left-8 top-20 bg-white rounded-2xl p-4 shadow-xl animate-bounce-slow">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <Truck className="w-6 h-6 text-green-600" />
                 </div>
-              </Link>
-            ))}
+                <div>
+                  <p className="font-semibold text-gray-900">Free Shipping</p>
+                  <p className="text-sm text-gray-500">On orders $50+</p>
+                </div>
+              </div>
+            </div>
+            <div className="absolute -right-4 bottom-20 bg-white rounded-2xl p-4 shadow-xl animate-bounce-slow delay-500">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-violet-100 rounded-xl flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-violet-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Secure Payment</p>
+                  <p className="text-sm text-gray-500">100% Protected</p>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Scroll Indicator */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+        <div className="w-8 h-12 border-2 border-white/30 rounded-full flex justify-center pt-2">
+          <div className="w-1.5 h-3 bg-white/60 rounded-full animate-scroll"></div>
         </div>
       </div>
     </section>
   );
 };
 
-// Features Section - Trust Bar Style
+// Features Section
 const FeaturesSection = () => {
   const features = [
-    { icon: Truck, title: "Free Delivery", desc: "On orders over ₹500" },
-    { icon: RotateCcw, title: "Easy Returns", desc: "10 days return policy" },
-    { icon: Shield, title: "Secure Payment", desc: "100% secure checkout" },
-    { icon: Headphones, title: "24/7 Support", desc: "Dedicated support team" },
+    {
+      icon: Truck,
+      title: "Free Shipping",
+      description: "Free shipping on all orders over $50",
+      color: "bg-blue-500",
+    },
+    {
+      icon: Shield,
+      title: "Secure Payment",
+      description: "100% secure payment processing",
+      color: "bg-green-500",
+    },
+    {
+      icon: RotateCcw,
+      title: "Easy Returns",
+      description: "30-day hassle-free return policy",
+      color: "bg-amber-500",
+    },
+    {
+      icon: Headphones,
+      title: "24/7 Support",
+      description: "Dedicated customer support team",
+      color: "bg-violet-500",
+    },
   ];
 
   return (
-    <section className="py-4 bg-white border-b border-gray-200">
+    <section className="py-16 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {features.map((f, i) => (
-            <div key={i} className="flex items-center gap-3 p-3">
-              <div className="w-10 h-10 bg-violet-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <f.icon className="w-5 h-5 text-violet-600" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900">{f.title}</p>
-                <p className="text-xs text-gray-500">{f.desc}</p>
-              </div>
-            </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          {features.map((feature, index) => (
+            <Card
+              key={index}
+              className="border-0 shadow-sm hover:shadow-lg transition-all duration-300 group"
+              data-testid={`feature-${index}`}
+            >
+              <CardContent className="p-6 text-center">
+                <div
+                  className={`w-14 h-14 ${feature.color} rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform`}
+                >
+                  <feature.icon className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  {feature.title}
+                </h3>
+                <p className="text-sm text-gray-500">{feature.description}</p>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
@@ -708,72 +593,97 @@ const FeaturesSection = () => {
   );
 };
 
-// Shop by Collection Section - Clean Formal Style
+// Premium Bento Grid Section
 const ModernBentoGrid = () => {
-  const collections = [
+  const items = [
     {
-      title: "Electronics",
-      subtitle: "Latest gadgets & tech",
-      image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80",
-      link: "/shop?category=electronics",
-      productCount: 120
+      title: "Audio Elite",
+      tag: "Pure Sound",
+      image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80",
+      description: "Experience sound like never before with our studio-grade headphones.",
+      width: "col-span-1 lg:col-span-2",
+      height: "h-[320px] lg:h-[400px]",
+      link: "/shop?category=electronics"
     },
     {
-      title: "Fashion",
-      subtitle: "Trending styles",
-      image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&q=80",
-      link: "/shop?category=fashion",
-      productCount: 250
+      title: "Pro Workspaces",
+      tag: "Efficiency",
+      image: "https://images.unsplash.com/photo-1493934558415-9d19f0b2b4d2?w=800&q=80",
+      description: "Minimalist desk setups for maximum focus.",
+      width: "col-span-1",
+      height: "h-[320px] lg:h-[400px]",
+      link: "/shop?category=electronics"
     },
     {
-      title: "Home & Living",
-      subtitle: "Decor essentials",
-      image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
-      link: "/shop?category=home-decoration",
-      productCount: 80
+      title: "Active Life",
+      tag: "Peak Performance",
+      image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
+      description: "Gear that moves with you.",
+      width: "col-span-1",
+      height: "h-[320px] lg:h-[480px]",
+      link: "/shop?category=sports"
     },
     {
-      title: "Sports & Fitness",
-      subtitle: "Active lifestyle",
-      image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80",
-      link: "/shop?category=sports",
-      productCount: 95
+      title: "Urban Style",
+      tag: "2025 Look",
+      image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&q=80",
+      description: "Modern fashion for the urban explorer.",
+      width: "col-span-1 lg:col-span-2",
+      height: "h-[320px] lg:h-[480px]",
+      link: "/shop?category=fashion"
     }
   ];
 
   return (
-    <section className="py-12 bg-white">
+    <section className="py-24 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Shop by Collection</h2>
-            <p className="text-gray-500 mt-1">Explore our curated categories</p>
+        <div className="flex flex-col mb-16 space-y-4">
+          <Badge className="w-fit bg-violet-600 text-white rounded-full px-4 font-bold border-none">The Lookbook</Badge>
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+            <h2 className="text-4xl lg:text-6xl font-black text-gray-900 leading-tight">
+              Curated <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-pink-500 italic">Collections</span>
+            </h2>
+            <p className="text-gray-500 text-lg max-w-md">
+              A bespoke selection of items chosen for their design, utility, and timeless appeal.
+            </p>
           </div>
-          <Link to="/categories" className="text-violet-600 hover:underline font-medium text-sm">
-            View All Categories
-          </Link>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {collections.map((item, idx) => (
-            <Link
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {items.map((item, idx) => (
+            <div
               key={idx}
-              to={item.link}
-              className="group relative aspect-[4/5] rounded-lg overflow-hidden bg-gray-100"
+              className={`group relative ${item.width} ${item.height} rounded-[2.5rem] overflow-hidden shadow-2xl bg-gray-100 transition-all duration-700 hover:-translate-y-3`}
             >
               <img
                 src={item.image}
                 alt={item.title}
                 loading="lazy"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                onLoad={(e) => e.target.classList.add('opacity-100')}
+                className="w-full h-full object-cover transition-all duration-1000 opacity-0 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <h3 className="text-lg font-bold text-white">{item.title}</h3>
-                <p className="text-white/70 text-sm">{item.subtitle}</p>
-                <p className="text-violet-300 text-xs mt-1">{item.productCount}+ products</p>
+
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+
+              <div className="absolute inset-0 p-8 flex flex-col justify-end">
+                <div className="space-y-4 translate-y-6 group-hover:translate-y-0 transition-transform duration-500">
+                  <div className="flex items-center gap-2">
+                    <span className="h-px w-8 bg-violet-400"></span>
+                    <span className="text-violet-400 text-sm font-bold uppercase tracking-widest">{item.tag}</span>
+                  </div>
+                  <h3 className="text-3xl font-bold text-white leading-none">{item.title}</h3>
+                  <p className="text-gray-300 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+                    {item.description}
+                  </p>
+                  <Link to={item.link} className="inline-block mt-4">
+                    <Button variant="outline" className="rounded-full border-white/20 text-white hover:bg-white hover:text-black transition-all">
+                      Explore Series
+                    </Button>
+                  </Link>
+                </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>
@@ -781,7 +691,7 @@ const ModernBentoGrid = () => {
   );
 };
 
-// Featured Products Section - Professional Style
+// Featured Products Section
 const FeaturedProductsSection = () => {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
@@ -801,6 +711,9 @@ const FeaturedProductsSection = () => {
           rating: p.rating,
           reviews: p.reviews ? p.reviews.length : Math.floor(Math.random() * 500) + 50,
           discount: Math.round(p.discountPercentage),
+          isNew: Math.random() > 0.8,
+          isBestSeller: Math.random() > 0.8,
+          description: p.description
         }));
         setProducts(mappedProducts);
       } catch (error) {
@@ -812,103 +725,153 @@ const FeaturedProductsSection = () => {
     fetchProducts();
   }, []);
 
+  const renderStars = (rating) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(
+        <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+      );
+    }
+    if (hasHalfStar) {
+      stars.push(
+        <Star
+          key="half"
+          className="w-4 h-4 fill-amber-400/50 text-amber-400"
+        />
+      );
+    }
+    const emptyStars = 5 - Math.ceil(rating);
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(
+        <Star key={`empty-${i}`} className="w-4 h-4 text-gray-300" />
+      );
+    }
+    return stars;
+  };
+
   if (isLoading) {
     return (
-      <section className="py-10 bg-gray-50 flex justify-center items-center min-h-[300px]">
-        <div className="w-10 h-10 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+      <section className="py-24 bg-gray-50/50 flex justify-center items-center min-h-[400px]">
+        <div className="w-12 h-12 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
       </section>
     );
   }
 
   return (
-    <section className="py-10 bg-gray-50">
+    <section className="py-24 bg-gray-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-4">
-            <h2 className="text-xl font-bold text-gray-900">🔥 Trending Products</h2>
-            <Link to="/shop" className="text-sm text-violet-600 hover:text-violet-700 hover:underline font-medium">
-              See more
-            </Link>
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
+          <div>
+            <Badge className="mb-4 bg-violet-100 text-violet-600 border-violet-200">Featured</Badge>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+              Trending Products
+            </h2>
+            <p className="text-gray-600 max-w-xl">
+              Discover our most popular and highly-rated products loved by
+              thousands of customers
+            </p>
           </div>
+          <Link
+            to="/shop"
+            className="mt-6 md:mt-0 inline-flex items-center text-violet-600 hover:text-violet-700 font-medium group"
+          >
+            View All Products
+            <ChevronRight className="ml-1 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                className="group p-3 hover:shadow-lg transition-shadow rounded-lg border border-transparent hover:border-violet-100"
-                data-testid={`product-${product.id}`}
-              >
-                <Link to={`/product/${product.id}`} className="block">
-                  <div className="relative aspect-square mb-3 bg-gray-50 rounded-lg overflow-hidden">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop" }}
-                      loading="lazy"
-                    />
-                    {product.discount > 10 && (
-                      <div className="absolute top-2 left-2">
-                        <span className="bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded">
-                          {product.discount}% off
-                        </span>
-                      </div>
-                    )}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {products.map((product) => (
+            <Card
+              key={product.id}
+              className="group border-0 shadow-md hover:shadow-2xl transition-all duration-500 overflow-hidden bg-white flex flex-col"
+              data-testid={`product-${product.id}`}
+            >
+              <div className="relative overflow-hidden aspect-square">
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop" }}
+                />
+                {/* Badges */}
+                <div className="absolute top-4 left-4 flex flex-col gap-2">
+                  {product.discount && (
+                    <Badge className="bg-violet-600 text-white border-0 font-bold px-3 py-1 text-xs shadow-xl">
+                      -{product.discount}%
+                    </Badge>
+                  )}
+                  {product.isNew && (
+                    <Badge className="bg-indigo-500 text-white border-0 font-bold px-3 py-1 text-xs shadow-xl">
+                      NEW
+                    </Badge>
+                  )}
+                  {product.isBestSeller && (
+                    <Badge className="bg-amber-500 text-white border-0 font-bold px-3 py-1 text-xs shadow-xl">
+                      BEST SELLER
+                    </Badge>
+                  )}
+                </div>
+                {/* Quick Actions */}
+                <div className="absolute top-4 right-4 translate-y-2 lg:translate-y-4 lg:opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className={`rounded-2xl bg-white shadow-2xl hover:bg-white ${isInWishlist(product.id) ? 'text-violet-600' : 'text-gray-400'}`}
+                    onClick={() => isInWishlist(product.id) ? removeFromWishlist(product.id) : addToWishlist(product)}
+                  >
+                    <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+                  </Button>
+                </div>
+              </div>
+              <CardContent className="p-6 flex flex-col flex-1">
+                <div className="flex-1">
+                  <div className="flex items-center gap-1 mb-3">
+                    <div className="flex">{renderStars(product.rating)}</div>
+                    <span className="text-[10px] font-black text-gray-400 ml-1">
+                      ({product.reviews})
+                    </span>
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-violet-600">
+                  <Link to={`/shop`}>
+                    <h3 className="font-bold text-gray-900 mb-2 group-hover:text-violet-600 transition-colors line-clamp-2 text-lg leading-tight">
                       {product.name}
                     </h3>
-                    <div className="flex items-center gap-1">
-                      <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className={`w-3 h-3 ${i < Math.floor(product.rating) ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
-                        ))}
-                      </div>
-                      <span className="text-xs text-gray-500">({product.reviews})</span>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-lg font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
-                      {product.originalPrice && (
-                        <span className="text-xs text-gray-400 line-through">₹{product.originalPrice.toLocaleString()}</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-green-600 font-medium">Free delivery</p>
+                  </Link>
+                  <div className="flex items-baseline gap-2 mb-6">
+                    <span className="text-2xl font-black text-gray-900 tracking-tighter">
+                      ₹{product.price}
+                    </span>
+                    {product.originalPrice && (
+                      <span className="text-sm text-gray-400 line-through font-bold">
+                        ₹{product.originalPrice}
+                      </span>
+                    )}
                   </div>
-                </Link>
-                <Button
-                  className="w-full mt-3 bg-violet-600 hover:bg-violet-700 text-white font-medium h-9 rounded-lg text-sm shadow-sm"
-                  onClick={(e) => { e.preventDefault(); addToCart(product); }}
-                >
-                  Add to Cart
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
-
-// Why Shop With Us Section - Clean Formal Style
-const PromoBannerSection = () => {
-  const benefits = [
-    { title: "Quality Products", desc: "Handpicked items from trusted brands" },
-    { title: "Fast Delivery", desc: "Free shipping on orders over ₹500" },
-    { title: "Easy Returns", desc: "10-day hassle-free return policy" },
-    { title: "Secure Payments", desc: "100% safe & secure checkout" },
-  ];
-
-  return (
-    <section className="py-12 bg-violet-600">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-          {benefits.map((item, i) => (
-            <div key={i} className="text-center">
-              <h3 className="text-white font-bold text-lg mb-1">{item.title}</h3>
-              <p className="text-violet-200 text-sm">{item.desc}</p>
-            </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    className="flex-1 h-12 bg-gray-900 hover:bg-violet-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 group/btn overflow-hidden relative shadow-lg shadow-gray-200"
+                    onClick={() => addToCart(product)}
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-2 group-hover/btn:animate-bounce" />
+                    Cart
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-12 border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95"
+                    onClick={() => {
+                      addToCart(product);
+                      window.location.href = '/payment';
+                    }}
+                  >
+                    Buy Now
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
@@ -916,62 +879,150 @@ const PromoBannerSection = () => {
   );
 };
 
-// Customer Reviews Section - Clean Formal Style
+// Promo Banner Section
+const PromoBannerSection = () => {
+  return (
+    <section className="py-20 bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 relative overflow-hidden">
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+      </div>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="text-center lg:text-left">
+            <Badge className="bg-white/20 text-white border-white/30 mb-6">
+              Limited Time Offer
+            </Badge>
+            <h2 className="text-3xl lg:text-5xl font-bold text-white mb-6">
+              Summer Sale
+              <span className="block text-amber-300">Up to 50% Off</span>
+            </h2>
+            <p className="text-white/80 text-lg mb-8 max-w-lg mx-auto lg:mx-0">
+              Do not miss out on our biggest sale of the season. Get exclusive
+              deals on thousands of products.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+              <Link to="/deals">
+                <Button
+                  size="lg"
+                  className="bg-white text-violet-700 hover:bg-white/90 px-8"
+                  data-testid="shop-sale-btn"
+                >
+                  Shop the Sale
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
+            </div>
+
+            {/* Countdown Timer (Static for demo) */}
+            <div className="flex justify-center lg:justify-start gap-4 mt-8">
+              {[
+                { value: "12", label: "Days" },
+                { value: "08", label: "Hours" },
+                { value: "45", label: "Mins" },
+                { value: "30", label: "Secs" },
+              ].map((item, index) => (
+                <div
+                  key={index}
+                  className="bg-white/10 backdrop-blur-sm rounded-lg p-3 min-w-[70px]"
+                >
+                  <p className="text-2xl font-bold text-white">{item.value}</p>
+                  <p className="text-xs text-white/70">{item.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="hidden lg:block">
+            <img
+              src="https://images.unsplash.com/photo-1524289286702-f07229da36f5?w=600&h=400&fit=crop"
+              alt="Sale products"
+              className="rounded-2xl shadow-2xl"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// Testimonials Section
 const TestimonialsSection = () => {
   const testimonials = [
     {
-      name: "Priya Sharma",
+      name: "Sarah Johnson",
+      role: "Verified Buyer",
       rating: 5,
-      text: "Excellent shopping experience! The product quality exceeded my expectations and delivery was super fast.",
-      location: "Mumbai",
-      date: "2 days ago"
+      text: "Absolutely love shopping here! The product quality is exceptional and the delivery was faster than expected. Will definitely be a returning customer!",
+      location: "New York, NY",
+      avatar: "SJ",
     },
     {
-      name: "Rahul Kumar",
+      name: "Michael Chen",
+      role: "Premium Member",
       rating: 5,
-      text: "Great prices and authentic products. Customer service was very helpful with my query.",
-      location: "Delhi",
-      date: "1 week ago"
+      text: "The best online shopping experience I've ever had. Great prices, easy navigation, and the customer service team is incredibly helpful.",
+      location: "Los Angeles, CA",
+      avatar: "MC",
     },
     {
-      name: "Ananya Patel",
+      name: "Emily Davis",
+      role: "Verified Buyer",
       rating: 5,
-      text: "Love the easy returns policy. The app is so user-friendly and I got my refund within 3 days.",
-      location: "Bangalore",
-      date: "2 weeks ago"
+      text: "I was skeptical at first, but after my first purchase, I'm completely sold. The quality exceeded my expectations and the returns process is hassle-free.",
+      location: "Chicago, IL",
+      avatar: "ED",
     },
   ];
 
   return (
-    <section className="py-12 bg-gray-50">
+    <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">What Our Customers Say</h2>
-          <p className="text-gray-500">Trusted by thousands of happy shoppers</p>
+        <div className="text-center mb-12">
+          <Badge className="mb-4 bg-violet-100 text-violet-600 border-violet-200">Testimonials</Badge>
+          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+            What Our Customers Say
+          </h2>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Join thousands of satisfied customers who love shopping with us
+          </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-8">
           {testimonials.map((testimonial, index) => (
-            <div
+            <Card
               key={index}
-              className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-shadow"
+              className="border-0 shadow-lg hover:shadow-xl transition-shadow"
+              data-testid={`testimonial-${index}`}
             >
-              <div className="flex gap-1 mb-3">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                ))}
-              </div>
-              <p className="text-gray-700 mb-4 leading-relaxed">
-                "{testimonial.text}"
-              </p>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-900">{testimonial.name}</p>
-                  <p className="text-sm text-gray-500">{testimonial.location}</p>
+              <CardContent className="p-6">
+                <Quote className="w-10 h-10 text-violet-200 mb-4" />
+                <div className="flex gap-1 mb-4">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className="w-5 h-5 fill-amber-400 text-amber-400"
+                    />
+                  ))}
                 </div>
-                <span className="text-xs text-gray-400">{testimonial.date}</span>
-              </div>
-            </div>
+                <p className="text-gray-700 mb-6 leading-relaxed">
+                  &ldquo;{testimonial.text}&rdquo;
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold">
+                    {testimonial.avatar}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {testimonial.name}
+                    </p>
+                    <p className="text-sm text-gray-500">{testimonial.role}</p>
+                    <p className="text-xs text-gray-400">
+                      {testimonial.location}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
@@ -979,36 +1030,41 @@ const TestimonialsSection = () => {
   );
 };
 
-// Newsletter Section - Clean Formal Style
+// Newsletter Section
 const NewsletterSection = () => {
   return (
-    <section className="py-12 bg-white border-t border-gray-200">
+    <section className="py-20 bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gray-50 rounded-lg p-8 lg:p-12">
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Subscribe to Our Newsletter
+        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-3xl p-8 lg:p-12 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+
+          <div className="relative text-center max-w-2xl mx-auto">
+            <Mail className="w-12 h-12 text-white/80 mx-auto mb-6" />
+            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
+              Stay in the Loop
             </h2>
-            <p className="text-gray-500 mb-6">
-              Get the latest deals, new arrivals, and exclusive offers delivered to your inbox.
+            <p className="text-white/80 mb-8">
+              Subscribe to our newsletter and be the first to know about
+              exclusive deals, new arrivals, and special offers.
             </p>
-            <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+            <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
               <Input
                 type="email"
                 placeholder="Enter your email"
-                className="flex-1 h-12 border-gray-300 focus:border-violet-500 focus:ring-violet-500"
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:bg-white/20"
                 data-testid="newsletter-email"
               />
               <Button
                 type="submit"
-                className="h-12 px-8 bg-violet-600 hover:bg-violet-700 text-white font-medium"
+                className="bg-white text-violet-700 hover:bg-white/90 px-8"
                 data-testid="newsletter-submit"
               >
                 Subscribe
               </Button>
             </form>
-            <p className="text-gray-400 text-xs mt-4">
-              No spam, unsubscribe anytime.
+            <p className="text-white/60 text-sm mt-4">
+              No spam, unsubscribe at any time.
             </p>
           </div>
         </div>
@@ -1017,75 +1073,37 @@ const NewsletterSection = () => {
   );
 };
 
-// Best Sellers Section
-const BestSellersSection = () => {
-  const { addToCart } = useCart();
-  const [products, setProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchBestSellers = async () => {
-      try {
-        const response = await axios.get('https://dummyjson.com/products?limit=4&skip=50');
-        setProducts(response.data.products.map(p => ({
-          ...p,
-          price: Math.round(p.price * 83),
-          originalPrice: Math.round(p.price * 83 * 1.2),
-          rating: p.rating,
-          reviews: Math.floor(Math.random() * 500) + 100,
-          isBestSeller: true
-        })));
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchBestSellers();
-  }, []);
-
-  if (isLoading) return null;
+// Categories Section
+const CategoriesSection = () => {
+  const categories = [
+    { name: "Electronics", icon: Laptop, link: "/shop?category=electronics" },
+    { name: "Fashion", icon: Shirt, link: "/shop?category=fashion" },
+    { name: "Home & Kitchen", icon: HomeIcon, link: "/shop?category=home-decoration" },
+    { name: "Sports", icon: Dumbbell, link: "/shop?category=sports" },
+  ];
 
   return (
-    <section className="py-24 bg-white">
+    <section className="py-10 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-16">
-          <div className="space-y-2">
-            <Badge className="bg-amber-100 text-amber-600 border-none font-black uppercase tracking-widest text-[10px]">Top Rated</Badge>
-            <h2 className="text-4xl lg:text-5xl font-black text-gray-900 tracking-tighter">Best Sellers</h2>
-          </div>
-          <Link to="/shop" className="text-violet-600 font-black uppercase tracking-widest text-xs flex items-center gap-2 group">
-            Explore All <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Shop by Category</h2>
+          <Link to="/categories" className="text-sm text-violet-600 hover:text-violet-700 hover:underline font-medium">
+            View All
           </Link>
         </div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
-          {products.map(p => (
-            <div key={p.id} className="group relative">
-              <div className="relative aspect-[3/4] rounded-[2rem] overflow-hidden bg-gray-100 mb-6">
-                <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" loading="lazy" />
-                <div className="absolute top-6 left-6">
-                  <Badge className="bg-amber-400 text-black border-none font-black px-3 py-1 text-[10px] shadow-xl">BEST SELLER</Badge>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {categories.map((cat, i) => (
+            <Link key={i} to={cat.link} className="bg-white p-5 rounded-xl shadow-sm hover:shadow-lg transition-shadow border border-gray-100 group">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-violet-200 transition-colors">
+                  <cat.icon className="w-8 h-8 text-violet-600" />
                 </div>
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                  <Button size="icon" className="bg-white text-gray-900 rounded-full hover:bg-violet-600 hover:text-white transition-all shadow-2xl" onClick={() => addToCart(p)}>
-                    <ShoppingCart className="w-5 h-5" />
-                  </Button>
-                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{cat.name}</h3>
+                <span className="text-sm text-violet-600 hover:text-violet-700 hover:underline font-medium">
+                  Shop now
+                </span>
               </div>
-              <div className="flex items-center gap-1 mb-2 px-2">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className={`w-3 h-3 ${i < Math.floor(p.rating) ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
-                ))}
-                <span className="text-[9px] font-black text-gray-400 ml-1">({p.reviews})</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-1 px-2 line-clamp-1">{p.title}</h3>
-              <p className="text-gray-500 text-sm px-2 mb-3 font-medium">{p.category}</p>
-              <div className="flex items-center gap-2 px-2">
-                <span className="text-2xl font-black text-violet-600 tracking-tighter">₹{p.price}</span>
-                <span className="text-sm text-gray-400 line-through font-bold">₹{p.originalPrice}</span>
-              </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
@@ -1113,11 +1131,9 @@ const Home = () => {
       <Navigation />
       <HeroSection />
       <FeaturesSection />
-      <FeaturedCategoriesSection />
-      <FlashDealsSection />
-      <BestSellersSection />
-      <FeaturedProductsSection />
+      <CategoriesSection />
       <ModernBentoGrid />
+      <FeaturedProductsSection />
       <PromoBannerSection />
       <TestimonialsSection />
       <NewsletterSection />
@@ -1126,113 +1142,46 @@ const Home = () => {
   );
 };
 
-// Protected Route Component
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user, loading } = useAuth();
-  const location = useLocation();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-12 h-12 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(user.user_type)) {
-    // Redirect to home if user doesn't have the required role
-    return <Navigate to="/" replace />;
-  }
-
-  return children;
-};
-
 function App() {
   return (
-    <div className="App selection:bg-violet-600/20 selection:text-violet-900">
-      <HelmetProvider>
-        <Helmet>
-          <title>ZippyCart | Premium E-Commerce Intelligence</title>
-          <meta name="description" content="Shop the future with ZippyCart. Premium products, secure payments, and lightning-fast logistics." />
-          <meta name="keywords" content="e-commerce, shopping, premium products, fast delivery, secure checkout" />
-          <meta property="og:site_name" content="ZippyCart" />
-          <meta property="og:type" content="website" />
-        </Helmet>
+    <div className="App">
+      <CouponProvider>
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
               <OrderProvider>
-                <CouponProvider>
-                  <BrowserRouter>
-                    <ScrollToTop />
-                    <Routes>
-                      {/* Public Routes */}
-                      <Route path="/" element={<Home />} />
-                      <Route path="/product/:id" element={<DetailsView />} />
-                      <Route path="/shop" element={<Shop />} />
-                      <Route path="/categories" element={<Categories />} />
-                      <Route path="/deals" element={<Deals />} />
-                      <Route path="/about" element={<About />} />
-                      <Route path="/contact" element={<Contact />} />
-                      <Route path="/faq" element={<FAQ />} />
-                      <Route path="/shipping" element={<ShippingInfo />} />
-                      <Route path="/returns" element={<Returns />} />
-                      <Route path="/track-order" element={<TrackOrder />} />
-                      <Route path="/privacy" element={<PrivacyPolicy />} />
-                      <Route path="/terms" element={<TermsOfService />} />
-                      <Route path="/cookies" element={<Cookies />} />
-                      <Route path="/cart" element={<Cart />} />
-                      <Route path="/auth" element={<Auth />} />
-
-                      {/* Shared Protected Routes (Cart/Wishlist/Payment usually require account) */}
-                      <Route path="/payment" element={
-                        <ProtectedRoute allowedRoles={["user", "vendor", "admin"]}>
-                          <Payment />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/wishlist" element={
-                        <ProtectedRoute allowedRoles={["user", "vendor", "admin"]}>
-                          <Wishlist />
-                        </ProtectedRoute>
-                      } />
-
-                      {/* Role-Specific Protected Routes */}
-                      <Route path="/account" element={
-                        <ProtectedRoute allowedRoles={["user"]}>
-                          <Profile />
-                        </ProtectedRoute>
-                      } />
-                      {/* Redirect /profile to /account for consistency */}
-                      <Route path="/profile" element={<Navigate to="/account" replace />} />
-
-                      <Route path="/admin/dashboard" element={
-                        <ProtectedRoute allowedRoles={["admin"]}>
-                          <Admin />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/admin" element={<AdminLogin />} />
-
-                      <Route path="/vendor/dashboard" element={
-                        <ProtectedRoute allowedRoles={["vendor"]}>
-                          <Vendor />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/vendor" element={<VendorLogin />} />
-
-                      {/* Fallback */}
-                      <Route path="*" element={<Home />} />
-                    </Routes>
-                  </BrowserRouter>
-                </CouponProvider>
+                <BrowserRouter>
+                  <ScrollToTop />
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/product/:id" element={<DetailsView />} />
+                    <Route path="/shop" element={<Shop />} />
+                    <Route path="/categories" element={<Categories />} />
+                    <Route path="/deals" element={<Deals />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/faq" element={<FAQ />} />
+                    <Route path="/shipping" element={<ShippingInfo />} />
+                    <Route path="/returns" element={<Returns />} />
+                    <Route path="/track-order" element={<TrackOrder />} />
+                    <Route path="/privacy" element={<PrivacyPolicy />} />
+                    <Route path="/terms" element={<TermsOfService />} />
+                    <Route path="/cookies" element={<Cookies />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/payment" element={<Payment />} />
+                    <Route path="/wishlist" element={<Wishlist />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/admin" element={<Admin />} />
+                    <Route path="/vendor" element={<Vendor />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="*" element={<Home />} />
+                  </Routes>
+                </BrowserRouter>
               </OrderProvider>
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>
-      </HelmetProvider>
+      </CouponProvider>
     </div>
   );
 }

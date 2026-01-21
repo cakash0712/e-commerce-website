@@ -467,7 +467,7 @@ const Shop = () => {
                             </div>
                           </div>
                         </Link>
-                        <div className="p-3">
+                        <div className="p-3 flex flex-col h-full">
                           <span className="text-xs text-violet-600 font-medium capitalize">{product.category}</span>
                           <Link to={`/product/${product.id}`}>
                             <h3 className="font-medium text-gray-900 line-clamp-2 mt-1 mb-2 text-sm group-hover:text-violet-600 transition-colors">
@@ -480,17 +480,16 @@ const Shop = () => {
                             ))}
                             <span className="text-xs text-gray-500">({product.reviews})</span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="text-lg font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
-                              {product.originalPrice > product.price && (
-                                <span className="text-sm text-gray-400 line-through ml-2">₹{product.originalPrice.toLocaleString()}</span>
-                              )}
-                            </div>
+                          <div className="flex items-baseline gap-2 mb-1">
+                            <span className="text-lg font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
+                            {product.originalPrice > product.price && (
+                              <span className="text-sm text-gray-400 line-through">₹{product.originalPrice.toLocaleString()}</span>
+                            )}
                           </div>
+                          <p className="text-xs text-green-600 font-medium mb-3">Free delivery</p>
                           <Button
                             onClick={() => addToCart(product)}
-                            className="w-full mt-3 h-9 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium"
+                            className="w-full mt-auto h-9 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium"
                           >
                             Add to Cart
                           </Button>

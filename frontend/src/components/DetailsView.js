@@ -29,8 +29,6 @@ import { useCart, useWishlist } from "../App";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
 
-import { Helmet } from 'react-helmet-async';
-
 const DetailsView = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -185,14 +183,6 @@ const DetailsView = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col pt-20">
-            <Helmet>
-                <title>{`${product.name} | ZippyCart`}</title>
-                <meta name="description" content={product.description} />
-                <meta property="og:title" content={product.name} />
-                <meta property="og:description" content={product.description} />
-                <meta property="og:image" content={product.images[0]} />
-                <script type="application/ld+json">{JSON.stringify(getJsonLd())}</script>
-            </Helmet>
             <Navigation />
 
             <main className="flex-1">
