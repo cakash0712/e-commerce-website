@@ -53,67 +53,69 @@ const Categories = () => {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
-  // Static categories with icons and logos mapped to API slugs
-  const staticCategories = [
-    { name: "Electronics", slug: "electronics", icon: Laptop, logo: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=200&h=200&fit=crop&crop=center" },
-    { name: "Laptops", slug: "laptops", icon: Laptop, logo: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=200&h=200&fit=crop&crop=center" },
-    { name: "Smartphones", slug: "smartphones", icon: Smartphone, logo: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&h=200&fit=crop&crop=center" },
-    { name: "Tablets", slug: "tablets", icon: Tablet, logo: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=200&h=200&fit=crop&crop=center" },
-    { name: "Fashion", slug: "fashion", icon: Shirt, logo: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=200&h=200&fit=crop&crop=center" },
-    { name: "Mens Shirts", slug: "mens-shirts", icon: Shirt, logo: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200&h=200&fit=crop&crop=center" },
-    { name: "Mens Shoes", slug: "mens-shoes", icon: Footprints, logo: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=200&h=200&fit=crop&crop=center" },
-    { name: "Womens Dresses", slug: "womens-dresses", icon: ShoppingBag, logo: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=200&h=200&fit=crop&crop=center" },
-    { name: "Womens Shoes", slug: "womens-shoes", icon: Footprints, logo: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=200&h=200&fit=crop&crop=center" },
-    { name: "Tops", slug: "tops", icon: Shirt, logo: "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=200&h=200&fit=crop&crop=center" },
-    { name: "Accessories", slug: "accessories", icon: Watch, logo: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=200&h=200&fit=crop&crop=center" },
-    { name: "Womens Watches", slug: "womens-watches", icon: Watch, logo: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&h=200&fit=crop&crop=center" },
-    { name: "Mens Watches", slug: "mens-watches", icon: Watch, logo: "https://images.unsplash.com/photo-1547996160-81dfa63595aa?w=200&h=200&fit=crop&crop=center" },
-    { name: "Sunglasses", slug: "sunglasses", icon: Sun, logo: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=200&h=200&fit=crop&crop=center" },
-    { name: "Womens Bags", slug: "womens-bags", icon: ShoppingBag, logo: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=200&h=200&fit=crop&crop=center" },
-    { name: "Womens Jewellery", slug: "womens-jewellery", icon: Gem, logo: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=200&h=200&fit=crop&crop=center" },
-    { name: "Home & Decor", slug: "home-decoration", icon: HomeIcon, logo: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=200&h=200&fit=crop&crop=center" },
-    { name: "Furniture", slug: "furniture", icon: Bed, logo: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=200&h=200&fit=crop&crop=center" },
-    { name: "Kitchen Accessories", slug: "kitchen-accessories", icon: Utensils, logo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center" },
-    { name: "Sports & Fitness", slug: "sports", icon: Dumbbell, logo: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop&crop=center" },
-    { name: "Sports Accessories", slug: "sports-accessories", icon: Bike, logo: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop&crop=center" },
-    { name: "Books", slug: "books", icon: BookOpen, logo: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=200&h=200&fit=crop&crop=center" },
-    { name: "Beauty", slug: "beauty", icon: Sparkles, logo: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=200&h=200&fit=crop&crop=center" },
-    { name: "Fragrances", slug: "fragrances", icon: Wind, logo: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=200&h=200&fit=crop&crop=center" },
-    { name: "Skin Care", slug: "skin-care", icon: Sparkles, logo: "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=200&h=200&fit=crop&crop=center" },
-    { name: "Baby & Kids", slug: "baby", icon: Baby, logo: "https://images.unsplash.com/photo-1544569226-44165ff6e324?w=200&h=200&fit=crop&crop=center" },
-    { name: "Automotive", slug: "automotive", icon: Car, logo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop&crop=center" },
-    { name: "Motorcycle", slug: "motorcycle", icon: Bike, logo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop&crop=center" },
-    { name: "Vehicle", slug: "vehicle", icon: Car, logo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop&crop=center" },
-    { name: "Groceries", slug: "groceries", icon: Utensils, logo: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&h=200&fit=crop&crop=center" },
-    { name: "Garden", slug: "garden", icon: Flower2, logo: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=200&h=200&fit=crop&crop=center" },
-    { name: "Gaming", slug: "gaming", icon: Gamepad2, logo: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=200&h=200&fit=crop&crop=center" },
-    { name: "Cameras", slug: "cameras", icon: Camera, logo: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=200&h=200&fit=crop&crop=center" },
-    { name: "Audio", slug: "audio", icon: Headphones, logo: "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=200&h=200&fit=crop&crop=center" },
-    { name: "Mobile Accessories", slug: "mobile-accessories", icon: Smartphone, logo: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=200&h=200&fit=crop&crop=center" },
-    { name: "Gifts", slug: "gifts", icon: Gift, logo: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=200&h=200&fit=crop&crop=center" },
-    { name: "Jewelry", slug: "jewelry", icon: Gem, logo: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=200&h=200&fit=crop&crop=center" },
-    { name: "Health", slug: "health", icon: Pill, logo: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=200&h=200&fit=crop&crop=center" },
-    { name: "Pet Supplies", slug: "pets", icon: PawPrint, logo: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=200&h=200&fit=crop&crop=center" },
-    { name: "Art & Crafts", slug: "art", icon: Brush, logo: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=200&h=200&fit=crop&crop=center" },
-  ];
+  // Icon mapping for categories
+  const getCategoryIcon = (slug) => {
+    const iconMap = {
+      electronics: Laptop,
+      laptops: Laptop,
+      smartphones: Smartphone,
+      tablets: Tablet,
+      fashion: Shirt,
+      'mens-shirts': Shirt,
+      'mens-shoes': Footprints,
+      'womens-dresses': ShoppingBag,
+      'womens-shoes': Footprints,
+      tops: Shirt,
+      accessories: Watch,
+      'womens-watches': Watch,
+      'mens-watches': Watch,
+      sunglasses: Sun,
+      'womens-bags': ShoppingBag,
+      'womens-jewellery': Gem,
+      'home-decoration': HomeIcon,
+      furniture: Bed,
+      'kitchen-accessories': Utensils,
+      sports: Dumbbell,
+      'sports-accessories': Bike,
+      books: BookOpen,
+      beauty: Sparkles,
+      fragrances: Wind,
+      'skin-care': Sparkles,
+      baby: Baby,
+      automotive: Car,
+      motorcycle: Bike,
+      vehicle: Car,
+      groceries: Utensils,
+      garden: Flower2,
+      gaming: Gamepad2,
+      cameras: Camera,
+      audio: Headphones,
+      'mobile-accessories': Smartphone,
+      gifts: Gift,
+      jewelry: Gem,
+      health: Pill,
+      pets: PawPrint,
+      art: Brush,
+    };
+    return iconMap[slug] || Grid3X3;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("https://dummyjson.com/products?limit=200");
-        const products = response.data.products;
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const response = await axios.get(`${API_BASE}/api/products`);
+        const products = response.data;
         setAllProducts(products);
 
         const uniqueCategories = [...new Set(products.map(p => p.category))];
         const categoryObjects = uniqueCategories.map((cat, index) => {
-          const product = products.find(p => p.category === cat);
           const categoryProducts = products.filter(p => p.category === cat);
           return {
             id: index,
             name: cat.charAt(0).toUpperCase() + cat.slice(1).replace(/-/g, ' '),
             slug: cat,
-            image: product ? (product.thumbnail || product.images[0]) : "https://via.placeholder.com/300",
             productCount: categoryProducts.length
           };
         });
@@ -128,22 +130,12 @@ const Categories = () => {
   }, []);
 
   const displayedProducts = selectedCategory
-    ? allProducts.filter(p => p.category === selectedCategory.slug).map(p => ({
-      id: p.id,
-      name: p.title,
-      price: Math.round(p.price * 83),
-      originalPrice: Math.round(p.price * 83 * (1 + p.discountPercentage / 100)),
-      discount: Math.round(p.discountPercentage),
-      image: p.thumbnail || p.images[0],
-      rating: p.rating,
-      reviews: p.reviews ? p.reviews.length : 100,
-      category: p.category
-    }))
+    ? allProducts.filter(p => p.category === selectedCategory.slug)
     : [];
 
   const getCategoryInfo = (slug) => {
-    const cat = staticCategories.find(c => c.slug === slug);
-    return cat ? { icon: cat.icon, logo: cat.logo } : { icon: Grid3X3, logo: "https://via.placeholder.com/200x200?text=Category" };
+    const IconComponent = getCategoryIcon(slug);
+    return { icon: IconComponent };
   };
 
   return (
@@ -192,7 +184,7 @@ const Categories = () => {
           /* Categories Grid - Logo Images */
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {apiCategories.map((cat) => {
-              const { icon: IconComponent, logo } = getCategoryInfo(cat.slug);
+              const { icon: IconComponent } = getCategoryInfo(cat.slug);
               return (
                 <button
                   key={cat.id}

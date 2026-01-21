@@ -64,20 +64,9 @@ const Shop = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("https://dummyjson.com/products?limit=100");
-        const mappedProducts = response.data.products.map(p => ({
-          id: p.id,
-          name: p.title,
-          price: Math.round(p.price * 83),
-          originalPrice: Math.round(p.price * 83 * (1 + p.discountPercentage / 100)),
-          image: p.thumbnail || p.images[0],
-          rating: p.rating,
-          reviews: p.reviews ? p.reviews.length : Math.floor(Math.random() * 500) + 100,
-          discount: Math.round(p.discountPercentage),
-          category: p.category,
-          description: p.description
-        }));
-        setProducts(mappedProducts);
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const response = await axios.get(`${API_BASE}/api/products`);
+        setProducts(response.data);
       } catch (err) {
         console.error("Error fetching products:", err);
         setError("Unable to load products. Please try again later.");

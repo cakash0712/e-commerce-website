@@ -24,6 +24,7 @@ import TermsOfService from "./components/TermsOfService";
 import Cookies from "./components/Cookies";
 import DetailsView from "./components/DetailsView";
 import Auth from "./components/Auth";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -110,7 +111,7 @@ const AuthProvider = ({ children }) => {
         user_type: userType
       });
       const userData = response.data;
-      localStorage.setItem('token', 'user_token');
+      localStorage.setItem('token', userData.token);
       localStorage.setItem('user_data', JSON.stringify(userData));
       setUser(userData);
       return userData;
@@ -142,6 +143,22 @@ const AuthProvider = ({ children }) => {
     localStorage.removeItem('user_profile');
     setUser(null);
   };
+
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401 ||
+          error.response?.data?.detail === "Session protocol corrupted." ||
+          error.response?.data?.detail === "Session expired. Re-authentication required.") {
+          console.warn("Session expired or corrupted. Logging out.");
+          logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => axios.interceptors.response.eject(interceptor);
+  }, []);
 
   const updateUser = async (userId, updates) => {
     try {
@@ -701,21 +718,9 @@ const FeaturedProductsSection = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await axios.get('https://dummyjson.com/products?limit=8&skip=10');
-        const mappedProducts = response.data.products.map(p => ({
-          id: p.id,
-          name: p.title,
-          price: Math.round(p.price * 83),
-          originalPrice: Math.round(p.price * 83 * (1 + p.discountPercentage / 100)),
-          image: p.thumbnail || p.images[0],
-          rating: p.rating,
-          reviews: p.reviews ? p.reviews.length : Math.floor(Math.random() * 500) + 50,
-          discount: Math.round(p.discountPercentage),
-          isNew: Math.random() > 0.8,
-          isBestSeller: Math.random() > 0.8,
-          description: p.description
-        }));
-        setProducts(mappedProducts);
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const response = await axios.get(`${API_BASE}/api/products?limit=8`);
+        setProducts(response.data);
       } catch (error) {
         console.error("Failed to fetch products", error);
       } finally {
@@ -812,6 +817,11 @@ const FeaturedProductsSection = () => {
                   {product.isBestSeller && (
                     <Badge className="bg-amber-500 text-white border-0 font-bold px-3 py-1 text-xs shadow-xl">
                       BEST SELLER
+                    </Badge>
+                  )}
+                  {product.offers && (
+                    <Badge className="bg-emerald-500 text-white border-0 font-bold px-3 py-1 text-xs shadow-xl max-w-[150px] truncate">
+                      {product.offers}
                     </Badge>
                   )}
                 </div>
@@ -945,85 +955,26 @@ const PromoBannerSection = () => {
   );
 };
 
-// Testimonials Section
+// Testimonials Section - Placeholder for dynamic testimonials
 const TestimonialsSection = () => {
-  const testimonials = [
-    {
-      name: "Sarah Johnson",
-      role: "Verified Buyer",
-      rating: 5,
-      text: "Absolutely love shopping here! The product quality is exceptional and the delivery was faster than expected. Will definitely be a returning customer!",
-      location: "New York, NY",
-      avatar: "SJ",
-    },
-    {
-      name: "Michael Chen",
-      role: "Premium Member",
-      rating: 5,
-      text: "The best online shopping experience I've ever had. Great prices, easy navigation, and the customer service team is incredibly helpful.",
-      location: "Los Angeles, CA",
-      avatar: "MC",
-    },
-    {
-      name: "Emily Davis",
-      role: "Verified Buyer",
-      rating: 5,
-      text: "I was skeptical at first, but after my first purchase, I'm completely sold. The quality exceeded my expectations and the returns process is hassle-free.",
-      location: "Chicago, IL",
-      avatar: "ED",
-    },
-  ];
-
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <Badge className="mb-4 bg-violet-100 text-violet-600 border-violet-200">Testimonials</Badge>
           <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-            What Our Customers Say
+            Customer Reviews
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Join thousands of satisfied customers who love shopping with us
+            Real reviews from our satisfied customers will appear here once products are purchased and reviewed.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          {testimonials.map((testimonial, index) => (
-            <Card
-              key={index}
-              className="border-0 shadow-lg hover:shadow-xl transition-shadow"
-              data-testid={`testimonial-${index}`}
-            >
-              <CardContent className="p-6">
-                <Quote className="w-10 h-10 text-violet-200 mb-4" />
-                <div className="flex gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className="w-5 h-5 fill-amber-400 text-amber-400"
-                    />
-                  ))}
-                </div>
-                <p className="text-gray-700 mb-6 leading-relaxed">
-                  &ldquo;{testimonial.text}&rdquo;
-                </p>
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold">
-                    {testimonial.avatar}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">
-                      {testimonial.name}
-                    </p>
-                    <p className="text-sm text-gray-500">{testimonial.role}</p>
-                    <p className="text-xs text-gray-400">
-                      {testimonial.location}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Quote className="w-8 h-8 text-violet-600" />
+          </div>
+          <p className="text-gray-500">No reviews yet. Be the first to leave a review after your purchase!</p>
         </div>
       </div>
     </section>
@@ -1169,11 +1120,35 @@ function App() {
                     <Route path="/cookies" element={<Cookies />} />
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/payment" element={<Payment />} />
-                    <Route path="/wishlist" element={<Wishlist />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/admin" element={<Admin />} />
-                    <Route path="/vendor" element={<Vendor />} />
+                    <Route path="/wishlist" element={
+                      <ProtectedRoute>
+                        <Wishlist />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/profile" element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    } />
+                    {/* Alias /account to /profile for consistency */}
+                    <Route path="/account" element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/admin/*" element={
+                      <ProtectedRoute requiredRole="admin">
+                        <Admin />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/vendor/*" element={
+                      <ProtectedRoute requiredRole="vendor">
+                        <Vendor />
+                      </ProtectedRoute>
+                    } />
                     <Route path="/auth" element={<Auth />} />
+                    <Route path="/auth/admin" element={<Auth />} />
+                    <Route path="/auth/vendor" element={<Auth />} />
                     <Route path="*" element={<Home />} />
                   </Routes>
                 </BrowserRouter>

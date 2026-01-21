@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,13 +12,19 @@ import Footer from "./Footer";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, login, logout, register, updateUser, loading, setUser } = useAuth();
 
   // Auth Mode States
   const [authMode, setAuthMode] = useState("login"); // login, signup
   const [authStep, setAuthStep] = useState("credentials"); // credentials, details
   const [loginMethod, setLoginMethod] = useState("phone"); // phone or email
-  const [userType, setUserType] = useState("user"); // user or vendor
+  const [userType, setUserType] = useState(() => {
+    const path = location.pathname;
+    if (path.includes('/admin')) return "admin";
+    if (path.includes('/vendor')) return "vendor";
+    return "user";
+  }); // user, vendor, or admin
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,6 +48,18 @@ const Auth = () => {
     setPassword("");
   }, []);
 
+  // Listen for location changes to update userType if re-using component
+  useEffect(() => {
+    const path = location.pathname;
+    const type = path.includes('/admin') ? "admin" : (path.includes('/vendor') ? "vendor" : "user");
+    setUserType(type);
+
+    // Reset to login mode if switching to admin
+    if (type === 'admin') {
+      setAuthMode('login');
+    }
+  }, [location.pathname]);
+
   const [error, setError] = useState("");
 
   const handleLogin = async () => {
@@ -62,10 +80,14 @@ const Auth = () => {
     }
 
     try {
-      const userData = await login(identifier, password, userType);
+      // Ensure we pass the correct userType based on current state, which should match the URL
+      const currentPath = location.pathname;
+      const type = currentPath.includes('/admin') ? "admin" : (currentPath.includes('/vendor') ? "vendor" : "user");
+
+      const userData = await login(identifier, password, type);
       const redirectPath = userData.user_type === "admin"
         ? "/admin/dashboard"
-        : (userData.user_type === "vendor" ? "/vendor/dashboard" : "/account");
+        : (userData.user_type === "vendor" ? "/vendor/dashboard" : "/profile");
       navigate(redirectPath);
     } catch (err) {
       // Special case for local admin demo login if backend is not available
@@ -154,7 +176,7 @@ const Auth = () => {
       localStorage.setItem('signup_data', JSON.stringify(signupProfileData));
 
       await login(loginMethod === "phone" ? signupData.email : email, signupData.password, userType);
-      const redirectPath = userType === "vendor" ? "/vendor/dashboard" : "/account";
+      const redirectPath = userType === "vendor" ? "/vendor/dashboard" : "/profile";
       navigate(redirectPath);
     } catch (err) {
       // Show specific error message from backend
@@ -188,10 +210,10 @@ const Auth = () => {
     </div>
   );
 
-  if (user) {
+  if (user && user.user_type === userType) {
     const redirectPath = user.user_type === "admin"
       ? "/admin/dashboard"
-      : (user.user_type === "vendor" ? "/vendor/dashboard" : "/account");
+      : (user.user_type === "vendor" ? "/vendor/dashboard" : "/profile");
     navigate(redirectPath);
     return null;
   }
@@ -524,23 +546,30 @@ const Auth = () => {
 
           {/* Footer */}
           <div className="px-8 pb-8 border-t border-gray-50 pt-6 space-y-4">
-            <p className="text-center text-sm text-gray-500 font-medium">
-              {authMode === "login" ? "Don't have an account? " : "Already have an account? "}
-              <button
-                onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); resetAuth(); }}
-                className="text-violet-600 font-bold hover:underline decoration-2 underline-offset-4"
-              >
-                {authMode === "login" ? "Create One" : "Sign In"}
-              </button>
-            </p>
+            {userType !== "admin" && (
+              <p className="text-center text-sm text-gray-500 font-medium">
+                {authMode === "login" ? "Don't have an account? " : "Already have an account? "}
+                <button
+                  onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); resetAuth(); }}
+                  className="text-violet-600 font-bold hover:underline decoration-2 underline-offset-4"
+                >
+                  {authMode === "login" ? "Create One" : "Sign In"}
+                </button>
+              </p>
+            )}
 
             <div className="flex flex-col items-center gap-3 border-t border-gray-50 pt-4">
               <p className="text-xs text-gray-400 font-medium">
-                Are you a vendor?{" "}
-                <Link to="/vendor" className="text-indigo-600 font-bold hover:underline">
-                  Go to Vendor Portal
+                {userType === "user" ? "Are you a vendor? " : "Are you a customer? "}
+                <Link to={userType === "user" ? "/auth/vendor" : "/auth"} className="text-indigo-600 font-bold hover:underline">
+                  {userType === "user" ? "Go to Vendor Portal" : "Go to Customer Login"}
                 </Link>
               </p>
+              {userType !== "admin" && (
+                <Link to="/auth/admin" className="text-[10px] text-gray-300 hover:text-gray-500 font-medium transition-colors">
+                  Admin Access
+                </Link>
+              )}
             </div>
 
             <p className="text-center text-[10px] text-gray-400 mt-4 uppercase tracking-widest font-black flex items-center justify-center gap-2">

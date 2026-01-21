@@ -114,12 +114,19 @@ class Product(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     category: str
+    brand: str = ""
     price: float
     originalPrice: Optional[float] = None
+    discount: int = 0
     stock: int
     image: str
     description: str = ""
+    colors: List[str] = []
+    weight: str = ""
+    dimensions: str = ""
+    material: str = ""
     vendor_id: str
+    offers: str = ""
     status: str = "pending" # pending, approved, rejected
     rejection_reason: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -127,10 +134,17 @@ class Product(BaseModel):
 class ProductCreate(BaseModel):
     name: str
     category: str
+    brand: str = ""
     price: float
+    discount: int = 0
     stock: int
     image: str
     description: str = ""
+    colors: List[str] = []
+    weight: str = ""
+    dimensions: str = ""
+    material: str = ""
+    offers: str = ""
 
 class Notification(BaseModel):
     model_config = ConfigDict(extra="ignore")

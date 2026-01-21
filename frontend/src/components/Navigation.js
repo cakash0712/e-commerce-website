@@ -444,7 +444,7 @@ const Navigation = () => {
                 )}
               </Button>
             </CartDrawer>
-            <Link to={user ? (user.user_type === "admin" ? "/admin/dashboard" : (user.user_type === "vendor" ? "/vendor/dashboard" : "/account")) : "/auth"}>
+            <Link to={user ? (user.user_type === "admin" ? "/admin/dashboard" : (user.user_type === "vendor" ? "/vendor/dashboard" : "/profile")) : "/auth"}>
               <Button
                 variant="ghost"
                 size="icon"
@@ -563,7 +563,7 @@ const Navigation = () => {
                 )}
               </Link>
               <Link
-                to={user ? (user.user_type === "admin" ? "/admin/dashboard" : (user.user_type === "vendor" ? "/vendor/dashboard" : "/account")) : "/auth"}
+                to={user ? (user.user_type === "admin" ? "/admin/dashboard" : (user.user_type === "vendor" ? "/vendor/dashboard" : "/profile")) : "/auth"}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 text-gray-700 hover:text-violet-600 bg-gray-50 rounded-lg transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >

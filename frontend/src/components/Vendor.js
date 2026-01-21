@@ -16,7 +16,7 @@ import {
   Box, Wallet, History, CreditCard, Banknote, MessageSquare,
   Settings, Image, FileText, CheckCircle2, AlertCircle,
   XCircle, Search, Bell, MoreVertical, Globe, ShieldCheck,
-  ChevronRight, ChevronDown, Tag, UserCheck
+  ChevronRight, ChevronDown, Tag, UserCheck, Store, Mail, MapPin, Phone
 } from "lucide-react";
 import { useAuth } from "../App";
 import {
@@ -31,6 +31,8 @@ const Vendor = () => {
 
   // State for products and data
   const [products, setProducts] = useState([]);
+
+  /* Removed static/mock data fetching */
 
   useEffect(() => {
     fetchVendorProducts();
@@ -48,10 +50,7 @@ const Vendor = () => {
     }
   };
 
-  const [reviews] = useState([
-    { id: 1, user: "Alice", rating: 5, comment: "Excellent quality!", product: "Premium Leather Bag", date: "2 days ago" },
-    { id: 2, user: "Bob", rating: 4, comment: "Good, but shipping took long.", product: "Smart Coffee Maker", date: "1 week ago" },
-  ]);
+  const [reviews, setReviews] = useState([]);
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -62,13 +61,11 @@ const Vendor = () => {
     { id: 'reviews', label: 'Reviews', icon: Star },
     { id: 'coupons', label: 'Marketing & Coupons', icon: Tag },
     { id: 'settings', label: 'Store Settings', icon: Settings },
+    { id: 'profile', label: 'My Profile', icon: User },
     { id: 'support', label: 'Support', icon: MessageSquare },
   ];
 
-  const [vendorCoupons, setVendorCoupons] = useState([
-    { id: 1, code: 'SAVE10', discount: '10%', usage: 25, limit: 100, expires: '2026-06-01', status: 'active' },
-    { id: 2, code: 'FLASH50', discount: '₹50', usage: 10, limit: 50, expires: '2026-02-15', status: 'expired' },
-  ]);
+  const [vendorCoupons, setVendorCoupons] = useState([]);
 
   const renderCoupons = () => (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -146,13 +143,8 @@ const Vendor = () => {
     </div>
   );
 
-  // Dummy Chart Data
-  const salesData = [
-    { name: 'Mon', sales: 400 }, { name: 'Tue', sales: 700 },
-    { name: 'Wed', sales: 1200 }, { name: 'Thu', sales: 900 },
-    { name: 'Fri', sales: 1500 }, { name: 'Sat', sales: 1800 },
-    { name: 'Sun', sales: 1100 },
-  ];
+  // Chart Data - will be fetched from backend
+  const [salesData, setSalesData] = useState([]);
 
   /* Redundant check removed as ProtectedRoute handles it */
 
@@ -160,9 +152,9 @@ const Vendor = () => {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { label: 'Weekly Sales', value: '₹45,290', trend: '+12%', icon: TrendingUp, color: 'text-violet-600', bg: 'bg-violet-100' },
-          { label: 'Pending Orders', value: '18', trend: '5 new', icon: ShoppingCart, color: 'text-amber-600', bg: 'bg-amber-100' },
-          { label: 'Total Earnings', value: '₹2,12,800', trend: '+8%', icon: Wallet, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+          { label: 'Total Products', value: products.length, trend: 'Catalog Size', icon: Package, color: 'text-violet-600', bg: 'bg-violet-100' },
+          { label: 'Low Stock Items', value: products.filter(p => p.stock <= 5).length, trend: 'Action Needed', icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-100' },
+          { label: 'Total Stock Value', value: `₹${products.reduce((acc, p) => acc + (p.price * p.stock), 0).toLocaleString()}`, trend: 'Asset Value', icon: Wallet, color: 'text-emerald-600', bg: 'bg-emerald-100' },
         ].map((stat, i) => (
           <Card key={i} className="border-0 shadow-sm">
             <CardContent className="p-6 flex items-center gap-4">
@@ -228,7 +220,8 @@ const Vendor = () => {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newProduct, setNewProduct] = useState({
-    name: '', category: '', price: '', stock: '', image: '', description: ''
+    name: '', category: '', price: '', stock: '', image: '', description: '',
+    brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: ''
   });
 
   const handleAddProduct = async (e) => {
@@ -238,16 +231,24 @@ const Vendor = () => {
       await axios.post(`${API_BASE}/api/products`, {
         ...newProduct,
         price: parseFloat(newProduct.price),
-        stock: parseInt(newProduct.stock)
+        stock: parseInt(newProduct.stock),
+        discount: parseInt(newProduct.discount || 0),
+        discount: parseInt(newProduct.discount || 0),
+        colors: newProduct.colors.split(',').map(c => c.trim()).filter(c => c),
+        offers: newProduct.offers
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       alert("Inventory submitted for administrative compliance audit.");
       setShowAddForm(false);
-      setNewProduct({ name: '', category: '', price: '', stock: '', image: '', description: '' });
+      setNewProduct({
+        name: '', category: '', price: '', stock: '', image: '', description: '',
+        brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: ''
+      });
       fetchVendorProducts();
     } catch (e) {
-      alert("Inventory submission protocol failed.");
+      console.error("Add Product Error:", e.response ? e.response.data : e.message);
+      alert(`Inventory submission protocol failed: ${e.response?.data?.detail || e.message}`);
     }
   };
 
@@ -271,8 +272,9 @@ const Vendor = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-8">
-            <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
+            <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Product Basics */}
+              <div className="space-y-2 lg:col-span-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Product Name *</Label>
                 <Input
                   required
@@ -282,6 +284,60 @@ const Vendor = () => {
                   className="h-12 rounded-xl"
                 />
               </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Branch / Brand</Label>
+                <Input
+                  placeholder="Sony, Nike, etc."
+                  value={newProduct.brand}
+                  onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })}
+                  className="h-12 rounded-xl"
+                />
+              </div>
+
+              {/* Pricing & Stock */}
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Price (₹) *</Label>
+                <Input
+                  required
+                  type="number"
+                  placeholder="2999"
+                  value={newProduct.price}
+                  onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                  className="h-12 rounded-xl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Input
+                  type="number"
+                  placeholder="0"
+                  max="100"
+                  value={newProduct.discount}
+                  onChange={(e) => setNewProduct({ ...newProduct, discount: e.target.value })}
+                  className="h-12 rounded-xl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Offers / Deals</Label>
+                <Input
+                  placeholder="e.g. Buy 1 Get 1 Free, Free Shipping"
+                  value={newProduct.offers}
+                  onChange={(e) => setNewProduct({ ...newProduct, offers: e.target.value })}
+                  className="h-12 rounded-xl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Initial Stock *</Label>
+                <Input
+                  required
+                  type="number"
+                  placeholder="50"
+                  value={newProduct.stock}
+                  onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                  className="h-12 rounded-xl"
+                />
+              </div>
+
+              {/* Category & Attributes */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Category *</Label>
                 <Select onValueChange={(val) => setNewProduct({ ...newProduct, category: val })}>
@@ -297,29 +353,47 @@ const Vendor = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Price (₹) *</Label>
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Available Colors</Label>
                 <Input
-                  required
-                  type="number"
-                  placeholder="2999"
-                  value={newProduct.price}
-                  onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                  placeholder="Red, Blue, Matte Black (comma separated)"
+                  value={newProduct.colors}
+                  onChange={(e) => setNewProduct({ ...newProduct, colors: e.target.value })}
+                  className="h-12 rounded-xl"
+                />
+              </div>
+
+              {/* Dimensions */}
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Weight</Label>
+                <Input
+                  placeholder="e.g. 500g"
+                  value={newProduct.weight}
+                  onChange={(e) => setNewProduct({ ...newProduct, weight: e.target.value })}
                   className="h-12 rounded-xl"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Initial Stock *</Label>
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Dimensions</Label>
                 <Input
-                  required
-                  type="number"
-                  placeholder="50"
-                  value={newProduct.stock}
-                  onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                  placeholder="e.g. 10x20x5 cm"
+                  value={newProduct.dimensions}
+                  onChange={(e) => setNewProduct({ ...newProduct, dimensions: e.target.value })}
                   className="h-12 rounded-xl"
                 />
               </div>
-              <div className="md:col-span-2 space-y-2">
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Material</Label>
+                <Input
+                  placeholder="e.g. Leather, Plastic"
+                  value={newProduct.material}
+                  onChange={(e) => setNewProduct({ ...newProduct, material: e.target.value })}
+                  className="h-12 rounded-xl"
+                />
+              </div>
+
+              {/* Media & Desc */}
+              <div className="grid-cols-1 md:col-span-3 space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Image URL *</Label>
                 <Input
                   required
@@ -329,7 +403,7 @@ const Vendor = () => {
                   className="h-12 rounded-xl"
                 />
               </div>
-              <div className="md:col-span-2 space-y-2">
+              <div className="grid-cols-1 md:col-span-3 space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Description</Label>
                 <Textarea
                   placeholder="Describe your product features and specifications..."
@@ -339,7 +413,7 @@ const Vendor = () => {
                   className="rounded-xl"
                 />
               </div>
-              <div className="md:col-span-2 flex justify-end">
+              <div className="grid-cols-1 md:col-span-3 flex justify-end">
                 <Button type="submit" className="h-12 px-10 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-violet-200">
                   Submit for Audit
                 </Button>
@@ -447,10 +521,7 @@ const Vendor = () => {
     </div>
   );
 
-  const [withdrawals, setWithdrawals] = useState([
-    { id: '#WTH-001', amount: '₹15,000', method: 'Bank Transfer', status: 'completed', date: '2026-01-15' },
-    { id: '#WTH-002', amount: '₹8,500', method: 'UPI', status: 'pending', date: '2026-01-19' },
-  ]);
+  const [withdrawals, setWithdrawals] = useState([]);
 
   const [withdrawAmount, setWithdrawAmount] = useState("");
 
@@ -474,16 +545,16 @@ const Vendor = () => {
         <Card className="p-8 bg-black text-white border-none shadow-2xl rounded-[2rem] relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-violet-600/20 blur-3xl group-hover:bg-violet-600/40 transition-colors" />
           <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Available Balance</p>
-          <h4 className="text-4xl font-black italic">₹84,200</h4>
+          <h4 className="text-4xl font-black italic">₹0</h4>
           <div className="mt-6 flex items-center gap-2 text-emerald-400 text-[10px] font-black uppercase tracking-widest">
             <TrendingUp className="w-4 h-4" />
-            <span>+12.4% vs last week</span>
+            <span>Ready for payout</span>
           </div>
         </Card>
         {[
-          { label: 'Gross Revenue', val: '₹4,12,000', icon: CreditCard, color: 'text-violet-600', bg: 'bg-violet-50' },
-          { label: 'Zippy Commission (10%)', val: '₹41,200', icon: History, color: 'text-red-500', bg: 'bg-red-50' },
-          { label: 'Total Payouts', val: '₹3,70,800', icon: Banknote, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Gross Revenue', val: '₹0', icon: CreditCard, color: 'text-violet-600', bg: 'bg-violet-50' },
+          { label: 'Zippy Commission (10%)', val: '₹0', icon: History, color: 'text-red-500', bg: 'bg-red-50' },
+          { label: 'Total Payouts', val: '₹0', icon: Banknote, color: 'text-emerald-600', bg: 'bg-emerald-50' },
         ].map((item, i) => (
           <Card key={i} className="p-8 border-none shadow-sm flex flex-col justify-between rounded-[2rem] bg-white">
             <div className={`p-3 w-fit rounded-2xl ${item.bg} ${item.color}`}><item.icon className="w-6 h-6" /></div>
@@ -513,11 +584,7 @@ const Vendor = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 text-sm italic">
-                {[
-                  { id: '#TRX-9901', val: '2,500', comm: '250', net: '2,250', status: 'settled' },
-                  { id: '#TRX-9902', val: '4,000', comm: '400', net: '3,600', status: 'pending' },
-                  { id: '#TRX-9903', val: '1,200', comm: '120', net: '1,080', status: 'settled' },
-                ].map(t => (
+                {[].map(t => (
                   <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-8 py-5 font-bold font-mono text-gray-500">{t.id}</td>
                     <td className="px-8 py-5 text-right font-black">₹{t.val}</td>
@@ -659,6 +726,93 @@ const Vendor = () => {
     </div>
   );
 
+  const renderProfile = () => (
+    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-bold">Vendor Profile</h3>
+        <Button className="bg-violet-600 hover:bg-violet-700 rounded-xl">Edit Profile</Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Profile Card */}
+        <Card className="border-0 shadow-lg rounded-[2rem] overflow-hidden">
+          <div className="h-32 bg-gradient-to-r from-violet-600 to-indigo-600 relative">
+            <div className="absolute -bottom-12 left-8">
+              <div className="w-24 h-24 rounded-2xl bg-white p-1 shadow-xl">
+                <div className="w-full h-full bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-10 h-10 text-gray-400" />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          <CardContent className="pt-16 px-8 pb-8">
+            <h2 className="text-2xl font-black text-gray-900">{user?.name}</h2>
+            <p className="text-sm font-medium text-violet-600 mb-6">{user?.user_type === 'vendor' ? 'Verified Merchant' : 'User'}</p>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-sm text-gray-600">
+                <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                  <Mail className="w-4 h-4" />
+                </div>
+                {user?.email}
+              </div>
+              <div className="flex items-center gap-3 text-sm text-gray-600">
+                <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                  <Phone className="w-4 h-4" />
+                </div>
+                {user?.phone || 'No phone number'}
+              </div>
+              <div className="flex items-center gap-3 text-sm text-gray-600">
+                <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                {user?.address || 'No address provided'}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Business Details */}
+        <Card className="lg:col-span-2 border-0 shadow-sm rounded-[2rem]">
+          <CardHeader>
+            <CardTitle>Business Information</CardTitle>
+            <CardDescription>Official business details as registered on the platform.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1">
+              <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Business Name</Label>
+              <Input value={user?.business_name || ''} readOnly className="bg-gray-50 border-gray-100 font-bold" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Owner Name</Label>
+              <Input value={user?.owner_name || ''} readOnly className="bg-gray-50 border-gray-100 font-bold" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Business Email</Label>
+              <Input value={user?.email || ''} readOnly className="bg-gray-50 border-gray-100 font-bold" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Contact Number</Label>
+              <Input value={user?.phone || ''} readOnly className="bg-gray-50 border-gray-100 font-bold" />
+            </div>
+
+            <div className="md:col-span-2 mt-4 p-4 bg-emerald-50 rounded-xl border border-emerald-100 flex items-start gap-4">
+              <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-bold text-emerald-900 text-sm">Verification Status: Verified</h4>
+                <p className="text-xs text-emerald-700 mt-1">Your business identity has been verified and authenticated by the platform administration.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
   const renderOrders = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -681,10 +835,7 @@ const Vendor = () => {
               </tr>
             </thead>
             <tbody className="divide-y text-sm">
-              {[
-                { id: '#ORD-7721', name: 'John Doe', amt: '₹1,200', status: 'processing' },
-                { id: '#ORD-7722', name: 'Jane Smith', amt: '₹4,500', status: 'shipped' },
-              ].map(o => (
+              {[].map(o => (
                 <tr key={o.id} className="hover:bg-gray-50/50">
                   <td className="px-6 py-4 font-bold">{o.id}</td>
                   <td className="px-6 py-4">{o.name}</td>
@@ -823,6 +974,7 @@ const Vendor = () => {
       case 'reviews': return renderReviews();
       case 'coupons': return renderCoupons();
       case 'settings': return renderSettings();
+      case 'profile': return renderProfile();
       default: return (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-16 h-16 bg-violet-50 rounded-full flex items-center justify-center mb-4">
@@ -912,27 +1064,5 @@ const Vendor = () => {
     </div>
   );
 };
-
-// Missing Store icon from import fix
-const Store = (props) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" />
-    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-    <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" />
-    <path d="M2 7h20" />
-    <path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7" />
-  </svg>
-);
 
 export default Vendor;

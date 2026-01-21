@@ -36,30 +36,15 @@ const Deals = () => {
     const fetchDeals = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("https://dummyjson.com/products?limit=100&skip=20");
-        const mappedDeals = response.data.products
-          .filter(p => p.discountPercentage > 5)
-          .map(p => {
-            const discount = Math.round(p.discountPercentage);
-            const inrPrice = Math.round(p.price * 83);
-            const originalPrice = Math.round(inrPrice * (1 + discount / 100));
-            const timeLeftValue = Math.floor(Math.random() * 12) + 1;
-            const timeLeftUnit = Math.random() > 0.5 ? "hours" : "days";
-
-            return {
-              id: p.id,
-              name: p.title,
-              price: inrPrice,
-              originalPrice: originalPrice,
-              image: p.thumbnail || p.images[0],
-              rating: p.rating,
-              reviews: p.reviews ? p.reviews.length : Math.floor(Math.random() * 200) + 50,
-              discount: discount,
-              timeLeft: `${timeLeftValue} ${timeLeftUnit}`,
-              isFlashDeal: Math.random() > 0.6,
-              category: p.category
-            };
-          });
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const response = await axios.get(`${API_BASE}/api/products`);
+        const mappedDeals = response.data
+          .filter(p => p.discount > 0)
+          .map(p => ({
+            ...p,
+            timeLeft: `${Math.floor(Math.random() * 12) + 1} ${Math.random() > 0.5 ? "hours" : "days"}`,
+            isFlashDeal: Math.random() > 0.6
+          }));
         setDeals(mappedDeals);
         setDisplayedDeals(mappedDeals.slice(0, 24));
       } catch (err) {
@@ -230,6 +215,12 @@ const Deals = () => {
                         <Clock className="w-3 h-3" />
                         Ends in: {deal.timeLeft}
                       </div>
+
+                      {deal.offers && (
+                        <div className="text-[10px] sm:text-xs font-medium text-violet-600 bg-violet-50 px-2 py-1 rounded-lg mb-3 line-clamp-1">
+                          {deal.offers}
+                        </div>
+                      )}
 
                       <Button
                         onClick={() => addToCart({ ...deal, quantity: 1 })}

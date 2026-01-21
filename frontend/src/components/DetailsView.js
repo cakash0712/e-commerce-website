@@ -81,25 +81,30 @@ const DetailsView = () => {
         const fetchProductDetails = async () => {
             try {
                 setLoading(true);
-                const productRes = await axios.get(`https://dummyjson.com/products/${id}`);
+                const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                const productRes = await axios.get(`${API_BASE}/api/products/${id}`);
                 const p = productRes.data;
 
                 const mappedProduct = {
                     id: p.id,
-                    name: p.title,
-                    price: Math.round(p.price * 83),
-                    originalPrice: Math.round(p.price * 83 * (1 + p.discountPercentage / 100)),
-                    discount: Math.round(p.discountPercentage),
+                    name: p.name,
+                    price: p.price,
+                    originalPrice: p.discount > 0 ? Math.round(p.price / (1 - p.discount / 100)) : p.price,
+                    discount: p.discount,
                     description: p.description,
-                    images: p.images || [p.thumbnail],
+                    images: p.images || (p.image ? [p.image] : []),
                     category: p.category,
-                    rating: p.rating,
-                    reviewsCount: p.reviews ? p.reviews.length : Math.floor(Math.random() * 500) + 100,
-                    stock: p.stock || Math.floor(Math.random() * 50) + 10,
-                    brand: p.brand || "ZippyCart",
+                    rating: p.rating || 0,
+                    reviewsCount: p.reviews ? p.reviews.length : 0,
+                    stock: p.stock,
+                    brand: p.brand || "Generic",
+                    offers: p.offers || "",
+                    weight: p.weight || "N/A",
+                    dimensions: p.dimensions || "N/A",
+                    material: p.material || "N/A",
                     vendor: {
-                        name: "ZippyCart Official",
-                        id: "v-123",
+                        name: "ZippyCart Vendor",
+                        id: p.vendor_id,
                         rating: 4.8
                     },
                     features: [
@@ -115,22 +120,11 @@ const DetailsView = () => {
                     ]
                 };
 
-                setProduct(mappedProduct);
+                setProduct(productRes.data);
 
                 try {
-                    const categoryRes = await axios.get(`https://dummyjson.com/products/category/${p.category}?limit=10`);
-                    const related = categoryRes.data.products
-                        .filter(item => item.id !== parseInt(id))
-                        .map(item => ({
-                            id: item.id,
-                            name: item.title,
-                            price: Math.round(item.price * 83),
-                            originalPrice: Math.round(item.price * 83 * (1 + item.discountPercentage / 100)),
-                            image: item.thumbnail,
-                            rating: item.rating
-                        }))
-                        .slice(0, 4);
-                    setRelatedProducts(related);
+                    const relatedRes = await axios.get(`${API_BASE}/api/products?category=${productRes.data.category}&limit=4&exclude=${id}`);
+                    setRelatedProducts(relatedRes.data);
                 } catch (catErr) {
                     console.error("Error fetching related products:", catErr);
                 }
@@ -283,6 +277,15 @@ const DetailsView = () => {
                                         </Badge>
                                     </div>
 
+                                    {product.offers && (
+                                        <div className="mb-6 p-4 bg-violet-50 rounded-xl border border-violet-100">
+                                            <h4 className="flex items-center gap-2 text-sm font-bold text-violet-700 mb-2 uppercase tracking-wide">
+                                                <Zap className="w-4 h-4 fill-violet-700" /> Available Offers
+                                            </h4>
+                                            <p className="text-sm text-gray-700 font-medium">{product.offers}</p>
+                                        </div>
+                                    )}
+
                                     <p className="text-gray-600 leading-relaxed mb-6">{product.description}</p>
                                 </div>
 
@@ -396,8 +399,8 @@ const DetailsView = () => {
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
                                         className={`py-4 text-sm font-medium border-b-2 transition-colors capitalize ${activeTab === tab
-                                                ? 'border-violet-600 text-violet-600'
-                                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                                            ? 'border-violet-600 text-violet-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700'
                                             }`}
                                     >
                                         {tab}
@@ -509,9 +512,10 @@ const DetailsView = () => {
                                     {[
                                         { label: "Brand", value: product.brand },
                                         { label: "Category", value: product.category },
-                                        { label: "SKU", value: `ZC-${product.id}` },
-                                        { label: "Weight", value: "0.5 kg" },
-                                        { label: "Warranty", value: "2 Years" },
+                                        { label: "SKU", value: `ZC-${product.id.substring(0, 8)}` },
+                                        { label: "Weight", value: product.weight },
+                                        { label: "Dimensions", value: product.dimensions },
+                                        { label: "Material", value: product.material },
                                     ].map((spec, i) => (
                                         <div key={i} className="flex justify-between py-3 border-b border-gray-100">
                                             <span className="text-gray-500">{spec.label}</span>

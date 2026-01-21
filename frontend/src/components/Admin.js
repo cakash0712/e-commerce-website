@@ -15,7 +15,7 @@ import {
   AlertCircle, CheckCircle2, XCircle, Search, Filter,
   Plus, MoreVertical, MessageSquare, FileText, Bell,
   ShieldCheck, Languages, Truck, Globe, Mail,
-  Megaphone, Star, ChevronRight, ChevronDown, Box, Trash2, Zap
+  Megaphone, Star, ChevronRight, ChevronDown, Box, Trash2, Zap, History, RotateCcw
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -32,17 +32,8 @@ const Admin = () => {
 
   // Dummy data for commissions and payouts
   const [commissionRate, setCommissionRate] = useState(10);
-  const [payoutRequests, setPayoutRequests] = useState([
-    { id: 'PAY-8821', vendor: 'Global Partners', amount: 45000, date: '2026-01-18', status: 'pending' },
-    { id: 'PAY-8822', vendor: 'Tech Haven', amount: 12800, date: '2026-01-19', status: 'processing' },
-    { id: 'PAY-8823', vendor: 'Fashion Hub', amount: 8400, date: '2026-01-15', status: 'completed' },
-  ]);
-  const [entities, setEntities] = useState([
-    { id: 'usr-101', name: 'John Doe', type: 'user', email: 'john@example.com', status: 'active', joined: '2025-12-10' },
-    { id: 'usr-102', name: 'Alice Smith', type: 'user', email: 'alice@example.com', status: 'active', joined: '2025-12-15' },
-    { id: 'vnd-201', name: 'Tech Haven', type: 'vendor', email: 'tech@haven.com', status: 'active', joined: '2026-01-02' },
-    { id: 'vnd-202', name: 'Fashion Hub', type: 'vendor', email: 'fashion@hub.com', status: 'suspended', joined: '2026-01-05' },
-  ]);
+  const [payoutRequests, setPayoutRequests] = useState([]);
+  const [entities, setEntities] = useState([]);
 
   const [pendingProducts, setPendingProducts] = useState([]);
   const [rejectionReasons, setRejectionReasons] = useState({});
@@ -234,40 +225,11 @@ const Admin = () => {
     }
   ];
 
-  // Dummy Chart Data
-  const salesData = [
-    { name: 'Mon', sales: 420 },
-    { name: 'Tue', sales: 380 },
-    { name: 'Wed', sales: 510 },
-    { name: 'Thu', sales: 490 },
-    { name: 'Fri', sales: 620 },
-    { name: 'Sat', sales: 740 },
-    { name: 'Sun', sales: 690 },
-  ];
-
-  const revenueData = [
-    { name: 'Jan', revenue: 2400000 },
-    { name: 'Feb', revenue: 1398000 },
-    { name: 'Mar', revenue: 9800000 },
-    { name: 'Apr', revenue: 3908000 },
-    { name: 'May', revenue: 4800000 },
-    { name: 'Jun', revenue: 3800000 },
-  ];
-
-  const topProducts = [
-    { name: 'Cyber-Watch Pro', sales: 1240, revenue: 350000, growth: 12.5 },
-    { name: 'Audio-Max v3', sales: 890, revenue: 180000, growth: 8.2 },
-    { name: 'Hyper-Book 14', sales: 560, revenue: 1200000, growth: -2.1 },
-    { name: 'Smart-Fit Band', sales: 2100, revenue: 85000, growth: 25.4 },
-    { name: 'Pro-Cam 4K', sales: 430, revenue: 210000, growth: 1.4 },
-  ];
-
-  const vendorData = [
-    { name: 'Apex Tech', value: 45 },
-    { name: 'Fashion Hub', value: 30 },
-    { name: 'Home Essentials', value: 15 },
-    { name: 'Beauty Direct', value: 10 },
-  ];
+  // Placeholder Chart Data (to be replaced with API data)
+  const salesData = [];
+  const revenueData = [];
+  const topProducts = [];
+  const vendorData = [];
 
   const COLORS = ['#8b5cf6', '#6366f1', '#ec4899', '#f59e0b'];
 
@@ -276,10 +238,10 @@ const Admin = () => {
       {/* Upper Stats Row */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Total Revenue', value: '₹12.4M', change: '+14.2%', icon: CreditCard, color: 'text-violet-600', bg: 'bg-violet-100' },
-          { label: 'Conversion Rate', value: '3.84%', change: '+0.45%', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-100' },
-          { label: 'Active Sessions', value: '1,842', change: '+5.4%', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-100' },
-          { label: 'Daily Sales', value: '642', change: '+12.1%', icon: ShoppingCart, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+          { label: 'Total Revenue', value: '₹0', change: '0%', icon: CreditCard, color: 'text-violet-600', bg: 'bg-violet-100' },
+          { label: 'Conversion Rate', value: '0%', change: '0%', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-100' },
+          { label: 'Active Sessions', value: '0', change: '0%', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-100' },
+          { label: 'Daily Sales', value: '0', change: '0%', icon: ShoppingCart, color: 'text-emerald-600', bg: 'bg-emerald-100' },
         ].map((stat, i) => (
           <Card key={i} className="border-0 shadow-sm hover:shadow-xl transition-all duration-300">
             <CardContent className="p-6">
@@ -534,11 +496,7 @@ const Admin = () => {
     </div>
   );
 
-  const [coupons, setCoupons] = useState([
-    { id: 1, code: 'WINTER20', type: 'global', discount: '20%', minOrder: 1000, expires: '2026-03-31', usage: '45/100', status: 'active' },
-    { id: 2, code: 'TECH-OFF', type: 'category', category: 'Electronics', discount: '₹500', minOrder: 5000, expires: '2026-02-15', usage: '12/50', status: 'active' },
-    { id: 3, code: 'VEND-99', type: 'vendor', vendor: 'Global Partners', discount: '15%', minOrder: 0, expires: '2026-06-01', usage: '8/200', status: 'active' },
-  ]);
+  const [coupons, setCoupons] = useState([]);
   const handleCreateCoupon = () => {
     alert("New Promotional Asset successfully synchronized with the global network. Compliance check passed.");
   };
@@ -664,11 +622,7 @@ const Admin = () => {
     </div>
   );
 
-  const [allReviews, setAllReviews] = useState([
-    { id: 1, user: 'Rahul K.', rating: 5, date: 'Jan 15, 2026', comment: 'Top-tier build quality. Worth every rupee.', product: 'Premium Leather Bag', status: 'published' },
-    { id: 2, user: 'Sanya M.', rating: 2, date: 'Jan 18, 2026', comment: 'Delivery was late and box was slightly crushed.', product: 'Noise Cancelling Headphones', status: 'flagged' },
-    { id: 3, user: 'Vikram Singh', rating: 4, date: 'Jan 19, 2026', comment: 'Good performance, but setup was tedious.', product: 'Smart Coffee Maker', status: 'published' },
-  ]);
+  const [allReviews, setAllReviews] = useState([]);
 
   const renderReviewModeration = () => (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -928,26 +882,68 @@ const Admin = () => {
     </div>
   );
 
-  const renderContent = () => {
-    if (activeMenu === 'dashboard') return renderDashboard();
-    if (activeSubMenu === 'all-users') return renderEntityManagement('user');
-    if (activeSubMenu === 'vendor-list') return renderEntityManagement('vendor');
-    if (activeSubMenu === 'commission-settings') return renderCommissionSettings();
-    if (activeSubMenu === 'vendor-payouts') return renderVendorPayouts();
-    if (activeSubMenu === 'coupons') return renderCoupons();
-    if (activeSubMenu === 'reviews') return renderReviewModeration();
-    if (activeSubMenu === 'product-approvals') return renderProductApprovals();
-
+  const renderPlaceholder = (title, description, icon = Box) => {
+    const Icon = icon;
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="w-20 h-20 bg-gray-50 rounded-[2rem] flex items-center justify-center mb-6">
-          <Box className="w-10 h-10 text-gray-300" />
+      <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in-95 duration-500">
+        <div className="w-24 h-24 bg-gray-50 rounded-[2.5rem] flex items-center justify-center mb-6 shadow-sm border border-gray-100">
+          <Icon className="w-10 h-10 text-gray-300" />
         </div>
-        <h3 className="text-2xl font-black italic">Module <span className="text-violet-600">Incoming.</span></h3>
-        <p className="text-gray-500 font-medium mt-2 max-w-sm mx-auto">We are currently synchronizing the {activeSubMenu || activeMenu} module with the Master Node.</p>
-        <Button onClick={() => handleMenuClick('dashboard')} className="mt-8 bg-gray-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest px-8">Back to Overview</Button>
+        <h3 className="text-3xl font-black italic text-gray-900 mb-2">{title}</h3>
+        <p className="text-gray-500 font-medium max-w-md mx-auto leading-relaxed">{description}</p>
+        <Button onClick={() => setActiveMenu('dashboard')} className="mt-8 h-12 bg-gray-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest px-8 shadow-xl hover:bg-violet-600 transition-all">
+          Return to Dashboard
+        </Button>
       </div>
     );
+  };
+
+  const renderContent = () => {
+    // Dashboard
+    if (activeMenu === 'dashboard' && activeSubMenu === 'overview') return renderDashboard();
+    if (activeSubMenu === 'revenue-charts') return renderPlaceholder('Revenue Analytics', 'Detailed financial graphs and revenue breakdowns will appear here once sufficient data is collected.', BarChart3);
+    if (activeSubMenu === 'recent-activity') return renderPlaceholder('System Activity', 'Real-time logs of system-wide actions and security events.', History);
+
+    // User Management
+    if (activeSubMenu === 'all-users') return renderEntityManagement('user');
+    if (activeSubMenu === 'roles-permissions') return renderPlaceholder('Access Control', 'Configure granular permissions and role-based access control policies.', ShieldCheck);
+
+    // Vendor Management
+    if (activeSubMenu === 'vendor-list') return renderEntityManagement('vendor');
+    if (activeSubMenu === 'vendor-approvals') return renderPlaceholder('Vendor Applications', 'Review and approve new merchant applications.', UserCheck);
+    if (activeSubMenu === 'vendor-performance') return renderPlaceholder('Vendor Metrics', 'Performance KPIs and reliability scores for all registered vendors.', TrendingUp);
+    if (activeSubMenu === 'commission-settings') return renderCommissionSettings();
+    if (activeSubMenu === 'vendor-payouts') return renderVendorPayouts();
+
+    // Product Management
+    if (activeSubMenu === 'all-products') return renderPlaceholder('Global Inventory', 'Master list of all products across all vendors.', Package);
+    if (activeSubMenu === 'product-approvals') return renderProductApprovals();
+    if (activeSubMenu === 'categories') return renderPlaceholder('Category Structure', 'Manage product taxonomy and category hierarchy.', Tag);
+
+    // Order Management
+    if (activeSubMenu === 'all-orders') return renderPlaceholder('Order Central', 'Global order processing and tracking terminal.', ShoppingCart);
+    if (activeSubMenu === 'returns-refunds') return renderPlaceholder('RMA Center', 'Process return merchandise authorizations and refunds.', RotateCcw);
+    if (activeSubMenu === 'shipping-status') return renderPlaceholder('Logistics Grid', 'Real-time shipping carrier integration and status updates.', Truck);
+
+    // Marketing
+    if (activeSubMenu === 'coupons') return renderCoupons();
+    if (activeSubMenu === 'promotions') return renderPlaceholder('Campaign Manager', 'Schedule and manage seasonal promotions.', Star);
+    if (activeSubMenu === 'newsletter') return renderPlaceholder('Email Marketing', 'Manage subscriber lists and newsletter campaigns.', Mail);
+
+    // CMS
+    if (activeSubMenu === 'pages') return renderPlaceholder('Page Builder', 'Edit static pages and content blocks.', LayoutDashboard);
+    if (activeSubMenu === 'reviews') return renderReviewModeration();
+    if (activeSubMenu === 'faq') return renderPlaceholder('Knowledge Base', 'Manage Frequently Asked Questions.', MessageSquare);
+    if (activeSubMenu === 'blog') return renderPlaceholder('Blog Posts', 'Manage news articles and blog content.', FileText);
+
+    // Reports
+    if (activeMenu === 'reports') return renderPlaceholder('Data Warehouse', 'Comprehensive system reports and data export tools.', BarChart3);
+
+    // Settings
+    if (activeMenu === 'settings') return renderPlaceholder('System Configuration', 'Global system settings and preferences.', Settings);
+
+    // Default
+    return renderPlaceholder('Module Incoming', `We are currently synchronizing the ${activeSubMenu || activeMenu} module with the Master Node.`);
   };
 
   return (
