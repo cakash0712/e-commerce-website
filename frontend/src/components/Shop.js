@@ -321,13 +321,52 @@ const Shop = () => {
                 </Button>
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-24 bg-white rounded-lg border border-gray-200">
-                <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No products found</h3>
-                <p className="text-gray-500 mb-6">Try adjusting your filters or search term.</p>
-                <Button onClick={clearFilters} className="bg-violet-600 hover:bg-violet-700 text-white">
-                  Clear Filters
-                </Button>
+              <div className="flex flex-col items-center justify-center py-32 px-6">
+                <div className="max-w-lg w-full text-center">
+                  <div className="relative inline-block mb-8">
+                    <div className="w-24 h-24 bg-violet-50 rounded-full flex items-center justify-center mx-auto">
+                      <Search className="w-12 h-12 text-violet-400" />
+                    </div>
+                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                      <ShoppingBag className="w-4 h-4 text-amber-600" />
+                    </div>
+                  </div>
+
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">No products found</h3>
+                  <p className="text-gray-600 mb-8 leading-relaxed">
+                    We couldn't find any products matching your search. Try adjusting your filters or browse our popular categories.
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
+                    <Button onClick={clearFilters} className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2.5 rounded-lg font-medium shadow-sm hover:shadow-md transition-all">
+                      <SlidersHorizontal className="w-4 h-4 mr-2" />
+                      Clear Filters
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate('/categories')}
+                      className="border-gray-300 hover:border-violet-300 hover:bg-violet-50 text-gray-700 px-6 py-2.5 rounded-lg font-medium"
+                    >
+                      <Grid3X3 className="w-4 h-4 mr-2" />
+                      Browse Categories
+                    </Button>
+                  </div>
+
+                  <div className="border-t border-gray-100 pt-8">
+                    <p className="text-sm text-gray-500 mb-4 text-center">Popular searches:</p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {['laptops', 'smartphones', 'fashion', 'home decor'].map((term) => (
+                        <button
+                          key={term}
+                          onClick={() => setSearchQuery(term)}
+                          className="px-3 py-1.5 bg-gray-100 hover:bg-violet-100 text-gray-600 hover:text-violet-700 rounded-full text-sm font-medium transition-colors"
+                        >
+                          {term}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className={viewMode === "grid"

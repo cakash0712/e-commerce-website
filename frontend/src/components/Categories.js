@@ -53,48 +53,48 @@ const Categories = () => {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
-  // Static categories with icons mapped to API slugs
+  // Static categories with icons and logos mapped to API slugs
   const staticCategories = [
-    { name: "Electronics", slug: "electronics", icon: Laptop },
-    { name: "Laptops", slug: "laptops", icon: Laptop },
-    { name: "Smartphones", slug: "smartphones", icon: Smartphone },
-    { name: "Tablets", slug: "tablets", icon: Tablet },
-    { name: "Fashion", slug: "fashion", icon: Shirt },
-    { name: "Mens Shirts", slug: "mens-shirts", icon: Shirt },
-    { name: "Mens Shoes", slug: "mens-shoes", icon: Footprints },
-    { name: "Womens Dresses", slug: "womens-dresses", icon: ShoppingBag },
-    { name: "Womens Shoes", slug: "womens-shoes", icon: Footprints },
-    { name: "Tops", slug: "tops", icon: Shirt },
-    { name: "Accessories", slug: "accessories", icon: Watch },
-    { name: "Womens Watches", slug: "womens-watches", icon: Watch },
-    { name: "Mens Watches", slug: "mens-watches", icon: Watch },
-    { name: "Sunglasses", slug: "sunglasses", icon: Sun },
-    { name: "Womens Bags", slug: "womens-bags", icon: ShoppingBag },
-    { name: "Womens Jewellery", slug: "womens-jewellery", icon: Gem },
-    { name: "Home & Decor", slug: "home-decoration", icon: HomeIcon },
-    { name: "Furniture", slug: "furniture", icon: Bed },
-    { name: "Kitchen Accessories", slug: "kitchen-accessories", icon: Utensils },
-    { name: "Sports & Fitness", slug: "sports", icon: Dumbbell },
-    { name: "Sports Accessories", slug: "sports-accessories", icon: Bike },
-    { name: "Books", slug: "books", icon: BookOpen },
-    { name: "Beauty", slug: "beauty", icon: Sparkles },
-    { name: "Fragrances", slug: "fragrances", icon: Wind },
-    { name: "Skin Care", slug: "skin-care", icon: Sparkles },
-    { name: "Baby & Kids", slug: "baby", icon: Baby },
-    { name: "Automotive", slug: "automotive", icon: Car },
-    { name: "Motorcycle", slug: "motorcycle", icon: Bike },
-    { name: "Vehicle", slug: "vehicle", icon: Car },
-    { name: "Groceries", slug: "groceries", icon: Utensils },
-    { name: "Garden", slug: "garden", icon: Flower2 },
-    { name: "Gaming", slug: "gaming", icon: Gamepad2 },
-    { name: "Cameras", slug: "cameras", icon: Camera },
-    { name: "Audio", slug: "audio", icon: Headphones },
-    { name: "Mobile Accessories", slug: "mobile-accessories", icon: Smartphone },
-    { name: "Gifts", slug: "gifts", icon: Gift },
-    { name: "Jewelry", slug: "jewelry", icon: Gem },
-    { name: "Health", slug: "health", icon: Pill },
-    { name: "Pet Supplies", slug: "pets", icon: PawPrint },
-    { name: "Art & Crafts", slug: "art", icon: Brush },
+    { name: "Electronics", slug: "electronics", icon: Laptop, logo: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=200&h=200&fit=crop&crop=center" },
+    { name: "Laptops", slug: "laptops", icon: Laptop, logo: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=200&h=200&fit=crop&crop=center" },
+    { name: "Smartphones", slug: "smartphones", icon: Smartphone, logo: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&h=200&fit=crop&crop=center" },
+    { name: "Tablets", slug: "tablets", icon: Tablet, logo: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=200&h=200&fit=crop&crop=center" },
+    { name: "Fashion", slug: "fashion", icon: Shirt, logo: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=200&h=200&fit=crop&crop=center" },
+    { name: "Mens Shirts", slug: "mens-shirts", icon: Shirt, logo: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200&h=200&fit=crop&crop=center" },
+    { name: "Mens Shoes", slug: "mens-shoes", icon: Footprints, logo: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=200&h=200&fit=crop&crop=center" },
+    { name: "Womens Dresses", slug: "womens-dresses", icon: ShoppingBag, logo: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=200&h=200&fit=crop&crop=center" },
+    { name: "Womens Shoes", slug: "womens-shoes", icon: Footprints, logo: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=200&h=200&fit=crop&crop=center" },
+    { name: "Tops", slug: "tops", icon: Shirt, logo: "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=200&h=200&fit=crop&crop=center" },
+    { name: "Accessories", slug: "accessories", icon: Watch, logo: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=200&h=200&fit=crop&crop=center" },
+    { name: "Womens Watches", slug: "womens-watches", icon: Watch, logo: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&h=200&fit=crop&crop=center" },
+    { name: "Mens Watches", slug: "mens-watches", icon: Watch, logo: "https://images.unsplash.com/photo-1547996160-81dfa63595aa?w=200&h=200&fit=crop&crop=center" },
+    { name: "Sunglasses", slug: "sunglasses", icon: Sun, logo: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=200&h=200&fit=crop&crop=center" },
+    { name: "Womens Bags", slug: "womens-bags", icon: ShoppingBag, logo: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=200&h=200&fit=crop&crop=center" },
+    { name: "Womens Jewellery", slug: "womens-jewellery", icon: Gem, logo: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=200&h=200&fit=crop&crop=center" },
+    { name: "Home & Decor", slug: "home-decoration", icon: HomeIcon, logo: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=200&h=200&fit=crop&crop=center" },
+    { name: "Furniture", slug: "furniture", icon: Bed, logo: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=200&h=200&fit=crop&crop=center" },
+    { name: "Kitchen Accessories", slug: "kitchen-accessories", icon: Utensils, logo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center" },
+    { name: "Sports & Fitness", slug: "sports", icon: Dumbbell, logo: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop&crop=center" },
+    { name: "Sports Accessories", slug: "sports-accessories", icon: Bike, logo: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop&crop=center" },
+    { name: "Books", slug: "books", icon: BookOpen, logo: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=200&h=200&fit=crop&crop=center" },
+    { name: "Beauty", slug: "beauty", icon: Sparkles, logo: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=200&h=200&fit=crop&crop=center" },
+    { name: "Fragrances", slug: "fragrances", icon: Wind, logo: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=200&h=200&fit=crop&crop=center" },
+    { name: "Skin Care", slug: "skin-care", icon: Sparkles, logo: "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=200&h=200&fit=crop&crop=center" },
+    { name: "Baby & Kids", slug: "baby", icon: Baby, logo: "https://images.unsplash.com/photo-1544569226-44165ff6e324?w=200&h=200&fit=crop&crop=center" },
+    { name: "Automotive", slug: "automotive", icon: Car, logo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop&crop=center" },
+    { name: "Motorcycle", slug: "motorcycle", icon: Bike, logo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop&crop=center" },
+    { name: "Vehicle", slug: "vehicle", icon: Car, logo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop&crop=center" },
+    { name: "Groceries", slug: "groceries", icon: Utensils, logo: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&h=200&fit=crop&crop=center" },
+    { name: "Garden", slug: "garden", icon: Flower2, logo: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=200&h=200&fit=crop&crop=center" },
+    { name: "Gaming", slug: "gaming", icon: Gamepad2, logo: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=200&h=200&fit=crop&crop=center" },
+    { name: "Cameras", slug: "cameras", icon: Camera, logo: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=200&h=200&fit=crop&crop=center" },
+    { name: "Audio", slug: "audio", icon: Headphones, logo: "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=200&h=200&fit=crop&crop=center" },
+    { name: "Mobile Accessories", slug: "mobile-accessories", icon: Smartphone, logo: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=200&h=200&fit=crop&crop=center" },
+    { name: "Gifts", slug: "gifts", icon: Gift, logo: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=200&h=200&fit=crop&crop=center" },
+    { name: "Jewelry", slug: "jewelry", icon: Gem, logo: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=200&h=200&fit=crop&crop=center" },
+    { name: "Health", slug: "health", icon: Pill, logo: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=200&h=200&fit=crop&crop=center" },
+    { name: "Pet Supplies", slug: "pets", icon: PawPrint, logo: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=200&h=200&fit=crop&crop=center" },
+    { name: "Art & Crafts", slug: "art", icon: Brush, logo: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=200&h=200&fit=crop&crop=center" },
   ];
 
   useEffect(() => {
@@ -141,9 +141,9 @@ const Categories = () => {
     }))
     : [];
 
-  const getCategoryIcon = (slug) => {
+  const getCategoryInfo = (slug) => {
     const cat = staticCategories.find(c => c.slug === slug);
-    return cat ? cat.icon : Grid3X3;
+    return cat ? { icon: cat.icon, logo: cat.logo } : { icon: Grid3X3, logo: "https://via.placeholder.com/200x200?text=Category" };
   };
 
   return (
@@ -189,10 +189,10 @@ const Categories = () => {
             <p className="text-gray-500">Loading categories...</p>
           </div>
         ) : !selectedCategory ? (
-          /* Categories Grid - Large Icon Cards */
+          /* Categories Grid - Logo Images */
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {apiCategories.map((cat) => {
-              const IconComponent = getCategoryIcon(cat.slug);
+              const { icon: IconComponent, logo } = getCategoryInfo(cat.slug);
               return (
                 <button
                   key={cat.id}
