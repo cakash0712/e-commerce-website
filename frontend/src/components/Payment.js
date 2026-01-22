@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -89,22 +90,48 @@ const Payment = () => {
         window.scrollTo(0, 0);
     }, [activeSection, orderComplete]);
 
-    const handlePlaceOrder = () => {
+    const handlePlaceOrder = async () => {
         setIsProcessing(true);
-        setTimeout(() => {
-            const newOrder = {
-                id: `ZIP-${Math.floor(100000 + Math.random() * 900000)}`,
-                date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-                items: [...cartItems],
-                total: total,
-                status: 'Confirmed',
-                paymentMethod: paymentMethod,
-                deliveryTimeline: shippingMethod === 'express' ? 'Arriving Tomorrow' : 'Arriving in 3-5 Days'
+        try {
+            const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+            const orderPayload = {
+                customer_name: address.name,
+                email: address.email,
+                phone: address.phone || "",
+                address: `${address.street}, ${address.city}, ${address.state || ""} ${address.zip}`,
+                payment_method: paymentMethod,
+                items: cartItems.map(item => ({
+                    product_id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                    image: item.image,
+                    vendor_id: item.vendor_id,
+                    status: "processing"
+                })),
+                total_amount: total
             };
-            addOrder(newOrder);
+
+            const response = await axios.post(`${API_BASE}/api/orders/checkout`, orderPayload, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+
+            // Sync with local state if needed
+            addOrder({
+                ...orderPayload,
+                id: response.data.order_id,
+                date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+                status: 'Confirmed',
+                deliveryTimeline: shippingMethod === 'express' ? 'Arriving Tomorrow' : 'Arriving in 3-5 Days'
+            });
+
             setIsProcessing(false);
             setOrderComplete(true);
-        }, 2500);
+        } catch (e) {
+            console.error("Order Placement Error:", e);
+            alert(`Failed to authorize transaction: ${e.response?.data?.detail || e.message}`);
+            setIsProcessing(false);
+        }
     };
 
     if (orderComplete) {
@@ -231,10 +258,10 @@ const Payment = () => {
                     onClick={() => (activeSection > s.step && setActiveSection(s.step))}
                 >
                     <div className={`w-12 h-12 rounded-[1.5rem] flex items-center justify-center font-black transition-all duration-500 ${activeSection === s.step
-                            ? 'bg-violet-600 text-white shadow-2xl shadow-violet-200 scale-110 ring-4 ring-white'
-                            : activeSection > s.step
-                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100'
-                                : 'bg-white border-2 border-gray-100 text-gray-300'
+                        ? 'bg-violet-600 text-white shadow-2xl shadow-violet-200 scale-110 ring-4 ring-white'
+                        : activeSection > s.step
+                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100'
+                            : 'bg-white border-2 border-gray-100 text-gray-300'
                         }`}>
                         {activeSection > s.step ? <Check className="w-6 h-6 stroke-[4]" /> : <s.icon className={`w-5 h-5 ${activeSection === s.step ? 'animate-bounce-slow' : ''}`} />}
                     </div>

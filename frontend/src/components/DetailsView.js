@@ -274,10 +274,14 @@ const DetailsView = () => {
                                     {/* Price */}
                                     <div className="flex items-baseline gap-3 mb-4">
                                         <span className="text-3xl font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
-                                        <span className="text-xl text-gray-400 line-through">₹{product.originalPrice.toLocaleString()}</span>
-                                        <Badge className="bg-green-100 text-green-700 border-none">
-                                            Save ₹{(product.originalPrice - product.price).toLocaleString()}
-                                        </Badge>
+                                        {product.discount > 0 && (
+                                            <>
+                                                <span className="text-xl text-gray-400 line-through">₹{product.originalPrice.toLocaleString()}</span>
+                                                <Badge className="bg-green-100 text-green-700 border-none">
+                                                    Save ₹{(product.originalPrice - product.price).toLocaleString()}
+                                                </Badge>
+                                            </>
+                                        )}
                                     </div>
 
                                     {product.offers && (
@@ -558,7 +562,12 @@ const DetailsView = () => {
                                         <div className="p-3">
                                             <h4 className="font-medium text-gray-900 text-sm line-clamp-2 group-hover:text-violet-600 transition-colors mb-2">{p.name}</h4>
                                             <div className="flex items-center justify-between">
-                                                <span className="font-bold text-gray-900">₹{p.price.toLocaleString()}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-gray-900">₹{p.price.toLocaleString()}</span>
+                                                    {p.discount > 0 && (
+                                                        <span className="text-[10px] text-gray-400 line-through">₹{Math.round(p.price / (1 - p.discount / 100)).toLocaleString()}</span>
+                                                    )}
+                                                </div>
                                                 <div className="flex items-center gap-1">
                                                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                                                     <span className="text-xs text-gray-500">{p.rating}</span>

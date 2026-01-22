@@ -132,7 +132,7 @@ class Product(BaseModel):
     material: str = ""
     vendor_id: str
     offers: str = ""
-    status: str = "pending" # pending, approved, rejected
+    status: str = "approved" # pending, approved, rejected
     rejection_reason: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -165,6 +165,38 @@ class Notification(BaseModel):
     type: str = "info" # info, success, warning, error
     is_read: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class OrderItem(BaseModel):
+    product_id: str
+    name: str
+    price: float
+    quantity: int
+    image: str
+    vendor_id: str
+    status: str = "processing" # processing, shipped, delivered, cancelled
+
+class Order(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    customer_name: str
+    email: str
+    phone: str = ""
+    address: str
+    payment_method: str = "card"
+    items: List[OrderItem]
+    total_amount: float
+    status: str = "processing"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class OrderCreate(BaseModel):
+    customer_name: str
+    email: str
+    phone: str = ""
+    address: str
+    payment_method: str = "card"
+    items: List[OrderItem]
+    total_amount: float
 
 # Add your routes to the router instead of directly to app
 
@@ -338,7 +370,7 @@ async def force_logout(user_id: str, current_admin: Annotated[dict, Depends(get_
     return {"message": "Sessions terminated. Entity must re-authenticate."}
 
 @api_router.post("/orders/checkout")
-async def checkout(request: Request, current_user: Annotated[dict, Depends(get_current_user)]):
+async def checkout(order_data: OrderCreate, request: Request, current_user: Annotated[dict, Depends(get_current_user)]):
     # Rate Limiting Logic for Checkout (max 3 per minute)
     client_ip = request.client.host
     now = datetime.now(timezone.utc)
@@ -354,19 +386,42 @@ async def checkout(request: Request, current_user: Annotated[dict, Depends(get_c
     else:
         order_attempts[client_ip] = (now, 1)
         
+    order_obj = Order(
+        **order_data.model_dump(),
+        user_id=current_user['id']
+    )
+    
+    doc = order_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    
+    await db.orders.insert_one(doc)
+
     # Trigger Notifications for order placement
     # Notify User
     await db.notifications.insert_one({
         "id": str(uuid.uuid4()),
         "user_id": current_user['id'],
         "title": "Order Protocol Authenticated",
-        "message": "Your transaction has been synchronized with the global ledger.",
+        "message": f"Your transaction {order_obj.id} has been synchronized with the global ledger.",
         "type": "success",
         "is_read": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     
-    return {"message": "Transaction authorized.", "order_id": str(uuid.uuid4())}
+    # Notify Vendors
+    vendor_ids = {item.vendor_id for item in order_obj.items}
+    for v_id in vendor_ids:
+        await db.notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": v_id,
+            "title": "New Sales Protocol",
+            "message": f"A new order {order_obj.id} has been received for your inventory.",
+            "type": "info",
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    return {"message": "Transaction authorized.", "order_id": order_obj.id}
 
 # --- Product Endpoints ---
 
@@ -549,6 +604,110 @@ async def reject_product(product_id: str, reason: dict, current_user: Annotated[
     })
     
     return {"message": "Inventory rejected for non-compliance."}
+
+@api_router.get("/vendor/orders")
+async def get_vendor_orders(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    orders_cursor = db.orders.find({"items.vendor_id": current_user['id']})
+    orders = []
+    async for o in orders_cursor:
+        o['id'] = o.get('id') or str(o['_id'])
+        if '_id' in o: del o['_id']
+        orders.append(o)
+    return orders
+
+@api_router.get("/vendor/stats")
+async def get_vendor_stats(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    vendor_id = current_user['id']
+    
+    # Products count
+    total_products = await db.products.count_documents({"vendor_id": vendor_id})
+    approved_products = await db.products.count_documents({"vendor_id": vendor_id, "status": "approved"})
+    
+    # Orders and Revenue
+    orders_cursor = db.orders.find({"items.vendor_id": vendor_id})
+    total_revenue = 0
+    total_orders = 0
+    unique_customers = set()
+    
+    async for order in orders_cursor:
+        total_orders += 1
+        unique_customers.add(order.get('user_id') or order.get('email'))
+        # Sum only vendor's items
+        for item in order.get('items', []):
+            if item.get('vendor_id') == vendor_id:
+                total_revenue += item.get('price', 0) * item.get('quantity', 1)
+                
+    return {
+        "totalProducts": total_products,
+        "approvedProducts": approved_products,
+        "totalRevenue": total_revenue,
+        "totalOrders": total_orders,
+        "uniqueCustomers": len(unique_customers),
+        "performance": [
+            {"name": "Orders", "value": total_orders},
+            {"name": "Revenue", "value": total_revenue}
+        ]
+    }
+
+@api_router.patch("/vendor/orders/{order_id}/status")
+async def update_vendor_order_status(order_id: str, status_data: dict, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    new_status = status_data.get('status')
+    if not new_status:
+        raise HTTPException(status_code=400, detail="Status required.")
+    
+    # Update status of items belonging to this vendor in this order
+    result = await db.orders.update_one(
+        {"id": order_id, "items.vendor_id": current_user['id']},
+        {"$set": {"items.$[elem].status": new_status}},
+        array_filters=[{"elem.vendor_id": current_user['id']}]
+    )
+    
+    if result.matched_count == 0:
+         raise HTTPException(status_code=404, detail="Order not found or access restricted.")
+         
+    return {"message": "Order item status updated."}
+
+@api_router.patch("/products/{product_id}/stock")
+async def update_product_stock(product_id: str, stock_data: dict, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Merchant clearance required.")
+    
+    new_stock = stock_data.get('stock')
+    if new_stock is None:
+        raise HTTPException(status_code=400, detail="Stock value required.")
+
+    vendor_id = current_user.get('id')
+    
+    # Try updating by 'id' field first
+    result = await db.products.update_one(
+        {"id": product_id, "vendor_id": vendor_id},
+        {"$set": {"stock": int(new_stock)}}
+    )
+    
+    if result.matched_count == 0:
+         # Try updating by MongoDB '_id'
+         from bson import ObjectId
+         try:
+             result = await db.products.update_one(
+                 {"_id": ObjectId(product_id), "vendor_id": vendor_id},
+                 {"$set": {"stock": int(new_stock)}}
+             )
+         except:
+             pass
+
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found or access restricted.")
+    
+    return {"message": "Stock updated successfully.", "new_stock": new_stock}
 
 # --- Notification Endpoints ---
 

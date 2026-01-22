@@ -82,7 +82,7 @@ const Shop = () => {
     let result = products.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.category.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = !filters.category || product.category === filters.category;
+      const matchesCategory = !filters.category || product.category?.toLowerCase() === filters.category?.toLowerCase();
       const matchesPrice = product.price >= filters.priceRange[0] && product.price <= filters.priceRange[1];
       const matchesRating = filters.rating === 0 || product.rating >= filters.rating;
       return matchesSearch && matchesCategory && matchesPrice && matchesRating;
@@ -92,7 +92,7 @@ const Shop = () => {
       case "price-low": result.sort((a, b) => a.price - b.price); break;
       case "price-high": result.sort((a, b) => b.price - a.price); break;
       case "rating": result.sort((a, b) => b.rating - a.rating); break;
-      case "newest": result.sort((a, b) => b.id - a.id); break;
+      case "newest": result.sort((a, b) => (b.id < a.id ? -1 : 1)); break;
       default: break;
     }
     return result;

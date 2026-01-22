@@ -1,0 +1,6 @@
+--- Products ---
+Name: soundcore by Anker Q20i Hybrid Active Noise Cancelling Headphones, Wireless Over-Ear Bluetooth, 40H Long ANC Playtime, Hi-Res Audio, Big Bass, Customize via an App, Transparency Mode (White) | Status: approved | Vendor ID: 31005e5b-3f20-4fee-b4ec-d1a9de51074c
+
+--- Vendors ---
+Name: LMK Softtech | ID: 9857961b-7443-4835-a52f-61e5aee1ebf9
+Name: DACH Tech | ID: 31005e5b-3f20-4fee-b4ec-d1a9de51074c

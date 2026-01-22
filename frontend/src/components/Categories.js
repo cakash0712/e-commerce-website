@@ -130,7 +130,7 @@ const Categories = () => {
   }, []);
 
   const displayedProducts = selectedCategory
-    ? allProducts.filter(p => p.category === selectedCategory.slug)
+    ? allProducts.filter(p => p.category?.toLowerCase() === selectedCategory.slug?.toLowerCase())
     : [];
 
   const getCategoryInfo = (slug) => {

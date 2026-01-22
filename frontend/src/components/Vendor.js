@@ -16,7 +16,8 @@ import {
   Box, Wallet, History, CreditCard, Banknote, MessageSquare,
   Settings, Image, FileText, CheckCircle2, AlertCircle,
   XCircle, Search, Bell, MoreVertical, Globe, ShieldCheck,
-  ChevronRight, ChevronDown, Tag, UserCheck, Store, Mail, MapPin, Phone
+  ChevronRight, ChevronDown, Tag, UserCheck, Store, Mail, MapPin, Phone,
+  RotateCcw
 } from "lucide-react";
 import { useAuth } from "../App";
 import {
@@ -31,12 +32,24 @@ const Vendor = () => {
 
   // State for products and data
   const [products, setProducts] = useState([]);
-
-  /* Removed static/mock data fetching */
+  const [vendorOrders, setVendorOrders] = useState([]);
 
   useEffect(() => {
     fetchVendorProducts();
+    fetchVendorOrders();
   }, []);
+
+  const fetchVendorOrders = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/vendor/orders`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setVendorOrders(response.data);
+    } catch (e) {
+      console.error("Failed to sync vendor orders:", e);
+    }
+  };
 
   const fetchVendorProducts = async () => {
     try {
@@ -317,6 +330,36 @@ const Vendor = () => {
     }
   };
 
+  const handleUpdateStock = async (productId, newStock) => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      await axios.patch(`${API_BASE}/api/products/${productId}/stock`,
+        { stock: parseInt(newStock) },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      alert("Inventory protocol synchronized: Stock levels updated.");
+      fetchVendorProducts();
+    } catch (e) {
+      console.error("Stock Update Error:", e.response?.data || e.message);
+      alert(`Failed to synchronize inventory levels: ${e.response?.data?.detail || e.message}`);
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      await axios.patch(`${API_BASE}/api/vendor/orders/${orderId}/status`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      alert("Logistics status updated and broadcasted to network.");
+      fetchVendorOrders();
+    } catch (e) {
+      console.error("Order Status Update Error:", e);
+      alert("Failed to update status protocol.");
+    }
+  };
+
   const renderProducts = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -585,7 +628,16 @@ const Vendor = () => {
                       {p.stock} units
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm font-bold">₹{p.price}</td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex flex-col items-end">
+                      <span className="text-sm font-black text-gray-900">₹{p.price}</span>
+                      {p.discount > 0 && (
+                        <span className="text-[10px] text-gray-400 line-through font-bold">
+                          ₹{Math.round(p.price / (1 - p.discount / 100))}
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-6 py-4">
                     <div className="space-y-1">
                       <Badge className={`border-none px-3 py-1 font-black text-[9px] uppercase tracking-widest ${p.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
@@ -619,7 +671,9 @@ const Vendor = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Inventory Management</h3>
-        <Badge className="bg-red-100 text-red-600 border-none px-3 py-1">2 Items at Low Stock</Badge>
+        <Badge className="bg-red-100 text-red-600 border-none px-3 py-1">
+          {products.filter(p => p.stock <= 5).length} Items at Low Stock
+        </Badge>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {products.filter(p => p.stock <= 5).map(p => (
@@ -632,20 +686,47 @@ const Vendor = () => {
                   <p className="text-xs text-red-600">Only {p.stock} units left!</p>
                 </div>
               </div>
-              <Button size="sm" className="bg-red-500 hover:bg-red-600 rounded-lg">Update Stock</Button>
+              <Button size="sm" className="bg-red-500 hover:bg-red-600 rounded-lg" onClick={() => setActiveMenu('products')}>Restock</Button>
             </CardContent>
           </Card>
         ))}
       </div>
-      <Card className="border-0 shadow-sm p-6">
-        <h4 className="font-bold mb-4">Update Stock Quantities</h4>
+      <Card className="border-0 shadow-sm p-6 bg-white rounded-[2rem]">
+        <div className="flex items-center justify-between mb-6">
+          <h4 className="font-black italic text-lg uppercase">Update <span className="text-violet-600">Stock Levels.</span></h4>
+        </div>
         <div className="space-y-4">
           {products.map(p => (
-            <div key={p.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors">
-              <span className="text-sm font-medium">{p.name}</span>
-              <div className="flex items-center gap-3">
-                <Input className="w-20 h-9" defaultValue={p.stock} type="number" />
-                <Button variant="outline" size="sm">Save</Button>
+            <div key={p.id} className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-2xl transition-all border border-transparent hover:border-gray-100">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gray-100 rounded-xl overflow-hidden">
+                  <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <span className="text-sm font-black text-gray-900">{p.name}</span>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{p.category}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <Input
+                    id={`stock-${p.id}`}
+                    className="w-24 h-11 rounded-xl text-center font-black pr-8"
+                    defaultValue={p.stock}
+                    type="number"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-gray-400">UNITS</span>
+                </div>
+                <Button
+                  className="h-11 bg-black hover:bg-violet-600 hover:shadow-lg hover:shadow-violet-200 text-white px-6 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 group"
+                  onClick={() => {
+                    const input = document.getElementById(`stock-${p.id}`);
+                    handleUpdateStock(p.id, input.value);
+                  }}
+                >
+                  <RotateCcw className="w-3 h-3 mr-2 group-hover:rotate-180 transition-transform duration-500" />
+                  Sync Stock
+                </Button>
               </div>
             </div>
           ))}
@@ -947,49 +1028,94 @@ const Vendor = () => {
   );
 
   const renderOrders = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Manage Orders</h3>
-        <div className="flex gap-2">
-          <Badge className="bg-blue-100 text-blue-700">12 New</Badge>
-          <Badge className="bg-amber-100 text-amber-700">5 Shipping</Badge>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex justify-between items-center bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+        <div>
+          <h3 className="text-3xl font-black italic">Sales <span className="text-violet-600">Registry.</span></h3>
+          <p className="text-gray-500 font-medium mt-1">Monitor order fulfillment and logistical status.</p>
+        </div>
+        <div className="flex gap-4">
+          <Badge className="bg-violet-50 text-violet-600 border-none px-4 py-2 font-black text-[10px] uppercase">
+            {vendorOrders.length} Total Signals
+          </Badge>
         </div>
       </div>
-      <Card className="border-0 shadow-sm overflow-hidden">
+
+      <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-gray-50/50 border-b">
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Order ID</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Customer</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Amount</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Order Reference</th>
+                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Customer Protocol</th>
+                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Settlement</th>
+                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Fulfillment</th>
+                <th className="px-8 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Protocol</th>
               </tr>
             </thead>
-            <tbody className="divide-y text-sm">
-              {[].map(o => (
-                <tr key={o.id} className="hover:bg-gray-50/50">
-                  <td className="px-6 py-4 font-bold">{o.id}</td>
-                  <td className="px-6 py-4">{o.name}</td>
-                  <td className="px-6 py-4 font-bold">{o.amt}</td>
-                  <td className="px-6 py-4">
-                    <Select defaultValue={o.status}>
-                      <SelectTrigger className="w-32 h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="processing">Processing</SelectItem>
-                        <SelectItem value="shipped">Shipped</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="sm">Details</Button>
+            <tbody className="divide-y divide-gray-50 text-sm">
+              {vendorOrders.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-8 py-20 text-center">
+                    <div className="flex flex-col items-center gap-3 text-gray-400">
+                      <ShoppingCart className="w-12 h-12 opacity-20" />
+                      <p className="font-black italic uppercase tracking-tighter">No active order signals detected on the frequency.</p>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                vendorOrders.map(o => {
+                  // Find items in this order belonging to current vendor
+                  const myItems = o.items.filter(item => item.vendor_id === user?.id);
+                  const myStatus = myItems[0]?.status || 'processing';
+
+                  return (
+                    <tr key={o.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-8 py-6">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-black font-mono text-gray-900 tracking-wider">#{o.id.slice(0, 8)}...</span>
+                          <span className="text-[10px] font-bold text-gray-400 uppercase">{new Date(o.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 font-black text-xs">
+                            {o.customer_name[0]}
+                          </div>
+                          <div>
+                            <p className="font-black text-gray-900 uppercase tracking-tight text-xs">{o.customer_name}</p>
+                            <p className="text-[10px] font-medium text-gray-400">{o.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6 text-right font-black italic text-violet-600 text-base">₹{o.total_amount}</td>
+                      <td className="px-8 py-6">
+                        <Select
+                          defaultValue={myStatus}
+                          onValueChange={(val) => handleUpdateOrderStatus(o.id, val)}
+                        >
+                          <SelectTrigger className="w-40 h-10 rounded-xl bg-slate-50 border-none font-black text-[10px] uppercase italic tracking-widest">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl border-none shadow-2xl">
+                            <SelectItem value="processing" className="text-[10px] font-black uppercase tracking-widest">Processing</SelectItem>
+                            <SelectItem value="shipped" className="text-[10px] font-black uppercase tracking-widest">Shipped</SelectItem>
+                            <SelectItem value="delivered" className="text-[10px] font-black uppercase tracking-widest">Delivered</SelectItem>
+                            <SelectItem value="cancelled" className="text-[10px] font-black uppercase tracking-widest text-red-500">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-8 py-6 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl border-slate-100 bg-white hover:bg-violet-50 hover:text-violet-600 transition-all">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
