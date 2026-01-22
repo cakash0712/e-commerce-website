@@ -219,36 +219,101 @@ const Vendor = () => {
   );
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [newProduct, setNewProduct] = useState({
     name: '', category: '', price: '', stock: '', image: '', description: '',
-    brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: ''
+    brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
+    images: '', highlights: '', specifications: '', warranty: '', box_contents: ''
   });
+
+  const handleEditInitiate = (product) => {
+    setEditingProduct(product.id);
+    setNewProduct({
+      name: product.name,
+      category: product.category,
+      price: product.price.toString(),
+      stock: product.stock.toString(),
+      image: product.image,
+      images: (product.images || []).join(', '),
+      description: product.description || '',
+      highlights: (product.highlights || []).join('\n'),
+      specifications: product.specifications ? Object.entries(product.specifications).map(([k, v]) => `${k}:${v}`).join('\n') : '',
+      warranty: product.warranty || '',
+      box_contents: product.box_contents || '',
+      brand: product.brand || '',
+      discount: (product.discount || 0).toString(),
+      colors: (product.colors || []).join(', '),
+      weight: product.weight || '',
+      dimensions: product.dimensions || '',
+      material: product.material || '',
+      offers: product.offers || ''
+    });
+    setShowAddForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    if (!window.confirm("Are you sure you want to decommission this inventory entity?")) return;
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      await axios.delete(`${API_BASE}/api/products/${productId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      alert("Inventory successfully decommissioned.");
+      fetchVendorProducts();
+    } catch (e) {
+      console.error("Delete Product Error:", e);
+      alert("Failed to decommission inventory.");
+    }
+  };
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
     try {
       const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-      await axios.post(`${API_BASE}/api/products`, {
+      const specObj = {};
+      if (newProduct.specifications) {
+        newProduct.specifications.split('\n').forEach(line => {
+          const [key, value] = line.split(':');
+          if (key && value) specObj[key.trim()] = value.trim();
+        });
+      }
+
+      const payload = {
         ...newProduct,
         price: parseFloat(newProduct.price),
         stock: parseInt(newProduct.stock),
         discount: parseInt(newProduct.discount || 0),
-        discount: parseInt(newProduct.discount || 0),
         colors: newProduct.colors.split(',').map(c => c.trim()).filter(c => c),
+        images: newProduct.images.split(',').map(c => c.trim()).filter(c => c),
+        highlights: newProduct.highlights.split('\n').map(c => c.trim()).filter(c => c),
+        specifications: specObj,
         offers: newProduct.offers
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      alert("Inventory submitted for administrative compliance audit.");
+      };
+
+      if (editingProduct) {
+        await axios.put(`${API_BASE}/api/products/${editingProduct}`, payload, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        alert("Inventory update protocol complete. Re-audit initiated.");
+      } else {
+        await axios.post(`${API_BASE}/api/products`, payload, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        alert("Inventory submitted for administrative compliance audit.");
+      }
+
       setShowAddForm(false);
+      setEditingProduct(null);
       setNewProduct({
         name: '', category: '', price: '', stock: '', image: '', description: '',
-        brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: ''
+        brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
+        images: '', highlights: '', specifications: '', warranty: '', box_contents: ''
       });
       fetchVendorProducts();
     } catch (e) {
-      console.error("Add Product Error:", e.response ? e.response.data : e.message);
-      alert(`Inventory submission protocol failed: ${e.response?.data?.detail || e.message}`);
+      console.error("Product Action Error:", e.response ? e.response.data : e.message);
+      alert(`Operation failed: ${e.response?.data?.detail || e.message}`);
     }
   };
 
@@ -256,7 +321,18 @@ const Vendor = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">My Product Catalog</h3>
-        <Button className="bg-violet-600 hover:bg-violet-700 rounded-xl" onClick={() => setShowAddForm(!showAddForm)}>
+        <Button className="bg-violet-600 hover:bg-violet-700 rounded-xl" onClick={() => {
+          if (showAddForm) {
+            setShowAddForm(false);
+            setEditingProduct(null);
+            setNewProduct({
+              name: '', category: '', price: '', stock: '', image: '', description: '',
+              brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: ''
+            });
+          } else {
+            setShowAddForm(true);
+          }
+        }}>
           <Plus className="w-4 h-4 mr-2" /> {showAddForm ? 'Cancel' : 'Add New Product'}
         </Button>
       </div>
@@ -265,7 +341,7 @@ const Vendor = () => {
         <Card className="border-0 shadow-xl rounded-[2rem] overflow-hidden">
           <CardHeader className="bg-gray-900 text-white">
             <CardTitle className="text-lg font-black uppercase tracking-widest italic">
-              New <span className="text-violet-400">Inventory</span> Submission
+              {editingProduct ? 'Edit' : 'New'} <span className="text-violet-400">Inventory</span> {editingProduct ? 'Update' : 'Submission'}
             </CardTitle>
             <CardDescription className="text-gray-400 text-xs uppercase tracking-widest">
               Products are queued for administrative audit before going live.
@@ -350,6 +426,15 @@ const Vendor = () => {
                     <SelectItem value="Home">Home & Living</SelectItem>
                     <SelectItem value="Beauty">Beauty</SelectItem>
                     <SelectItem value="Sports">Sports</SelectItem>
+                    <SelectItem value="Toys">Toys & Games</SelectItem>
+                    <SelectItem value="Health">Health & Personal Care</SelectItem>
+                    <SelectItem value="Grocery">Grocery & Gourmet Food</SelectItem>
+                    <SelectItem value="Office">Office Products</SelectItem>
+                    <SelectItem value="Automotive">Automotive</SelectItem>
+                    <SelectItem value="Books">Books</SelectItem>
+                    <SelectItem value="VideoGames">Video Games</SelectItem>
+                    <SelectItem value="PetSupplies">Pet Supplies</SelectItem>
+                    <SelectItem value="Tools">Tools & Home Improvement</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -394,19 +479,67 @@ const Vendor = () => {
 
               {/* Media & Desc */}
               <div className="grid-cols-1 md:col-span-3 space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Image URL *</Label>
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Featured Image URL *</Label>
                 <Input
                   required
-                  placeholder="https://example.com/product-image.jpg"
+                  placeholder="https://example.com/main-image.jpg"
                   value={newProduct.image}
                   onChange={(e) => setNewProduct({ ...newProduct, image: e.target.value })}
                   className="h-12 rounded-xl"
                 />
               </div>
               <div className="grid-cols-1 md:col-span-3 space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Description</Label>
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Additional Image URLs (Comma separated)</Label>
                 <Textarea
-                  placeholder="Describe your product features and specifications..."
+                  placeholder="https://example.com/img2.jpg, https://example.com/img3.jpg"
+                  rows={2}
+                  value={newProduct.images}
+                  onChange={(e) => setNewProduct({ ...newProduct, images: e.target.value })}
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="grid-cols-1 md:col-span-3 space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Bullet Points / Highlights (One per line)</Label>
+                <Textarea
+                  placeholder="High-fidelity audio&#10;Active Noise Cancellation&#10;40-hour battery life"
+                  rows={3}
+                  value={newProduct.highlights}
+                  onChange={(e) => setNewProduct({ ...newProduct, highlights: e.target.value })}
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="grid-cols-1 md:col-span-3 space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Technical Specifications (Key:Value, one per line)</Label>
+                <Textarea
+                  placeholder="Battery:4000mAh&#10;Screen:6.5 inch OLED&#10;Processor:Snapdragon 8 Gen 1"
+                  rows={4}
+                  value={newProduct.specifications}
+                  onChange={(e) => setNewProduct({ ...newProduct, specifications: e.target.value })}
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="grid-cols-1 md:col-span-2 space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Warranty Information</Label>
+                <Input
+                  placeholder="e.g. 1 Year Manufacturer Warranty"
+                  value={newProduct.warranty}
+                  onChange={(e) => setNewProduct({ ...newProduct, warranty: e.target.value })}
+                  className="h-12 rounded-xl"
+                />
+              </div>
+              <div className="grid-cols-1 space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Box Contents</Label>
+                <Input
+                  placeholder="e.g. Device, Charger, Manual"
+                  value={newProduct.box_contents}
+                  onChange={(e) => setNewProduct({ ...newProduct, box_contents: e.target.value })}
+                  className="h-12 rounded-xl"
+                />
+              </div>
+              <div className="grid-cols-1 md:col-span-3 space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Full Description</Label>
+                <Textarea
+                  placeholder="Describe your product features and specifications in detail..."
                   rows={4}
                   value={newProduct.description}
                   onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
@@ -415,7 +548,7 @@ const Vendor = () => {
               </div>
               <div className="grid-cols-1 md:col-span-3 flex justify-end">
                 <Button type="submit" className="h-12 px-10 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-violet-200">
-                  Submit for Audit
+                  {editingProduct ? 'Update Inventory' : 'Submit for Audit'}
                 </Button>
               </div>
             </form>
@@ -469,8 +602,8 @@ const Vendor = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-violet-600"><Edit className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600"><Trash2 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-violet-600" onClick={() => handleEditInitiate(p)}><Edit className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => handleDeleteProduct(p.id)}><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </td>
                 </tr>

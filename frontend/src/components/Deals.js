@@ -39,7 +39,7 @@ const Deals = () => {
         const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
         const response = await axios.get(`${API_BASE}/api/products`);
         const mappedDeals = response.data
-          .filter(p => p.discount > 0)
+          .filter(p => p.discount > 0 || (p.offers && p.offers.trim() !== ""))
           .map(p => ({
             ...p,
             timeLeft: `${Math.floor(Math.random() * 12) + 1} ${Math.random() > 0.5 ? "hours" : "days"}`,

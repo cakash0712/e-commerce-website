@@ -848,6 +848,73 @@ const Admin = () => {
                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Merchant ID</p>
                         <p className="text-sm font-black italic text-gray-700">{product.vendor_id.slice(0, 8)}...</p>
                       </div>
+                      {product.discount > 0 && (
+                        <div className="bg-violet-50 px-4 py-2 rounded-xl">
+                          <p className="text-[9px] font-black text-violet-400 uppercase tracking-widest">Discount</p>
+                          <p className="text-sm font-black italic text-violet-700">{product.discount}% OFF</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Rich Details Audit Section */}
+                    <div className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-50 mt-4">
+                      {product.highlights && product.highlights.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Key Highlights</p>
+                          <ul className="space-y-1">
+                            {product.highlights.map((h, i) => (
+                              <li key={i} className="text-xs font-semibold text-gray-600 flex items-center gap-2">
+                                <div className="w-1 h-1 bg-violet-400 rounded-full" /> {h}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {product.specifications && Object.keys(product.specifications).length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Technical Specifications</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {Object.entries(product.specifications).map(([k, v], i) => (
+                              <div key={i} className="bg-gray-50/50 p-2 rounded-lg">
+                                <p className="text-[8px] font-bold text-gray-400 uppercase">{k}</p>
+                                <p className="text-[10px] font-bold text-gray-700">{v}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Logistics & Support</p>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-400">Warranty:</span>
+                            <span className="font-bold text-gray-700">{product.warranty || "Standard"}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-400">Box Contents:</span>
+                            <span className="font-bold text-gray-700">{product.box_contents || "N/A"}</span>
+                          </div>
+                          {product.offers && (
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-gray-400">Promotional:</span>
+                              <span className="font-bold text-violet-600">{product.offers}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {product.images && product.images.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Additional Assets ({product.images.length})</p>
+                          <div className="flex gap-2 overflow-x-auto pb-2">
+                            {product.images.map((img, i) => (
+                              <img key={i} src={img} alt="" className="w-12 h-12 object-cover rounded-lg border border-gray-100 flex-shrink-0" />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

@@ -92,7 +92,7 @@ const DetailsView = () => {
                     originalPrice: p.discount > 0 ? Math.round(p.price / (1 - p.discount / 100)) : p.price,
                     discount: p.discount,
                     description: p.description,
-                    images: p.images || (p.image ? [p.image] : []),
+                    images: p.images && p.images.length > 0 ? [p.image, ...p.images] : [p.image],
                     category: p.category,
                     rating: p.rating || 0,
                     reviewsCount: p.reviews ? p.reviews.length : 0,
@@ -102,12 +102,15 @@ const DetailsView = () => {
                     weight: p.weight || "N/A",
                     dimensions: p.dimensions || "N/A",
                     material: p.material || "N/A",
+                    warranty: p.warranty || "N/A",
+                    box_contents: p.box_contents || "N/A",
+                    specifications: p.specifications || {},
                     vendor: {
                         name: "ZippyCart Vendor",
                         id: p.vendor_id,
                         rating: 4.8
                     },
-                    features: [
+                    features: p.highlights && p.highlights.length > 0 ? p.highlights : [
                         "Premium Quality Materials",
                         "Ergonomic Design",
                         "Quality Certified",
@@ -120,7 +123,7 @@ const DetailsView = () => {
                     ]
                 };
 
-                setProduct(productRes.data);
+                setProduct(mappedProduct);
 
                 try {
                     const relatedRes = await axios.get(`${API_BASE}/api/products?category=${productRes.data.category}&limit=4&exclude=${id}`);
@@ -516,10 +519,18 @@ const DetailsView = () => {
                                         { label: "Weight", value: product.weight },
                                         { label: "Dimensions", value: product.dimensions },
                                         { label: "Material", value: product.material },
+                                        { label: "Warranty", value: product.warranty },
+                                        { label: "Box Contents", value: product.box_contents },
                                     ].map((spec, i) => (
                                         <div key={i} className="flex justify-between py-3 border-b border-gray-100">
                                             <span className="text-gray-500">{spec.label}</span>
                                             <span className="font-medium text-gray-900 capitalize">{spec.value}</span>
+                                        </div>
+                                    ))}
+                                    {Object.entries(product.specifications).map(([key, value], i) => (
+                                        <div key={`tech-${i}`} className="flex justify-between py-3 border-b border-gray-100">
+                                            <span className="text-gray-500">{key}</span>
+                                            <span className="font-medium text-gray-900 capitalize">{value}</span>
                                         </div>
                                     ))}
                                 </div>

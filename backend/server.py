@@ -119,8 +119,13 @@ class Product(BaseModel):
     originalPrice: Optional[float] = None
     discount: int = 0
     stock: int
-    image: str
+    image: str # Featured image
+    images: List[str] = [] # Additional images
     description: str = ""
+    highlights: List[str] = [] # Bullet points
+    specifications: Optional[dict] = {} # Technical specs
+    warranty: str = ""
+    box_contents: str = ""
     colors: List[str] = []
     weight: str = ""
     dimensions: str = ""
@@ -139,7 +144,12 @@ class ProductCreate(BaseModel):
     discount: int = 0
     stock: int
     image: str
+    images: List[str] = []
     description: str = ""
+    highlights: List[str] = []
+    specifications: Optional[dict] = {}
+    warranty: str = ""
+    box_contents: str = ""
     colors: List[str] = []
     weight: str = ""
     dimensions: str = ""
@@ -389,15 +399,100 @@ async def add_product(product_data: ProductCreate, current_user: Annotated[dict,
 @api_router.get("/products")
 async def list_public_products():
     # Only show approved products
-    products = await db.products.find({"status": "approved"}, {"_id": 0}).to_list(1000)
+    products_cursor = db.products.find({"status": "approved"})
+    products = []
+    async for p in products_cursor:
+        p_id = p.get('id') or str(p['_id'])
+        p['id'] = p_id
+        if '_id' in p: del p['_id']
+        products.append(p)
     return products
 
 @api_router.get("/vendor/products")
 async def list_vendor_products(current_user: Annotated[dict, Depends(get_current_user)]):
     if current_user['user_type'] != 'vendor':
         raise HTTPException(status_code=403, detail="Unauthorized.")
-    products = await db.products.find({"vendor_id": current_user['id']}, {"_id": 0}).to_list(1000)
+    products_cursor = db.products.find({"vendor_id": current_user['id']})
+    products = []
+    async for p in products_cursor:
+        p_id = p.get('id') or str(p['_id'])
+        p['id'] = p_id
+        if '_id' in p: del p['_id']
+        products.append(p)
     return products
+
+@api_router.get("/products/{product_id}")
+async def get_product(product_id: str):
+    # Try custom id first, then _id
+    product = await db.products.find_one({"id": product_id})
+    if not product:
+        from bson import ObjectId
+        try:
+            product = await db.products.find_one({"_id": ObjectId(product_id)})
+        except:
+            pass
+            
+    if not product:
+        raise HTTPException(status_code=404, detail="Inventory entity not found on the grid.")
+    
+    product['id'] = product.get('id') or str(product['_id'])
+    if '_id' in product: del product['_id']
+    return product
+
+@api_router.put("/products/{product_id}")
+async def update_product(product_id: str, product_data: ProductCreate, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Merchant clearance required.")
+    
+    # Try custom id first, then _id
+    query = {"id": product_id, "vendor_id": current_user['id']}
+    existing_product = await db.products.find_one(query)
+    
+    if not existing_product:
+        from bson import ObjectId
+        try:
+            query = {"_id": ObjectId(product_id), "vendor_id": current_user['id']}
+            existing_product = await db.products.find_one(query)
+        except:
+            pass
+            
+    if not existing_product:
+        raise HTTPException(status_code=404, detail="Inventory entity not found or access restricted.")
+    
+    update_doc = product_data.model_dump()
+    update_doc['status'] = 'pending'
+    # Recalculate originalPrice if discount is provided
+    if update_doc.get('discount', 0) > 0:
+        update_doc['originalPrice'] = round(update_doc['price'] / (1 - update_doc['discount'] / 100), 2)
+    else:
+        update_doc['originalPrice'] = update_doc['price']
+    
+    # Ensure current ID stays the same
+    if existing_product.get('id'):
+        update_doc['id'] = existing_product['id']
+    
+    await db.products.update_one(query, {"$set": update_doc})
+    return {"message": "Inventory updated and queued for re-audit."}
+
+@api_router.delete("/products/{product_id}")
+async def delete_product(product_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Merchant clearance required.")
+    
+    # Try custom id first
+    result = await db.products.delete_one({"id": product_id, "vendor_id": current_user['id']})
+    
+    if result.deleted_count == 0:
+        from bson import ObjectId
+        try:
+            result = await db.products.delete_one({"_id": ObjectId(product_id), "vendor_id": current_user['id']})
+        except:
+            pass
+            
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Inventory entity not found or access restricted.")
+    
+    return {"message": "Inventory successfully decommissioned."}
 
 @api_router.get("/admin/products/pending")
 async def list_pending_products(current_user: Annotated[dict, Depends(get_current_user)]):

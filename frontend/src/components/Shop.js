@@ -21,7 +21,8 @@ import {
   Eye,
   ShoppingBag,
   SlidersHorizontal,
-  ChevronDown
+  ChevronDown,
+  Zap
 } from "lucide-react";
 
 import Navigation from "./Navigation";
@@ -380,6 +381,11 @@ const Shop = () => {
                                 -{product.discount}%
                               </span>
                             )}
+                            {product.offers && (
+                              <span className={`absolute ${product.discount > 10 ? 'top-10' : 'top-2'} left-2 bg-violet-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg flex items-center gap-1`}>
+                                <Zap className="w-3 h-3 fill-current" /> {product.offers}
+                              </span>
+                            )}
                           </div>
                         </Link>
                         <div className="flex-1 p-4 flex flex-col">
@@ -434,6 +440,11 @@ const Shop = () => {
                             {product.discount > 10 && (
                               <span className="absolute top-2 left-2 bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded">
                                 -{product.discount}%
+                              </span>
+                            )}
+                            {product.offers && (
+                              <span className={`absolute ${product.discount > 10 ? 'top-10' : 'top-2'} left-2 bg-violet-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg flex items-center gap-1`}>
+                                <Zap className="w-3 h-3 fill-current" /> {product.offers}
                               </span>
                             )}
                             {/* Quick Actions */}
