@@ -198,6 +198,61 @@ class OrderCreate(BaseModel):
     items: List[OrderItem]
     total_amount: float
 
+class Withdrawal(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    vendor_id: str
+    amount: float
+    method: str = "Bank Transfer"
+    status: str = "pending" # pending, completed, rejected
+    date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class WithdrawalCreate(BaseModel):
+    amount: float
+    method: str = "Bank Transfer"
+
+class Ticket(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    vendor_id: str
+    subject: str
+    order_id: Optional[str] = None
+    message: str
+    status: str = "open" # open, responding, resolved
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class TicketCreate(BaseModel):
+    subject: str
+    order_id: Optional[str] = None
+    message: str
+
+class Coupon(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    vendor_id: str
+    code: str
+    discount: str  # e.g., "10%" or "₹100"
+    limit: int  # usage limit
+    usage: int = 0  # current usage
+    expires: str  # e.g., "2024-12-31"
+    status: str = "active"  # active, inactive
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CouponCreate(BaseModel):
+    code: str
+    discount: str
+    limit: int
+    expires: str
+
+class Review(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    product_id: str
+    user_id: str
+    rating: int  # 1-5
+    comment: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 # Add your routes to the router instead of directly to app
 
 # Dependency for Protected Routes
@@ -655,6 +710,100 @@ async def get_vendor_stats(current_user: Annotated[dict, Depends(get_current_use
         ]
     }
 
+@api_router.get("/vendor/finance")
+async def get_vendor_finance(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    vendor_id = current_user['id']
+    
+    # Calculate Gross Revenue and Net Earnings from orders
+    orders_cursor = db.orders.find({"items.vendor_id": vendor_id})
+    earnings_protocol = []
+    total_gross = 0
+    total_net = 0
+    total_commission = 0
+    
+    async for order in orders_cursor:
+        order_gross = 0
+        for item in order.get('items', []):
+            if item.get('vendor_id') == vendor_id:
+                order_gross += item.get('price', 0) * item.get('quantity', 1)
+        
+        commission = order_gross * 0.10
+        net = order_gross - commission
+        
+        total_gross += order_gross
+        total_commission += commission
+        total_net += net
+        
+        earnings_protocol.append({
+            "id": order.get('id', 'N/A')[:12],
+            "val": order_gross,
+            "comm": commission,
+            "net": net,
+            "status": "settled" if order.get('status') == 'delivered' else "pending",
+            "date": order.get('created_at')
+        })
+    
+    # Fetch Withdrawals
+    withdrawals_cursor = db.withdrawals.find({"vendor_id": vendor_id}).sort("date", -1)
+    withdrawals = []
+    total_withdrawn = 0
+    async for w in withdrawals_cursor:
+        w['id'] = w.get('id') or str(w['_id'])
+        if '_id' in w: del w['_id']
+        withdrawals.append(w)
+        if w['status'] == 'completed':
+            total_withdrawn += w['amount']
+            
+    available_balance = total_net - total_withdrawn
+    
+    return {
+        "available_balance": available_balance,
+        "gross_revenue": total_gross,
+        "total_commission": total_commission,
+        "total_payouts": total_withdrawn,
+        "earnings_protocol": earnings_protocol,
+        "withdrawals": withdrawals
+    }
+
+@api_router.post("/vendor/withdraw")
+async def request_withdrawal(withdraw_data: WithdrawalCreate, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    vendor_id = current_user['id']
+    
+    # Check if balance is sufficient (Optional: Real implementation should verify this)
+    # We'll just record the request for now.
+    
+    withdrawal_obj = Withdrawal(
+        vendor_id=vendor_id,
+        amount=withdraw_data.amount,
+        method=withdraw_data.method
+    )
+    
+    doc = withdrawal_obj.model_dump()
+    doc['date'] = doc['date'].isoformat()
+    
+    await db.withdrawals.insert_one(doc)
+    
+    # Notify Admin
+    admins = await db.users.find({"user_type": "admin"}).to_list(None)
+    for admin in admins:
+        await db.notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": admin['id'],
+            "title": "New Withdrawal Request",
+            "message": f"Vendor {current_user.get('business_name')} requested ₹{withdraw_data.amount}.",
+            "type": "warning",
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+    return {"message": "Withdrawal request authenticated.", "id": withdrawal_obj.id}
+
 @api_router.patch("/vendor/orders/{order_id}/status")
 async def update_vendor_order_status(order_id: str, status_data: dict, current_user: Annotated[dict, Depends(get_current_user)]):
     if current_user['user_type'] != 'vendor':
@@ -708,6 +857,168 @@ async def update_product_stock(product_id: str, stock_data: dict, current_user: 
         raise HTTPException(status_code=404, detail="Product not found or access restricted.")
     
     return {"message": "Stock updated successfully.", "new_stock": new_stock}
+
+@api_router.post("/vendor/support/tickets")
+async def create_ticket(ticket_data: TicketCreate, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Merchant clearance required.")
+    
+    ticket_obj = Ticket(**ticket_data.model_dump(), vendor_id=current_user['id'])
+    doc = ticket_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    
+    await db.tickets.insert_one(doc)
+    
+    # Notify Admin
+    admins = await db.users.find({"user_type": "admin"}).to_list(None)
+    for admin in admins:
+        await db.notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": admin['id'],
+            "title": "New Support Ticket",
+            "message": f"Vendor {current_user.get('business_name')} submitted a ticket: {ticket_data.subject}",
+            "type": "info",
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    return {"message": "Ticket submitted.", "id": ticket_obj.id}
+
+@api_router.get("/vendor/support/tickets")
+async def get_tickets(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    tickets_cursor = db.tickets.find({"vendor_id": current_user['id']}).sort("created_at", -1)
+    tickets = []
+    async for t in tickets_cursor:
+        t['id'] = t.get('id') or str(t['_id'])
+        if '_id' in t: del t['_id']
+        tickets.append(t)
+    return tickets
+
+@api_router.get("/vendor/coupons")
+async def get_vendor_coupons(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    coupons_cursor = db.coupons.find({"vendor_id": current_user['id']}).sort("created_at", -1)
+    coupons = []
+    async for c in coupons_cursor:
+        c['id'] = c.get('id') or str(c['_id'])
+        if '_id' in c: del c['_id']
+        coupons.append(c)
+    return coupons
+
+@api_router.get("/vendor/reviews")
+async def get_vendor_reviews(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    # Get vendor's product ids
+    products_cursor = db.products.find({"vendor_id": current_user['id']}, {"id": 1})
+    product_ids = [p['id'] async for p in products_cursor]
+
+    reviews_cursor = db.reviews.find({"product_id": {"$in": product_ids}}).sort("created_at", -1)
+    reviews = []
+    async for r in reviews_cursor:
+        r['id'] = r.get('id') or str(r['_id'])
+        if '_id' in r: del r['_id']
+        # Add product name
+        product = await db.products.find_one({"id": r['product_id']})
+        r['product_name'] = product.get('name') if product else "Unknown Product"
+        # Add user name
+        user = await db.users.find_one({"id": r['user_id']})
+        r['user_name'] = user.get('name') if user else "Anonymous"
+        reviews.append(r)
+    return reviews
+
+@api_router.post("/vendor/coupons")
+async def create_vendor_coupon(coupon_data: CouponCreate, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    coupon_obj = Coupon(**coupon_data.model_dump(), vendor_id=current_user['id'])
+    doc = coupon_obj.model_dump()
+    _ = await db.coupons.insert_one(doc)
+    return {"message": "Coupon created successfully.", "id": coupon_obj.id}
+
+@api_router.put("/vendor/profile")
+async def update_vendor_profile(profile_data: dict, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    allowed_fields = ['business_name', 'owner_name', 'address', 'phone', 'logo', 'banner']
+    update_data = {k: v for k, v in profile_data.items() if k in allowed_fields}
+    result = await db.vendors.update_one({"id": current_user['id']}, {"$set": update_data})
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Vendor not found.")
+    return {"message": "Profile updated successfully."}
+
+@api_router.get("/admin/payouts")
+async def list_payout_requests(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    payouts = await db.withdrawals.find().sort("date", -1).to_list(1000)
+    for p in payouts:
+        p['id'] = str(p.get('id') or p['_id'])
+        if '_id' in p: del p['_id']
+        
+        # Add vendor name
+        vendor = await db.vendors.find_one({"id": p['vendor_id']})
+        p['vendor_name'] = vendor.get('business_name') if vendor else "Unknown Vendor"
+
+    return payouts
+
+@api_router.post("/admin/payouts/approve/{payout_id}")
+async def approve_payout(payout_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    result = await db.withdrawals.update_one({"id": payout_id}, {"$set": {"status": "completed"}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Request not found.")
+        
+    # Notify Vendor
+    payout = await db.withdrawals.find_one({"id": payout_id})
+    if payout:
+        await db.notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": payout['vendor_id'],
+            "title": "Payout Successfully Disbursed",
+            "message": f"Your request for ₹{payout['amount']} has been completed.",
+            "type": "success",
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+    return {"message": "Payout protocol completed."}
+
+@api_router.post("/admin/payouts/reject/{payout_id}")
+async def reject_payout(payout_id: str, reason_data: dict, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    reason = reason_data.get("reason", "Policy non-compliance.")
+    result = await db.withdrawals.update_one({"id": payout_id}, {"$set": {"status": "rejected", "rejection_reason": reason}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Request not found.")
+        
+    # Notify Vendor
+    payout = await db.withdrawals.find_one({"id": payout_id})
+    if payout:
+        await db.notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": payout['vendor_id'],
+            "title": "Payout Request Rejected",
+            "message": f"Your request for ₹{payout['amount']} was rejected. Reason: {reason}",
+            "type": "error",
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+    return {"message": "Payout rejected."}
 
 # --- Notification Endpoints ---
 

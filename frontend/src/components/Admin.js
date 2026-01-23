@@ -42,7 +42,50 @@ const Admin = () => {
     if (activeSubMenu === 'product-approvals') {
       fetchPendingProducts();
     }
+    if (activeSubMenu === 'vendor-payouts') {
+      fetchPayoutRequests();
+    }
   }, [activeSubMenu]);
+
+  const fetchPayoutRequests = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/payouts`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setPayoutRequests(response.data);
+    } catch (e) {
+      console.error("Failed to fetch payout requests:", e);
+    }
+  };
+
+  const handleApprovePayout = async (id) => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      await axios.post(`${API_BASE}/api/admin/payouts/approve/${id}`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      alert("Payout successfully disbursed and authenticated.");
+      fetchPayoutRequests();
+    } catch (e) {
+      alert("Disbursement protocol failed.");
+    }
+  };
+
+  const handleRejectPayout = async (id) => {
+    const reason = prompt("Enter rejection reason:");
+    if (!reason) return;
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      await axios.post(`${API_BASE}/api/admin/payouts/reject/${id}`, { reason }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      alert("Payout request rejected for non-compliance.");
+      fetchPayoutRequests();
+    } catch (e) {
+      alert("Rejection protocol failed.");
+    }
+  };
 
   const fetchPendingProducts = async () => {
     try {
@@ -443,52 +486,102 @@ const Admin = () => {
   );
 
   const renderVendorPayouts = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-2xl font-black italic">Payout <span className="text-violet-600">Terminal.</span></h3>
-        <Badge className="bg-amber-50 text-amber-600 border-none px-4 py-2 rounded-xl font-bold">
-          {payoutRequests.filter(p => p.status === 'pending').length} Pending Requests
-        </Badge>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+      <div className="flex justify-between items-center bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100">
+        <div>
+          <h3 className="text-4xl font-black italic tracking-tighter">Payout <span className="text-violet-600">Terminal.</span></h3>
+          <p className="text-slate-500 font-medium mt-2">Oversee capital outflows and authenticate vendor withdrawal requests.</p>
+        </div>
+        <div className="flex gap-4">
+          <div className="bg-amber-50 px-8 py-5 rounded-[2rem] border border-amber-100 text-right">
+            <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Awaiting Audit</p>
+            <p className="text-2xl font-black text-amber-600 italic">
+              {payoutRequests.filter(p => p.status === 'pending').length} Requests
+            </p>
+          </div>
+        </div>
       </div>
 
-      <Card className="border-0 shadow-xl rounded-[2.5rem] overflow-hidden bg-white">
+      <Card className="border-none shadow-xl rounded-[3rem] bg-white overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-900 text-white">
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Transaction ID</th>
+              <tr className="bg-slate-900 text-white">
+                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest">Transaction ID</th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Vendor Hub</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-right">Net Value</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Status</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-right">Actions</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-right">Settlement Value</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Protocol Status</th>
+                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-right">Moderation</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50 text-sm">
-              {payoutRequests.map(p => (
-                <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-8 py-6 font-mono font-bold text-gray-500">{p.id}</td>
-                  <td className="px-8 py-6">
-                    <p className="font-black text-gray-900 italic uppercase spacing-tight">{p.vendor}</p>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{p.date}</p>
-                  </td>
-                  <td className="px-8 py-6 text-right font-black italic text-violet-600">₹{p.amount.toLocaleString()}</td>
-                  <td className="px-8 py-6">
-                    <Badge className={`rounded-lg px-3 py-1 font-black text-[10px] uppercase tracking-widest border-none ${p.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
-                      p.status === 'processing' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'
-                      }`}>
-                      {p.status}
-                    </Badge>
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                    {p.status === 'pending' && (
-                      <div className="flex gap-2 justify-end">
-                        <Button variant="outline" className="h-10 rounded-xl border-gray-100 text-[10px] font-black uppercase text-red-500 hover:bg-red-50">Decline</Button>
-                        <Button className="h-10 rounded-xl bg-violet-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-violet-100">Approve</Button>
-                      </div>
-                    )}
+            <tbody className="divide-y divide-slate-50">
+              {payoutRequests.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-10 py-20 text-center">
+                    <div className="flex flex-col items-center gap-4 opacity-20">
+                      <CreditCard className="w-16 h-16" />
+                      <p className="text-sm font-black uppercase tracking-widest italic">No payout requests detected in the registry.</p>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                payoutRequests.map(p => (
+                  <tr key={p.id} className="hover:bg-slate-50/50 transition-all group">
+                    <td className="px-10 py-8 font-mono font-bold text-slate-400 text-xs">
+                      #{p.id.slice(0, 13)}...
+                    </td>
+                    <td className="px-8 py-8">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400 text-sm">
+                          {p.vendor_name[0]}
+                        </div>
+                        <div>
+                          <p className="font-black text-slate-900 uppercase tracking-tight text-sm italic">{p.vendor_name}</p>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{new Date(p.date).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-8 text-right font-black italic text-xl text-violet-600">
+                      ₹{p.amount.toLocaleString()}
+                    </td>
+                    <td className="px-8 py-8">
+                      <Badge className={`rounded-full px-4 py-1.5 font-black text-[9px] uppercase tracking-widest border-none ${p.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
+                          p.status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600 animate-pulse'
+                        }`}>
+                        {p.status}
+                      </Badge>
+                      {p.rejection_reason && (
+                        <p className="text-[9px] text-red-400 font-bold mt-1 italic max-w-[150px] truncate" title={p.rejection_reason}>
+                          {p.rejection_reason}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-10 py-8 text-right">
+                      {p.status === 'pending' ? (
+                        <div className="flex gap-3 justify-end items-center">
+                          <Button
+                            variant="ghost"
+                            className="h-12 px-6 rounded-xl text-[10px] font-black uppercase text-red-500 hover:bg-red-50 transition-all"
+                            onClick={() => handleRejectPayout(p.id)}
+                          >
+                            Decline
+                          </Button>
+                          <Button
+                            className="h-12 px-8 rounded-xl bg-violet-600 text-white text-[10px] font-black uppercase tracking-[0.1em] shadow-xl shadow-violet-100 hover:bg-slate-900 transition-all active:scale-95"
+                            onClick={() => handleApprovePayout(p.id)}
+                          >
+                            Disburse Funds
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex justify-end pr-4">
+                          <CheckCircle2 className={`w-6 h-6 ${p.status === 'completed' ? 'text-emerald-400' : 'text-slate-200'}`} />
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
