@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, UploadFile, File
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -14,6 +15,10 @@ from passlib.context import CryptContext
 import jwt
 from typing import Optional, Annotated
 from fastapi import HTTPException, Depends, Header, Request
+import shutil
+import requests
+from fastapi.responses import StreamingResponse
+import io
 
 
 ROOT_DIR = Path(__file__).parent
@@ -27,12 +32,18 @@ db = client[os.environ['DB_NAME']]
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    # Create uploads directory if it doesn't exist
+    uploads_dir = ROOT_DIR / 'uploads'
+    uploads_dir.mkdir(exist_ok=True)
     yield
     # Shutdown
     client.close()
 
 # Create the main app with lifespan
 app = FastAPI(lifespan=lifespan)
+
+# Mount static files
+app.mount("/uploads", StaticFiles(directory=str(ROOT_DIR / 'uploads')), name="uploads")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -186,6 +197,8 @@ class Order(BaseModel):
     payment_method: str = "card"
     items: List[OrderItem]
     total_amount: float
+    coupon_code: Optional[str] = None
+    discount_amount: float = 0
     status: str = "processing"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -197,6 +210,8 @@ class OrderCreate(BaseModel):
     payment_method: str = "card"
     items: List[OrderItem]
     total_amount: float
+    coupon_code: Optional[str] = None
+    discount_amount: float = 0
 
 class Withdrawal(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -204,12 +219,14 @@ class Withdrawal(BaseModel):
     vendor_id: str
     amount: float
     method: str = "Bank Transfer"
+    bank_details: Optional[dict] = None
     status: str = "pending" # pending, completed, rejected
     date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class WithdrawalCreate(BaseModel):
     amount: float
     method: str = "Bank Transfer"
+    bank_details: Optional[dict] = None
 
 class Ticket(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -429,7 +446,7 @@ async def checkout(order_data: OrderCreate, request: Request, current_user: Anno
     # Rate Limiting Logic for Checkout (max 3 per minute)
     client_ip = request.client.host
     now = datetime.now(timezone.utc)
-    
+
     if client_ip in order_attempts:
         last_attempt, count = order_attempts[client_ip]
         if (now - last_attempt).total_seconds() < 60:
@@ -440,16 +457,39 @@ async def checkout(order_data: OrderCreate, request: Request, current_user: Anno
             order_attempts[client_ip] = (now, 1)
     else:
         order_attempts[client_ip] = (now, 1)
-        
+
+    # Validate and apply coupon if provided
+    coupon = None
+    if order_data.coupon_code:
+        coupon = await db.coupons.find_one({
+            "code": order_data.coupon_code.upper(),
+            "status": "active",
+            "expires": {"$gte": datetime.now(timezone.utc).strftime("%Y-%m-%d")}
+        })
+
+        if not coupon:
+            raise HTTPException(status_code=400, detail="Invalid or expired coupon code.")
+
+        # Check usage limit
+        if coupon.get('usage', 0) >= coupon.get('limit', 0):
+            raise HTTPException(status_code=400, detail="Coupon usage limit exceeded.")
+
     order_obj = Order(
         **order_data.model_dump(),
         user_id=current_user['id']
     )
-    
+
     doc = order_obj.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
-    
+
     await db.orders.insert_one(doc)
+
+    # Increment coupon usage if coupon was applied
+    if coupon:
+        await db.coupons.update_one(
+            {"id": coupon['id']},
+            {"$inc": {"usage": 1}}
+        )
 
     # Trigger Notifications for order placement
     # Notify User
@@ -515,8 +555,41 @@ async def list_public_products():
         p_id = p.get('id') or str(p['_id'])
         p['id'] = p_id
         if '_id' in p: del p['_id']
+
+        # Add vendor information
+        vendor_id = p.get('vendor_id')
+        if vendor_id:
+            vendor = await db.vendors.find_one({"id": vendor_id})
+            if vendor:
+                p['vendor_name'] = vendor.get('business_name', 'Unknown Vendor')
+            else:
+                p['vendor_name'] = 'Unknown Vendor'
+        else:
+            p['vendor_name'] = 'Unknown Vendor'
+
         products.append(p)
     return products
+
+@api_router.get("/coupons/validate/{code}")
+async def validate_coupon(code: str):
+    # Find active coupon by code
+    coupon = await db.coupons.find_one({
+        "code": code.upper(),
+        "status": "active",
+        "expires": {"$gte": datetime.now(timezone.utc).strftime("%Y-%m-%d")}
+    })
+
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Invalid or expired coupon code.")
+
+    # Check usage limit
+    if coupon.get('usage', 0) >= coupon.get('limit', 0):
+        raise HTTPException(status_code=400, detail="Coupon usage limit exceeded.")
+
+    coupon['id'] = str(coupon.get('id') or coupon['_id'])
+    if '_id' in coupon: del coupon['_id']
+
+    return coupon
 
 @api_router.get("/vendor/products")
 async def list_vendor_products(current_user: Annotated[dict, Depends(get_current_user)]):
@@ -634,6 +707,62 @@ async def approve_product(product_id: str, current_user: Annotated[dict, Depends
     })
     
     return {"message": "Inventory successfully authorized."}
+
+@api_router.post("/upload/image")
+async def upload_image(current_user: Annotated[dict, Depends(get_current_user)], file: UploadFile = File(...)):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Merchant clearance required.")
+
+    # Validate file type
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="Only image files are allowed.")
+
+    # Generate unique filename
+    file_extension = file.filename.split('.')[-1]
+    unique_filename = f"{current_user['id']}_{uuid.uuid4()}.{file_extension}"
+    file_path = ROOT_DIR / 'uploads' / unique_filename
+
+    # Save file
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Return the URL
+    base_url = os.environ.get('BACKEND_URL', 'http://localhost:8000')
+    image_url = f"{base_url}/uploads/{unique_filename}"
+    return {"image_url": image_url}
+
+@api_router.get("/proxy-image")
+async def proxy_image(url: str):
+    """
+    Proxy external images to avoid CORS and mixed content issues
+    """
+    try:
+        # Validate URL to prevent abuse
+        if not url.startswith(('http://', 'https://')):
+            raise HTTPException(status_code=400, detail="Invalid URL")
+
+        # Only allow certain domains for security
+        allowed_domains = ['m.media-amazon.com', 'images-na.ssl-images-amazon.com', 'localhost', '127.0.0.1']
+        from urllib.parse import urlparse
+        parsed_url = urlparse(url)
+        if parsed_url.netloc not in allowed_domains:
+            raise HTTPException(status_code=403, detail="Domain not allowed")
+
+        # Fetch the image
+        response = requests.get(url, timeout=10, stream=True)
+        response.raise_for_status()
+
+        # Return the image with appropriate headers
+        return StreamingResponse(
+            io.BytesIO(response.content),
+            media_type=response.headers.get('content-type', 'image/jpeg'),
+            headers={
+                'Cache-Control': 'public, max-age=3600',  # Cache for 1 hour
+                'Access-Control-Allow-Origin': '*'
+            }
+        )
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch image: {str(e)}")
 
 @api_router.post("/admin/products/reject/{product_id}")
 async def reject_product(product_id: str, reason: dict, current_user: Annotated[dict, Depends(get_current_user)]):
@@ -781,7 +910,8 @@ async def request_withdrawal(withdraw_data: WithdrawalCreate, current_user: Anno
     withdrawal_obj = Withdrawal(
         vendor_id=vendor_id,
         amount=withdraw_data.amount,
-        method=withdraw_data.method
+        method=withdraw_data.method,
+        bank_details=withdraw_data.bank_details
     )
     
     doc = withdrawal_obj.model_dump()
@@ -888,7 +1018,7 @@ async def create_ticket(ticket_data: TicketCreate, current_user: Annotated[dict,
 async def get_tickets(current_user: Annotated[dict, Depends(get_current_user)]):
     if current_user['user_type'] != 'vendor':
         raise HTTPException(status_code=403, detail="Unauthorized.")
-    
+
     tickets_cursor = db.tickets.find({"vendor_id": current_user['id']}).sort("created_at", -1)
     tickets = []
     async for t in tickets_cursor:
@@ -896,6 +1026,54 @@ async def get_tickets(current_user: Annotated[dict, Depends(get_current_user)]):
         if '_id' in t: del t['_id']
         tickets.append(t)
     return tickets
+
+@api_router.get("/admin/support/tickets")
+async def get_all_tickets(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    tickets_cursor = db.tickets.find().sort("created_at", -1)
+    tickets = []
+    async for t in tickets_cursor:
+        t['id'] = t.get('id') or str(t['_id'])
+        if '_id' in t: del t['_id']
+
+        # Get vendor information
+        vendor = await db.vendors.find_one({"id": t.get('vendor_id')})
+        if vendor:
+            t['vendor_name'] = vendor.get('business_name') or vendor.get('name') or 'Unknown Vendor'
+        else:
+            t['vendor_name'] = 'Unknown Vendor'
+
+        tickets.append(t)
+    return tickets
+
+@api_router.post("/admin/support/tickets/{ticket_id}/reply")
+async def reply_to_ticket(ticket_id: str, reply_data: dict, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    reply_message = reply_data.get('message')
+    if not reply_message:
+        raise HTTPException(status_code=400, detail="Reply message required.")
+
+    # Update ticket status to responding
+    await db.tickets.update_one({"id": ticket_id}, {"$set": {"status": "responding"}})
+
+    # Create notification for vendor
+    ticket = await db.tickets.find_one({"id": ticket_id})
+    if ticket:
+        await db.notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": ticket['vendor_id'],
+            "title": "Support Response",
+            "message": f"Admin replied to your ticket '{ticket['subject']}': {reply_message}",
+            "type": "info",
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+
+    return {"message": "Reply sent successfully."}
 
 @api_router.get("/vendor/coupons")
 async def get_vendor_coupons(current_user: Annotated[dict, Depends(get_current_user)]):

@@ -452,7 +452,7 @@ const Navigation = () => {
               >
                 {user ? (
                   <Avatar className="w-5 h-5">
-                    <AvatarImage src={user.avatar} />
+                    <AvatarImage src={`${user.avatar}?t=${Date.now()}`} className="object-contain" />
                     <AvatarFallback className="bg-violet-100 text-violet-600 text-xs">
                       {user.name?.charAt(0)?.toUpperCase()}
                     </AvatarFallback>
@@ -569,7 +569,7 @@ const Navigation = () => {
               >
                 {user ? (
                   <Avatar className="w-4 h-4">
-                    <AvatarImage src={user.avatar} />
+                    <AvatarImage src={`${user.avatar}?t=${Date.now()}`} className="object-contain" />
                     <AvatarFallback className="bg-violet-100 text-violet-600 text-xs">
                       {user.name?.charAt(0)?.toUpperCase()}
                     </AvatarFallback>

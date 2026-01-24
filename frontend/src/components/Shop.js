@@ -22,7 +22,8 @@ import {
   ShoppingBag,
   SlidersHorizontal,
   ChevronDown,
-  Zap
+  Zap,
+  Store
 } from "lucide-react";
 
 import Navigation from "./Navigation";
@@ -60,6 +61,16 @@ const Shop = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Helper function to get proxied image URL
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return '/assets/zlogo.png';
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      return `${API_BASE}/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+    }
+    return imageUrl;
+  };
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -371,10 +382,13 @@ const Shop = () => {
                         <Link to={`/product/${product.id}`} className="block w-48 flex-shrink-0">
                           <div className="relative aspect-square bg-gray-50">
                             <img
-                              src={product.image}
+                              src={getImageUrl(product.image)}
                               alt={product.name}
                               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                               loading="lazy"
+                              onError={(e) => {
+                                e.target.src = '/assets/zlogo.png'; // Fallback image
+                              }}
                             />
                             {product.discount > 10 && (
                               <span className="absolute top-2 left-2 bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded">
@@ -393,6 +407,10 @@ const Shop = () => {
                           <Link to={`/product/${product.id}`}>
                             <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-violet-600 transition-colors">{product.name}</h3>
                           </Link>
+                          <div className="flex items-center gap-1 mb-2">
+                            <Store className="w-3 h-3 text-gray-500" />
+                            <span className="text-xs text-gray-600 font-medium">{product.vendor_name}</span>
+                          </div>
                           <div className="flex items-center gap-1 mb-2">
                             {[...Array(5)].map((_, i) => (
                               <Star key={i} className={`w-3 h-3 ${i < Math.floor(product.rating) ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
@@ -432,10 +450,13 @@ const Shop = () => {
                         <Link to={`/product/${product.id}`} className="block">
                           <div className="relative aspect-square bg-gray-50 overflow-hidden">
                             <img
-                              src={product.image}
+                              src={getImageUrl(product.image)}
                               alt={product.name}
                               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                               loading="lazy"
+                              onError={(e) => {
+                                e.target.src = '/assets/zlogo.png'; // Fallback image
+                              }}
                             />
                             {product.discount > 10 && (
                               <span className="absolute top-2 left-2 bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded">
@@ -474,6 +495,10 @@ const Shop = () => {
                               {product.name}
                             </h3>
                           </Link>
+                          <div className="flex items-center gap-1 mb-2">
+                            <Store className="w-3 h-3 text-gray-500" />
+                            <span className="text-xs text-gray-600 font-medium">{product.vendor_name}</span>
+                          </div>
                           <div className="flex items-center gap-1 mb-2">
                             {[...Array(5)].map((_, i) => (
                               <Star key={i} className={`w-3 h-3 ${i < Math.floor(product.rating) ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />

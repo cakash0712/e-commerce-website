@@ -37,6 +37,9 @@ const Admin = () => {
 
   const [pendingProducts, setPendingProducts] = useState([]);
   const [rejectionReasons, setRejectionReasons] = useState({});
+  const [supportTickets, setSupportTickets] = useState([]);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [adminReply, setAdminReply] = useState('');
 
   useEffect(() => {
     if (activeSubMenu === 'product-approvals') {
@@ -44,6 +47,9 @@ const Admin = () => {
     }
     if (activeSubMenu === 'vendor-payouts') {
       fetchPayoutRequests();
+    }
+    if (activeSubMenu === 'tickets') {
+      fetchSupportTickets();
     }
   }, [activeSubMenu]);
 
@@ -123,6 +129,18 @@ const Admin = () => {
       alert("Inventory Item rejected for non-compliance.");
     } catch (e) {
       alert("Rejection protocol failed.");
+    }
+  };
+
+  const fetchSupportTickets = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/support/tickets`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setSupportTickets(response.data);
+    } catch (e) {
+      console.error("Failed to fetch support tickets:", e);
     }
   };
 
@@ -242,6 +260,15 @@ const Admin = () => {
         { id: 'reviews', label: 'Reviews & Moderation' },
         { id: 'faq', label: 'FAQ' },
         { id: 'blog', label: 'Blog & News' }
+      ]
+    },
+    {
+      id: 'support',
+      label: 'Support',
+      icon: MessageSquare,
+      subItems: [
+        { id: 'tickets', label: 'Support Tickets' },
+        { id: 'chat-support', label: 'Live Chat' }
       ]
     },
     {
@@ -546,7 +573,7 @@ const Admin = () => {
                     </td>
                     <td className="px-8 py-8">
                       <Badge className={`rounded-full px-4 py-1.5 font-black text-[9px] uppercase tracking-widest border-none ${p.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
-                          p.status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600 animate-pulse'
+                        p.status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600 animate-pulse'
                         }`}>
                         {p.status}
                       </Badge>
@@ -1042,6 +1069,145 @@ const Admin = () => {
     </div>
   );
 
+  const renderSupport = () => (
+    <div className="space-y-8">
+      <div className="flex justify-between items-center bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
+        <div>
+          <h3 className="text-4xl font-black italic tracking-tighter">Support <span className="text-violet-600">Center.</span></h3>
+          <p className="text-slate-500 font-medium mt-2">Manage vendor support tickets and provide assistance.</p>
+        </div>
+        <div className="flex gap-4">
+          <div className="bg-amber-50 px-8 py-5 rounded-[2rem] border border-amber-100 text-right">
+            <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Open Tickets</p>
+            <p className="text-2xl font-black text-amber-600 italic">
+              {supportTickets.filter(t => t.status === 'open').length}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <Card className="border-none shadow-xl rounded-[3rem] bg-white overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-900 text-white">
+                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest">Ticket ID</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Vendor</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Subject</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Status</th>
+                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {supportTickets.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-10 py-20 text-center">
+                    <div className="flex flex-col items-center gap-4 opacity-20">
+                      <MessageSquare className="w-16 h-16" />
+                      <p className="text-sm font-black uppercase tracking-widest italic">No support tickets found.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                supportTickets.map(t => (
+                  <tr key={t.id} className="hover:bg-slate-50/50 transition-all group">
+                    <td className="px-10 py-8 font-mono font-bold text-slate-400 text-xs">
+                      #{t.id.slice(0, 13)}...
+                    </td>
+                    <td className="px-8 py-8">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400 text-sm">
+                          {t.vendor_name ? t.vendor_name[0] : 'V'}
+                        </div>
+                        <div>
+                          <p className="font-black text-slate-900 uppercase tracking-tight text-sm italic">{t.vendor_name || 'Unknown Vendor'}</p>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{new Date(t.created_at).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-8">
+                      <p className="font-black text-slate-900 italic">{t.subject}</p>
+                      {t.order_id && <p className="text-[9px] text-violet-600 font-bold uppercase">Order: {t.order_id}</p>}
+                    </td>
+                    <td className="px-8 py-8">
+                      <Badge className={`rounded-full px-4 py-1.5 font-black text-[9px] uppercase tracking-widest border-none ${t.status === 'resolved' ? 'bg-emerald-50 text-emerald-600' :
+                        t.status === 'responding' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'
+                        }`}>
+                        {t.status}
+                      </Badge>
+                    </td>
+                    <td className="px-10 py-8 text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setReplyingTo(replyingTo === t.id ? null : t.id)}
+                        className="rounded-xl border-slate-200 hover:border-violet-300"
+                      >
+                        {replyingTo === t.id ? 'Cancel' : 'Reply'}
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {replyingTo && (
+        <Card className="border-none shadow-xl rounded-[3rem] bg-white p-8">
+          <h4 className="text-2xl font-black italic mb-6">Reply to <span className="text-violet-600">Ticket.</span></h4>
+          <div className="space-y-6">
+            <div>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Your Response</Label>
+              <Textarea
+                value={adminReply}
+                onChange={(e) => setAdminReply(e.target.value)}
+                placeholder="Type your response to the vendor..."
+                rows={6}
+                className="rounded-[2rem] border-slate-100 bg-slate-50/50 focus:bg-white font-medium p-6 mt-2"
+              />
+            </div>
+            <div className="flex gap-4">
+              <Button
+                onClick={async () => {
+                  try {
+                    const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                    await axios.post(`${API_BASE}/api/admin/support/tickets/${replyingTo}/reply`, {
+                      message: adminReply
+                    }, {
+                      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                    });
+                    alert("Reply sent successfully!");
+                    setReplyingTo(null);
+                    setAdminReply('');
+                    fetchSupportTickets();
+                  } catch (e) {
+                    console.error("Failed to send reply:", e);
+                    alert("Failed to send reply. Please try again.");
+                  }
+                }}
+                className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl px-8"
+              >
+                Send Reply
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setReplyingTo(null);
+                  setAdminReply('');
+                }}
+                className="rounded-xl border-slate-200"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+
   const renderPlaceholder = (title, description, icon = Box) => {
     const Icon = icon;
     return (
@@ -1095,6 +1261,10 @@ const Admin = () => {
     if (activeSubMenu === 'reviews') return renderReviewModeration();
     if (activeSubMenu === 'faq') return renderPlaceholder('Knowledge Base', 'Manage Frequently Asked Questions.', MessageSquare);
     if (activeSubMenu === 'blog') return renderPlaceholder('Blog Posts', 'Manage news articles and blog content.', FileText);
+
+    // Support
+    if (activeSubMenu === 'tickets') return renderSupport();
+    if (activeSubMenu === 'chat-support') return renderPlaceholder('Live Support', 'Real-time chat support system for customer assistance.', MessageSquare);
 
     // Reports
     if (activeMenu === 'reports') return renderPlaceholder('Data Warehouse', 'Comprehensive system reports and data export tools.', BarChart3);

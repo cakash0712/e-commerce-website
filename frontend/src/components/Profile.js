@@ -64,7 +64,7 @@ const Profile = () => {
   };
 
   const handleAddNewAddress = () => {
-    setAddressFormData({ name: user?.name || "", phone: "", addr: "", type: "HOME" });
+    setAddressFormData({ name: user?.name || profileEdit?.name || "", phone: "", addr: "", type: "HOME" });
     setEditingAddressId(null);
     setIsAddressFormOpen(true);
   };
@@ -183,6 +183,7 @@ const Profile = () => {
     gender: user?.gender || "",
     dob: user?.dob || "",
     address: user?.address || "",
+    phone: user?.phone || "",
   });
 
   useEffect(() => {
@@ -212,7 +213,7 @@ const Profile = () => {
   const handleUpdateProfile = async () => {
     setIsLoading(true);
     try {
-      await updateUser(user.id, {
+      await updateUser(user?.id, {
         name: profileEdit.name,
         email: profileEdit.email,
         phone: profileEdit.phone,
@@ -248,7 +249,7 @@ const Profile = () => {
         const base64String = reader.result;
         setProfileEdit(prev => ({ ...prev, avatar: base64String }));
         try {
-          await updateUser(user.id, { avatar: base64String });
+          await updateUser(user?.id, { avatar: base64String });
           alert("Profile picture updated!");
         } catch (err) {
           alert("Updated locally, but failed to sync.");
@@ -295,7 +296,7 @@ const Profile = () => {
     return <Navigate to="/auth" />;
   }
 
-  if (user.user_type === "vendor") {
+  if (user?.user_type === "vendor") {
     return <Navigate to="/vendor" />;
   }
 
@@ -316,9 +317,9 @@ const Profile = () => {
                 onClick={() => fileInputRef.current.click()}
               >
                 <Avatar className="w-14 h-14 ring-2 ring-violet-50 group-hover:ring-violet-200 transition-all">
-                  <AvatarImage src={profileEdit.avatar || user.avatar} />
+                  <AvatarImage src={profileEdit.avatar || user?.avatar} />
                   <AvatarFallback className="bg-violet-100 text-violet-600 font-black italic">
-                    {user.name.charAt(0)}
+                    {user?.name?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
@@ -328,9 +329,9 @@ const Profile = () => {
               <div>
                 <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none mb-1">Hello,</p>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-black text-gray-900 text-lg tracking-tight italic">{profileEdit.name}</h3>
-                  <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] font-bold">VERIFIED</Badge>
-                </div>
+                 <h3 className="font-black text-gray-900 text-lg tracking-tight italic">{profileEdit.name || user?.name || 'User'}</h3>
+                 <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] font-bold">VERIFIED</Badge>
+               </div>
               </div>
             </Card>
 
@@ -408,7 +409,7 @@ const Profile = () => {
               <div className="space-y-12">
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter mb-2">Account Dashboard</h2>
-                  <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Verified Digital ID: {user.email}</p>
+                  <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Verified Digital ID: {user?.email}</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

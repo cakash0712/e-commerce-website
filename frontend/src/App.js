@@ -162,7 +162,10 @@ const AuthProvider = ({ children }) => {
 
   const updateUser = async (userId, updates) => {
     try {
-      await axios.put(`${API}/users/${userId}`, updates);
+      const token = localStorage.getItem('token');
+      await axios.put(`${API}/users/${userId}`, updates, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
     } catch (error) {
       console.error('Backend update failed, updating locally only:', error);
     }

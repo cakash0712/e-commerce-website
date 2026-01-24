@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,6 +34,7 @@ import { useCart, useOrders, useAuth, useCoupons } from "../App";
 
 const Payment = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { cartItems, getCartTotal } = useCart();
     const { addOrder } = useOrders();
     const { user } = useAuth();
@@ -45,7 +46,7 @@ const Payment = () => {
     const [paymentMethod, setPaymentMethod] = useState('card');
     const [shippingMethod, setShippingMethod] = useState('standard');
     const [couponCode, setCouponCode] = useState('');
-    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [appliedCoupon, setAppliedCoupon] = useState(location.state?.appliedCoupon || null);
     const [couponError, setCouponError] = useState('');
 
     const subtotal = getCartTotal();
@@ -109,7 +110,9 @@ const Payment = () => {
                     vendor_id: item.vendor_id,
                     status: "processing"
                 })),
-                total_amount: total
+                total_amount: total,
+                coupon_code: appliedCoupon?.code || null,
+                discount_amount: discount
             };
 
             const response = await axios.post(`${API_BASE}/api/orders/checkout`, orderPayload, {

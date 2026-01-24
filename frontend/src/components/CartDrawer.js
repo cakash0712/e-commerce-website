@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import {
     Sheet,
     SheetContent,
@@ -10,6 +11,7 @@ import {
     SheetClose,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useCart } from "../App";
 import {
     ShoppingCart,
@@ -21,7 +23,10 @@ import {
     ShoppingBag,
     CreditCard,
     ChevronRight,
-    Lock
+    Lock,
+    Tag,
+    Check,
+    X as XIcon
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -31,12 +36,54 @@ const CartDrawer = ({ children }) => {
     const navigate = useNavigate();
     const { cartItems, updateQuantity, removeFromCart } = useCart();
 
+    const [couponCode, setCouponCode] = useState('');
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [couponError, setCouponError] = useState('');
+
     const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const tax = subtotal * 0.18;
-    const total = subtotal + tax;
+
+    // Calculate discount
+    let discount = 0;
+    if (appliedCoupon) {
+        if (appliedCoupon.discount.endsWith('%')) {
+            const percentage = parseFloat(appliedCoupon.discount) / 100;
+            discount = subtotal * percentage;
+        } else {
+            discount = parseFloat(appliedCoupon.discount.replace('₹', ''));
+        }
+    }
+
+    const discountedSubtotal = subtotal - discount;
+    const tax = discountedSubtotal * 0.18;
+    const total = discountedSubtotal + tax;
+
+    const handleApplyCoupon = async () => {
+        if (!couponCode.trim()) return;
+
+        try {
+            const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+            const response = await axios.get(`${API_BASE}/api/coupons/validate/${couponCode.trim().toUpperCase()}`);
+            setAppliedCoupon(response.data);
+            setCouponError('');
+            setCouponCode('');
+        } catch (error) {
+            setCouponError(error.response?.data?.detail || 'Invalid coupon code');
+            setAppliedCoupon(null);
+        }
+    };
+
+    const handleRemoveCoupon = () => {
+        setAppliedCoupon(null);
+        setCouponCode('');
+        setCouponError('');
+    };
 
     const handleCheckout = () => {
-        navigate('/payment');
+        navigate('/payment', {
+            state: {
+                appliedCoupon: appliedCoupon
+            }
+        });
     };
 
     return (
@@ -133,15 +180,69 @@ const CartDrawer = ({ children }) => {
 
                 {cartItems.length > 0 && (
                     <div className="p-8 bg-gray-50 border-t border-gray-100">
+                        {/* Coupon Section */}
+                        <div className="mb-6">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Tag className="w-4 h-4 text-violet-600" />
+                                <span className="text-[10px] uppercase font-black tracking-[0.2em] text-violet-600">Apply Coupon Code</span>
+                            </div>
+
+                            {appliedCoupon ? (
+                                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <Check className="w-4 h-4 text-emerald-600" />
+                                        <span className="text-sm font-bold text-emerald-700">{appliedCoupon.code}</span>
+                                        <span className="text-xs text-emerald-600">({appliedCoupon.discount} off)</span>
+                                    </div>
+                                    <button
+                                        onClick={handleRemoveCoupon}
+                                        className="text-emerald-600 hover:text-emerald-800"
+                                    >
+                                        <XIcon className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex gap-2 mb-4">
+                                    <Input
+                                        placeholder="Enter coupon code"
+                                        value={couponCode}
+                                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                        className="flex-1 h-10 rounded-xl border-gray-200 focus:border-violet-300"
+                                        onKeyPress={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                                    />
+                                    <Button
+                                        onClick={handleApplyCoupon}
+                                        disabled={!couponCode.trim()}
+                                        className="h-10 px-4 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold text-xs"
+                                    >
+                                        Apply
+                                    </Button>
+                                </div>
+                            )}
+
+                            {couponError && (
+                                <p className="text-xs text-red-600 font-medium">{couponError}</p>
+                            )}
+                        </div>
+
                         <div className="space-y-4 mb-8 text-left">
                             <div className="flex justify-between items-center text-gray-500">
                                 <span className="text-[10px] uppercase font-bold tracking-[0.2em]">Procurement Subtotal</span>
                                 <span className="text-sm font-bold text-gray-900">₹{subtotal.toLocaleString()}</span>
                             </div>
+
+                            {discount > 0 && (
+                                <div className="flex justify-between items-center text-emerald-600">
+                                    <span className="text-[10px] uppercase font-bold tracking-[0.2em]">Coupon Discount</span>
+                                    <span className="text-sm font-bold">-₹{Math.round(discount).toLocaleString()}</span>
+                                </div>
+                            )}
+
                             <div className="flex justify-between items-center text-gray-500">
                                 <span className="text-[10px] uppercase font-bold tracking-[0.2em]">Compliance Tax (18%)</span>
                                 <span className="text-sm font-bold text-gray-900">₹{Math.round(tax).toLocaleString()}</span>
                             </div>
+
                             <Separator className="bg-gray-200/50 h-0.5" />
                             <div className="flex justify-between items-end pt-2">
                                 <div className="text-left">

@@ -46,6 +46,16 @@ const DetailsView = () => {
     const [userComment, setUserComment] = useState('');
     const [activeTab, setActiveTab] = useState('description');
 
+    // Helper function to get proxied image URL
+    const getImageUrl = (imageUrl) => {
+        if (!imageUrl) return '/assets/zlogo.png';
+        if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+            const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+            return `${API_BASE}/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+        }
+        return imageUrl;
+    };
+
     const handleReviewSubmit = () => {
         alert("Thank you for your review! It will be published after verification.");
         setShowReviewForm(false);
@@ -106,7 +116,7 @@ const DetailsView = () => {
                     box_contents: p.box_contents || "N/A",
                     specifications: p.specifications || {},
                     vendor: {
-                        name: "ZippyCart Vendor",
+                        name: p.vendor_name || "ZippyCart Vendor",
                         id: p.vendor_id,
                         rating: 4.8
                     },
@@ -206,9 +216,12 @@ const DetailsView = () => {
                             <div className="space-y-4">
                                 <div className="relative aspect-square bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
                                     <img
-                                        src={product.images[activeImage]}
+                                        src={product.images && product.images.length > 0 ? getImageUrl(product.images[activeImage]) : getImageUrl(product.image)}
                                         alt={product.name}
                                         className="w-full h-full object-contain"
+                                        onError={(e) => {
+                                            e.target.src = '/assets/zlogo.png'; // Fallback image
+                                        }}
                                     />
                                     {product.discount > 10 && (
                                         <Badge className="absolute top-4 left-4 bg-rose-500 text-white border-none font-bold">
@@ -245,7 +258,7 @@ const DetailsView = () => {
                                             onClick={() => setActiveImage(idx)}
                                             className={`relative shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${activeImage === idx ? 'border-violet-600' : 'border-gray-200 hover:border-violet-300'}`}
                                         >
-                                            <img src={img} alt={`View ${idx + 1}`} className="w-full h-full object-contain bg-gray-50" />
+                                            <img src={getImageUrl(img)} alt={`View ${idx + 1}`} className="w-full h-full object-contain bg-gray-50" onError={(e) => { e.target.src = '/assets/zlogo.png'; }} />
                                         </button>
                                     ))}
                                 </div>
@@ -557,7 +570,7 @@ const DetailsView = () => {
                                 {relatedProducts.map((p) => (
                                     <Link key={p.id} to={`/product/${p.id}`} className="group bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg hover:border-violet-200 transition-all">
                                         <div className="aspect-square bg-gray-50 overflow-hidden">
-                                            <img src={p.image} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
+                                            <img src={p.image || '/assets/zlogo.png'} alt={p.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" onError={(e) => { e.target.src = '/assets/zlogo.png'; }} />
                                         </div>
                                         <div className="p-3">
                                             <h4 className="font-medium text-gray-900 text-sm line-clamp-2 group-hover:text-violet-600 transition-colors mb-2">{p.name}</h4>

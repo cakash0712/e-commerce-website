@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import {
   Package, Plus, Edit, Trash2, Eye, Upload, Star, ShoppingCart,
   TrendingUp, LayoutDashboard, DollarSign, User, LogOut,
@@ -25,6 +26,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts';
+import * as XLSX from 'xlsx';
 
 const Vendor = () => {
   const { user, updateUser, logout } = useAuth();
@@ -149,11 +151,26 @@ const Vendor = () => {
 
   const handleCreateCoupon = async (e) => {
     e.preventDefault();
+
+    // Validation
+    if (!newCoupon.code || !newCoupon.discount || !newCoupon.limit || !newCoupon.expires) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    const limit = parseInt(newCoupon.limit);
+    if (isNaN(limit) || limit <= 0) {
+      alert("Please enter a valid usage limit.");
+      return;
+    }
+
     try {
       const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
       const payload = {
-        ...newCoupon,
-        limit: parseInt(newCoupon.limit)
+        code: newCoupon.code.trim(),
+        discount: newCoupon.discount.trim(),
+        limit: limit,
+        expires: newCoupon.expires
       };
       await axios.post(`${API_BASE}/api/vendor/coupons`, payload, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -216,6 +233,129 @@ const Vendor = () => {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.post(`${API_BASE}/api/upload/image`, formData, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      setNewProduct({ ...newProduct, image: response.data.image_url });
+      alert("Image uploaded successfully!");
+    } catch (error) {
+      console.error("Failed to upload image:", error);
+      alert("Failed to upload image. Please try again.");
+    }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.post(`${API_BASE}/api/upload/image`, formData, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      // Update user profile (this also updates the backend)
+      const userId = user?.id || localStorage.getItem('user_data') && JSON.parse(localStorage.getItem('user_data'))?.id;
+      await updateUser(userId, { avatar: response.data.image_url });
+      alert("Avatar uploaded successfully!");
+    } catch (error) {
+      console.error("Failed to upload avatar:", error);
+      alert("Failed to upload avatar. Please try again.");
+    }
+  };
+
+  const handleBannerUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.post(`${API_BASE}/api/upload/image`, formData, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      // Update user profile (this also updates the backend)
+      const userId = user?.id || localStorage.getItem('user_data') && JSON.parse(localStorage.getItem('user_data'))?.id;
+      await updateUser(userId, { banner: response.data.image_url });
+      alert("Banner uploaded successfully!");
+    } catch (error) {
+      console.error("Failed to upload banner:", error);
+      alert("Failed to upload banner. Please try again.");
+    }
+  };
+
+  const exportEarningsToXLSX = () => {
+    if (financeData.earnings_protocol.length === 0) {
+      alert("No earnings data to export.");
+      return;
+    }
+
+    // Prepare data for export
+    const exportData = financeData.earnings_protocol.map(earning => ({
+      'Order ID': earning.id,
+      'Date': new Date(earning.date).toLocaleDateString(),
+      'Gross Amount (₹)': earning.val,
+      'Net Amount (₹)': earning.net,
+      'Status': earning.status
+    }));
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Add summary row
+    const summaryRow = [
+      'Summary',
+      '',
+      `Total Gross: ₹${financeData.gross_revenue.toLocaleString()}`,
+      `Total Net: ₹${(financeData.gross_revenue - financeData.total_commission).toLocaleString()}`,
+      `Total Commission: ₹${financeData.total_commission.toLocaleString()}`
+    ];
+    XLSX.utils.sheet_add_aoa(ws, [summaryRow], { origin: -1 });
+
+    // Auto-size columns
+    const colWidths = [
+      { wch: 15 }, // Order ID
+      { wch: 12 }, // Date
+      { wch: 18 }, // Gross Amount
+      { wch: 15 }, // Net Amount
+      { wch: 10 }  // Status
+    ];
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Earnings Report');
+
+    // Generate filename with current date
+    const fileName = `earnings_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+    // Save file
+    XLSX.writeFile(wb, fileName);
+  };
+
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'products', label: 'Product Management', icon: Package },
@@ -240,6 +380,11 @@ const Vendor = () => {
     logo: user?.logo || '',
     banner: user?.banner || ''
   });
+
+  // Dialog states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+
 
   const renderCoupons = () => (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -508,19 +653,26 @@ const Vendor = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDeleteProduct = async (productId) => {
-    if (!window.confirm("Are you sure you want to decommission this inventory entity?")) return;
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
     try {
       const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-      await axios.delete(`${API_BASE}/api/products/${productId}`, {
+      await axios.delete(`${API_BASE}/api/products/${productToDelete}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      alert("Product successfully deleted.");
+      setShowDeleteDialog(false);
+      setProductToDelete(null);
       fetchVendorProducts();
     } catch (e) {
       console.error("Delete Product Error:", e);
-      alert("Failed to delete product.");
+      setShowDeleteDialog(false);
+      setProductToDelete(null);
     }
+  };
+
+  const confirmDeleteProduct = (productId) => {
+    setProductToDelete(productId);
+    setShowDeleteDialog(true);
   };
 
   const handleAddProduct = async (e) => {
@@ -773,17 +925,40 @@ const Vendor = () => {
 
                   <TabsContent value="media" className="mt-0 space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Main Image URL *</Label>
-                      <div className="flex gap-4">
-                        <Input
-                          required
-                          placeholder="https://cdn.zippycart.com/products/master-node.jpg"
-                          value={newProduct.image}
-                          onChange={(e) => setNewProduct({ ...newProduct, image: e.target.value })}
-                          className="h-14 rounded-2xl border-slate-100 font-bold flex-1"
-                        />
-                        <div className="w-14 h-14 bg-slate-50 border border-dashed rounded-2xl flex items-center justify-center">
-                          {newProduct.image ? <img src={newProduct.image} className="w-full h-full object-cover rounded-2xl" /> : <Image className="w-5 h-5 text-slate-300" />}
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Main Image</Label>
+                      <div className="space-y-4">
+                        <div className="flex gap-4">
+                          <Input
+                            required={!newProduct.image}
+                            placeholder="https://cdn.zippycart.com/products/master-node.jpg"
+                            value={newProduct.image}
+                            onChange={(e) => setNewProduct({ ...newProduct, image: e.target.value })}
+                            className="h-14 rounded-2xl border-slate-100 font-bold flex-1"
+                          />
+                          <div className="w-14 h-14 bg-slate-50 border border-dashed rounded-2xl flex items-center justify-center overflow-hidden">
+                            {newProduct.image ? (
+                              <img
+                                src={newProduct.image}
+                                alt="Product preview"
+                                className="w-full h-full object-cover rounded-2xl"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <Image className="w-5 h-5 text-slate-300" />
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <Label htmlFor="image-upload" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Or Upload Image:</Label>
+                          <Input
+                            id="image-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="h-10 rounded-xl border-slate-100 font-medium flex-1"
+                          />
                         </div>
                       </div>
                     </div>
@@ -879,7 +1054,16 @@ const Vendor = () => {
                 <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg" />
+                      <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden">
+                        <img
+                          src={p.image || '/assets/zlogo.png'}
+                          alt={p.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src = '/assets/zlogo.png';
+                          }}
+                        />
+                      </div>
                       <div>
                         <p className="font-bold text-sm text-gray-900">{p.name}</p>
                         <p className="text-xs text-gray-500">{p.category}</p>
@@ -918,7 +1102,7 @@ const Vendor = () => {
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-violet-600" onClick={() => handleEditInitiate(p)}><Edit className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => handleDeleteProduct(p.id)}><Trash2 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => confirmDeleteProduct(p.id)}><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </td>
                 </tr>
@@ -963,7 +1147,7 @@ const Vendor = () => {
             <div key={p.id} className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-2xl transition-all border border-transparent hover:border-gray-100">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-gray-100 rounded-xl overflow-hidden">
-                  <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                  <img src={p.image || '/assets/zlogo.png'} alt={p.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = '/assets/zlogo.png'; }} />
                 </div>
                 <div>
                   <span className="text-sm font-black text-gray-900">{p.name}</span>
@@ -999,24 +1183,61 @@ const Vendor = () => {
   );
 
   const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [bankDetails, setBankDetails] = useState({
+    account_holder: "",
+    account_number: "",
+    bank_name: "",
+    ifsc_code: "",
+    account_type: "savings"
+  });
+  const [withdrawError, setWithdrawError] = useState("");
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
-    if (!withdrawAmount || isNaN(withdrawAmount)) return;
+    setWithdrawError("");
+
+    // Validation
+    if (!withdrawAmount || isNaN(withdrawAmount) || parseFloat(withdrawAmount) <= 0) {
+      setWithdrawError("Please enter a valid withdrawal amount.");
+      return;
+    }
+
+    const amount = parseFloat(withdrawAmount);
+    if (amount > financeData.available_balance) {
+      setWithdrawError("Insufficient balance. Please enter an amount less than or equal to your available balance.");
+      return;
+    }
+
+    // Validate bank details
+    if (!bankDetails.account_holder || !bankDetails.account_number || !bankDetails.bank_name || !bankDetails.ifsc_code) {
+      setWithdrawError("Please fill in all bank details.");
+      return;
+    }
 
     try {
       const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
       await axios.post(`${API_BASE}/api/vendor/withdraw`,
-        { amount: parseFloat(withdrawAmount) },
+        {
+          amount: amount,
+          bank_details: bankDetails
+        },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
 
-      alert("Withdrawal request sent. Funds will be released after review.");
+      alert("Withdrawal request sent successfully. Funds will be released after review.");
       setWithdrawAmount("");
+      setBankDetails({
+        account_holder: "",
+        account_number: "",
+        bank_name: "",
+        ifsc_code: "",
+        account_type: "savings"
+      });
+      setWithdrawError("");
       fetchVendorFinance();
     } catch (e) {
-      console.error("Withdrawal error:", e);
-      alert("Failed to send withdrawal request.");
+      console.error("Failed to request withdrawal:", e);
+      setWithdrawError(e.response?.data?.detail || "Failed to request withdrawal. Please try again.");
     }
   };
 
@@ -1068,7 +1289,7 @@ const Vendor = () => {
               <h4 className="font-black italic text-xl uppercase tracking-tight">Recent <span className="text-violet-600">Earnings.</span></h4>
               <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">A record of all your sales</p>
             </div>
-            <Button variant="outline" className="rounded-2xl border-slate-100 text-[10px] font-black uppercase tracking-widest px-6 h-10">Export XLSX</Button>
+            <Button variant="outline" onClick={exportEarningsToXLSX} className="rounded-2xl border-slate-100 text-[10px] font-black uppercase tracking-widest px-6 h-10">Export XLSX</Button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -1144,6 +1365,52 @@ const Vendor = () => {
                   <div className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-violet-300">INR</div>
                 </div>
               </div>
+
+              <div className="space-y-4">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-violet-200 ml-2">Bank Details</Label>
+                <div className="grid grid-cols-1 gap-4">
+                  <Input
+                    placeholder="Account Holder Name"
+                    value={bankDetails.account_holder}
+                    onChange={(e) => setBankDetails({ ...bankDetails, account_holder: e.target.value })}
+                    className="bg-black/20 border-white/10 text-white placeholder:text-white/20 h-12 rounded-2xl px-6 focus:ring-2 focus:ring-white/30 transition-all"
+                  />
+                  <Input
+                    placeholder="Account Number"
+                    value={bankDetails.account_number}
+                    onChange={(e) => setBankDetails({ ...bankDetails, account_number: e.target.value })}
+                    className="bg-black/20 border-white/10 text-white placeholder:text-white/20 h-12 rounded-2xl px-6 focus:ring-2 focus:ring-white/30 transition-all"
+                  />
+                  <Input
+                    placeholder="Bank Name"
+                    value={bankDetails.bank_name}
+                    onChange={(e) => setBankDetails({ ...bankDetails, bank_name: e.target.value })}
+                    className="bg-black/20 border-white/10 text-white placeholder:text-white/20 h-12 rounded-2xl px-6 focus:ring-2 focus:ring-white/30 transition-all"
+                  />
+                  <Input
+                    placeholder="IFSC Code"
+                    value={bankDetails.ifsc_code}
+                    onChange={(e) => setBankDetails({ ...bankDetails, ifsc_code: e.target.value })}
+                    className="bg-black/20 border-white/10 text-white placeholder:text-white/20 h-12 rounded-2xl px-6 focus:ring-2 focus:ring-white/30 transition-all"
+                  />
+                  <Select value={bankDetails.account_type} onValueChange={(value) => setBankDetails({ ...bankDetails, account_type: value })}>
+                    <SelectTrigger className="bg-black/20 border-white/10 text-white h-12 rounded-2xl px-6 focus:ring-2 focus:ring-white/30 transition-all">
+                      <SelectValue placeholder="Account Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="savings">Savings Account</SelectItem>
+                      <SelectItem value="current">Current Account</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {withdrawError && (
+                <div className="text-red-300 text-xs font-bold uppercase tracking-widest bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                  {withdrawError}
+                </div>
+              )}
+
               <Button
                 className="w-full h-16 bg-white text-violet-600 hover:bg-violet-50 font-black uppercase tracking-widest rounded-3xl shadow-2xl shadow-violet-900/40 active:scale-95 transition-all text-sm"
               >
@@ -1164,54 +1431,6 @@ const Vendor = () => {
         </Card>
       </div>
 
-      {/* Withdrawal History */}
-      <Card className="border-none shadow-sm rounded-[3rem] bg-white overflow-hidden">
-        <div className="p-10 border-b border-slate-50">
-          <h4 className="font-black italic text-xl uppercase tracking-tight">Withdrawal <span className="text-violet-600">History.</span></h4>
-          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">View all your past withdrawals</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50/50">
-                <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Reference Node</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Timestamp</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Method</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
-                <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {financeData.withdrawals.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="px-10 py-20 text-center text-slate-400 font-black italic uppercase text-xs">No withdrawal history detected.</td>
-                </tr>
-              ) : (
-                financeData.withdrawals.map(w => (
-                  <tr key={w.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-10 py-6 font-bold font-mono text-slate-400 text-xs">{w.id.slice(0, 13)}...</td>
-                    <td className="px-8 py-6 text-xs font-bold text-slate-900">{new Date(w.date).toLocaleString()}</td>
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-violet-500" />
-                        <span className="text-xs font-black uppercase tracking-tighter">{w.method}</span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6 text-right font-black italic text-lg text-slate-900">₹{w.amount.toLocaleString()}</td>
-                    <td className="px-10 py-6">
-                      <Badge className={`px-4 py-1.5 rounded-full border-none font-black text-[9px] uppercase tracking-widest ${w.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
-                        w.status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
-                        }`}>
-                        {w.status}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
     </div>
   );
 
@@ -1233,20 +1452,48 @@ const Vendor = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Profile Card */}
         <Card className="border-0 shadow-lg rounded-[2rem] overflow-hidden">
-          <div className="h-32 bg-gradient-to-r from-violet-600 to-indigo-600 relative">
-            <div className="absolute -bottom-12 left-8">
-              <div className="w-24 h-24 rounded-2xl bg-white p-1 shadow-xl">
-                <div className="w-full h-full bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+          <div className="h-32 bg-gradient-to-r from-violet-600 to-indigo-600 relative overflow-hidden">
+            {user?.banner && (
+              <img src={user.banner} alt="Banner" className="w-full h-full object-cover" />
+            )}
+            <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all flex items-center justify-center group">
+              <label className="cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="bg-white bg-opacity-90 rounded-lg px-4 py-2 flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-gray-700" />
+                  <span className="text-sm font-medium text-gray-700">Upload Banner</span>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBannerUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            <div className="absolute bottom-0 left-8">
+              <div className="w-20 h-20 rounded-2xl bg-white p-1 shadow-xl">
+                <div className="w-full h-full bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden relative group">
                   {user?.avatar ? (
-                    <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+                    <img src={`${user.avatar}?t=${Date.now()}`} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
                     <User className="w-10 h-10 text-gray-400" />
                   )}
+                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                    <label className="cursor-pointer">
+                      <Upload className="w-6 h-6 text-white" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          <CardContent className="pt-16 px-8 pb-8">
+          <CardContent className="pt-18 px-8 pb-8">
             <h2 className="text-2xl font-black text-gray-900">{user?.name}</h2>
             <p className="text-sm font-medium text-violet-600 mb-6">{user?.user_type === 'vendor' ? 'Verified Merchant' : 'User'}</p>
 
@@ -1316,36 +1563,6 @@ const Vendor = () => {
           </CardContent>
         </Card>
 
-        {/* Branding */}
-        <Card className="lg:col-span-3 border-0 shadow-sm rounded-[2rem]">
-          <CardHeader>
-            <CardTitle>Store Branding</CardTitle>
-            <CardDescription>Customize your store's visual identity.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Store Logo URL</Label>
-              <Input
-                value={storeSettings.logo}
-                onChange={(e) => setStoreSettings({ ...storeSettings, logo: e.target.value })}
-                placeholder="https://example.com/logo.png"
-              />
-            </div>
-            <div className="space-y-4">
-              <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Store Banner URL</Label>
-              <Input
-                value={storeSettings.banner}
-                onChange={(e) => setStoreSettings({ ...storeSettings, banner: e.target.value })}
-                placeholder="https://example.com/banner.png"
-              />
-            </div>
-            <div className="md:col-span-2 mt-4">
-              <Button onClick={handleUpdateSettings} className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-black uppercase text-sm tracking-widest py-3">
-                Update Branding
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
@@ -1467,7 +1684,18 @@ const Vendor = () => {
             <p className="text-slate-400 font-medium mt-3 max-w-xl">Directly message our Admin team for any issues with your account, orders, or payouts.</p>
           </div>
           <div className="flex gap-4">
-            <Button className="h-16 px-8 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-2xl shadow-violet-900/20 active:scale-95 transition-all">
+            <Button
+              onClick={() => {
+                const contactForm = document.getElementById('contact-admin-form');
+                if (contactForm) {
+                  contactForm.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                  });
+                }
+              }}
+              className="h-16 px-8 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-2xl shadow-violet-900/20 active:scale-95 transition-all"
+            >
               <Headset className="w-5 h-5 mr-3" /> Contact Admin
             </Button>
           </div>
@@ -1518,7 +1746,7 @@ const Vendor = () => {
         </div>
 
         {/* Contact Form */}
-        <Card className="border-none shadow-2xl rounded-[3rem] bg-white p-10">
+        <Card id="contact-admin-form" className="border-none shadow-2xl rounded-[3rem] bg-white p-10">
           <h4 className="text-2xl font-black italic mb-6">Contact <span className="text-violet-600">Admin.</span></h4>
           <form className="space-y-6" onSubmit={handleSendTicket}>
             <div className="grid grid-cols-2 gap-4">
@@ -1788,15 +2016,50 @@ const Vendor = () => {
             </nav>
 
             <div className="absolute bottom-6 left-6 right-6">
-              <button
-                onClick={logout}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-colors bg-white font-bold text-sm"
-              >
-                <LogOut className="w-5 h-5" />
-                Sign Out
-              </button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-colors bg-white font-bold text-sm"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    Sign Out
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to sign out?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      You will be logged out of your vendor account and redirected to the login page.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={logout} className="bg-red-600 hover:bg-red-700">
+                      Yes, Sign Out
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </aside>
+
+          {/* Delete Product Confirmation Dialog */}
+          <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Product</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this product? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteProduct} className="bg-red-600 hover:bg-red-700">
+                  Delete Product
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           {/* Main Content */}
           <main className="flex-1 p-8 overflow-y-auto bg-slate-50/50">
