@@ -55,6 +55,7 @@ import {
   Mail,
   MapPin,
   Phone,
+  Utensils,
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -1032,6 +1033,7 @@ const CategoriesSection = () => {
   const categories = [
     { name: "Electronics", icon: Laptop, link: "/shop?category=electronics" },
     { name: "Fashion", icon: Shirt, link: "/shop?category=fashion" },
+    { name: "Food & Beverages", icon: Utensils, link: "/shop?category=groceries" },
     { name: "Home & Kitchen", icon: HomeIcon, link: "/shop?category=home-decoration" },
     { name: "Sports", icon: Dumbbell, link: "/shop?category=sports" },
   ];

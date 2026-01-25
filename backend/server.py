@@ -205,6 +205,12 @@ class Order(BaseModel):
     discount_amount: float = 0
     status: str = "processing"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # Food delivery fields
+    delivery_date: Optional[datetime] = None
+    delivery_time_slot: Optional[str] = None  # e.g., "9AM-11AM", "2PM-4PM"
+    tracking_number: Optional[str] = None
+    delivery_status: str = "pending"  # pending, scheduled, out_for_delivery, delivered
+    delivery_notes: Optional[str] = None
 
 class OrderCreate(BaseModel):
     customer_name: str
@@ -216,6 +222,17 @@ class OrderCreate(BaseModel):
     total_amount: float
     coupon_code: Optional[str] = None
     discount_amount: float = 0
+    # Food delivery fields
+    delivery_date: Optional[datetime] = None
+    delivery_time_slot: Optional[str] = None
+    delivery_notes: Optional[str] = None
+
+class DeliveryUpdate(BaseModel):
+    delivery_date: Optional[datetime] = None
+    delivery_time_slot: Optional[str] = None
+    tracking_number: Optional[str] = None
+    delivery_status: str = "pending"
+    delivery_notes: Optional[str] = None
 
 class Withdrawal(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -854,7 +871,7 @@ async def reject_product(product_id: str, reason: dict, current_user: Annotated[
 async def get_vendor_orders(current_user: Annotated[dict, Depends(get_current_user)]):
     if current_user['user_type'] != 'vendor':
         raise HTTPException(status_code=403, detail="Unauthorized.")
-    
+
     orders_cursor = db.orders.find({"items.vendor_id": current_user['id']})
     orders = []
     async for o in orders_cursor:
@@ -862,6 +879,33 @@ async def get_vendor_orders(current_user: Annotated[dict, Depends(get_current_us
         if '_id' in o: del o['_id']
         orders.append(o)
     return orders
+
+@api_router.put("/vendor/orders/{order_id}/delivery")
+async def update_order_delivery(order_id: str, delivery_data: DeliveryUpdate, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+
+    # Check if order exists and belongs to vendor
+    order = await db.orders.find_one({"id": order_id, "items.vendor_id": current_user['id']})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found or not authorized.")
+
+    # Update delivery fields
+    update_data = {}
+    if delivery_data.delivery_date is not None:
+        update_data['delivery_date'] = delivery_data.delivery_date
+    if delivery_data.delivery_time_slot is not None:
+        update_data['delivery_time_slot'] = delivery_data.delivery_time_slot
+    if delivery_data.tracking_number is not None:
+        update_data['tracking_number'] = delivery_data.tracking_number
+    if delivery_data.delivery_status:
+        update_data['delivery_status'] = delivery_data.delivery_status
+    if delivery_data.delivery_notes is not None:
+        update_data['delivery_notes'] = delivery_data.delivery_notes
+
+    await db.orders.update_one({"id": order_id}, {"$set": update_data})
+
+    return {"message": "Delivery information updated successfully."}
 
 @api_router.get("/vendor/stats")
 async def get_vendor_stats(current_user: Annotated[dict, Depends(get_current_user)]):

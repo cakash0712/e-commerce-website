@@ -230,6 +230,41 @@ const Vendor = () => {
     }
   };
 
+  const handleUpdateDelivery = async (e) => {
+    e.preventDefault();
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const payload = {
+        delivery_date: deliveryData.delivery_date ? new Date(deliveryData.delivery_date) : null,
+        delivery_time_slot: deliveryData.delivery_time_slot || null,
+        tracking_number: deliveryData.tracking_number || null,
+        delivery_status: deliveryData.delivery_status,
+        delivery_notes: deliveryData.delivery_notes || null
+      };
+      await axios.put(`${API_BASE}/api/vendor/orders/${selectedOrder.id}/delivery`, payload, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      alert("Delivery information updated successfully.");
+      setShowDeliveryDialog(false);
+      fetchVendorOrders();
+    } catch (e) {
+      console.error("Failed to update delivery:", e);
+      alert("Failed to update delivery information.");
+    }
+  };
+
+  const openDeliveryDialog = (order) => {
+    setSelectedOrder(order);
+    setDeliveryData({
+      delivery_date: order.delivery_date ? new Date(order.delivery_date).toISOString().split('T')[0] : '',
+      delivery_time_slot: order.delivery_time_slot || '',
+      tracking_number: order.tracking_number || '',
+      delivery_status: order.delivery_status || 'pending',
+      delivery_notes: order.delivery_notes || ''
+    });
+    setShowDeliveryDialog(true);
+  };
+
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -382,6 +417,17 @@ const Vendor = () => {
   // Dialog states
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+
+  // Delivery states
+  const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [deliveryData, setDeliveryData] = useState({
+    delivery_date: '',
+    delivery_time_slot: '',
+    tracking_number: '',
+    delivery_status: 'pending',
+    delivery_notes: ''
+  });
 
 
   const renderCoupons = () => (
@@ -595,7 +641,13 @@ const Vendor = () => {
         <Card className="border-0 shadow-sm">
           <CardHeader><CardTitle>Quick Actions</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 gap-4">
-            <Button variant="outline" className="h-24 flex-col gap-2 rounded-2xl border-gray-100" onClick={() => setActiveMenu('products')}>
+            <Button variant="outline" className="h-24 flex-col gap-2 rounded-2xl border-gray-100" onClick={() => {
+              setActiveMenu('products');
+              // Optional: If we want to open the form immediately when clicking from dashboard, we'd need to set showAddForm here
+              // But likely the user wants to see the list first. 
+              // However, the REQUEST is "show intial add new product details based on vendor categories".
+              // This implies when they eventually click "Add Product" (inside the products tab), it should be pre-filled.
+            }}>
               <Plus className="w-6 h-6 text-violet-600" />
               <span>Add Product</span>
             </Button>
@@ -620,7 +672,7 @@ const Vendor = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [newProduct, setNewProduct] = useState({
-    name: '', category: '', price: '', stock: '', image: '', description: '',
+    name: '', category: user?.business_category || '', price: '', stock: '', image: '', description: '',
     brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
     images: '', highlights: '', specifications: '', warranty: '', box_contents: ''
   });
@@ -731,7 +783,7 @@ const Vendor = () => {
       setShowAddForm(false);
       setEditingProduct(null);
       setNewProduct({
-        name: '', category: '', price: '', stock: '', image: '', description: '',
+        name: '', category: user?.business_category || '', price: '', stock: '', image: '', description: '',
         brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
         images: '', highlights: '', specifications: '', warranty: '', box_contents: ''
       });
@@ -867,18 +919,22 @@ const Vendor = () => {
                         {errors.category && <span className="text-red-500 text-[10px] uppercase font-bold tracking-wider ml-2 animate-pulse">{errors.category}</span>}
                       </div>
                       <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Primary Material Base</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">
+                          {(newProduct.category === "Food & Beverages" || newProduct.category === "Grocery") ? "Diet Type / Preference" : "Primary Material Base"}
+                        </Label>
                         <Input
-                          placeholder="e.g. Brushed Steel, Organic Cotton"
+                          placeholder={(newProduct.category === "Food & Beverages" || newProduct.category === "Grocery") ? "e.g. Vegetarian, Gluten-Free" : "e.g. Brushed Steel, Organic Cotton"}
                           value={newProduct.material}
                           onChange={(e) => setNewProduct({ ...newProduct, material: e.target.value })}
                           className="h-14 rounded-2xl border-slate-100 font-bold"
                         />
                       </div>
                       <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Available Palette / Colors</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">
+                          {(newProduct.category === "Food & Beverages" || newProduct.category === "Grocery") ? "Pack Size / Quantity" : "Available Palette / Colors"}
+                        </Label>
                         <Input
-                          placeholder="e.g. Midnight Black, Crimson Red, Silver"
+                          placeholder={(newProduct.category === "Food & Beverages" || newProduct.category === "Grocery") ? "e.g. 500g, 1L, Family Pack" : "e.g. Midnight Black, Crimson Red, Silver"}
                           value={newProduct.colors}
                           onChange={(e) => setNewProduct({ ...newProduct, colors: e.target.value })}
                           className="h-14 rounded-2xl border-slate-100 font-bold"
@@ -1042,7 +1098,7 @@ const Vendor = () => {
                         </>
                       )}
 
-                      {(newProduct.category === "Grocery" || newProduct.category === "Beauty" || newProduct.category === "Health") && (
+                      {(newProduct.category === "Grocery" || newProduct.category === "Beauty" || newProduct.category === "Health" || newProduct.category === "Food & Beverages") && (
                         <>
                           <div className="space-y-3">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Expiry Date / Best Before</Label>
@@ -1085,7 +1141,7 @@ const Vendor = () => {
                       )}
 
                       {/* Default Fields for Electronics, Home, Toys, Automotive, etc. if not matched above */}
-                      {!["Fashion", "Apparel", "Grocery", "Beauty", "Health", "Books"].includes(newProduct.category) && (
+                      {!["Fashion", "Apparel", "Grocery", "Beauty", "Health", "Books", "Food & Beverages"].includes(newProduct.category) && (
                         <>
                           <div className="space-y-3">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Item Mass / Weight</Label>
@@ -1224,6 +1280,90 @@ const Vendor = () => {
           </table>
         </div>
       </Card>
+
+      {/* Delivery Management Dialog */}
+      <AlertDialog open={showDeliveryDialog} onOpenChange={setShowDeliveryDialog}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black italic">
+              Manage <span className="text-violet-600">Delivery</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Schedule delivery and update tracking information for order #{selectedOrder?.id?.slice(0, 8)}...
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <form onSubmit={handleUpdateDelivery} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Delivery Date</Label>
+                <Input
+                  type="date"
+                  value={deliveryData.delivery_date}
+                  onChange={(e) => setDeliveryData({ ...deliveryData, delivery_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Time Slot</Label>
+                <Select
+                  value={deliveryData.delivery_time_slot}
+                  onValueChange={(val) => setDeliveryData({ ...deliveryData, delivery_time_slot: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time slot" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="9AM-11AM">9AM - 11AM</SelectItem>
+                    <SelectItem value="11AM-1PM">11AM - 1PM</SelectItem>
+                    <SelectItem value="2PM-4PM">2PM - 4PM</SelectItem>
+                    <SelectItem value="4PM-6PM">4PM - 6PM</SelectItem>
+                    <SelectItem value="6PM-8PM">6PM - 8PM</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Tracking Number</Label>
+                <Input
+                  placeholder="Enter tracking number"
+                  value={deliveryData.tracking_number}
+                  onChange={(e) => setDeliveryData({ ...deliveryData, tracking_number: e.target.value })}
+                />
+              </div>
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Delivery Status</Label>
+                <Select
+                  value={deliveryData.delivery_status}
+                  onValueChange={(val) => setDeliveryData({ ...deliveryData, delivery_status: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                    <SelectItem value="delivered">Delivered</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Delivery Notes</Label>
+              <Textarea
+                placeholder="Add any special delivery instructions..."
+                value={deliveryData.delivery_notes}
+                onChange={(e) => setDeliveryData({ ...deliveryData, delivery_notes: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <Button type="submit" className="bg-violet-600 hover:bg-violet-700">
+                Update Delivery
+              </Button>
+            </AlertDialogFooter>
+          </form>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 
@@ -1735,7 +1875,7 @@ const Vendor = () => {
                     <SelectValue placeholder="Select Primary Category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {["Electronics", "Fashion", "Home & Kitchen", "Beauty & Personal Care", "Books", "Sports & Outdoors", "Toys & Games", "Automotive", "Grocery", "Health & Wellness"].map(cat => (
+                    {["Electronics", "Fashion", "Home & Kitchen", "Food & Beverages", "Beauty & Personal Care", "Books", "Sports & Outdoors", "Toys & Games", "Automotive", "Grocery", "Health & Wellness"].map(cat => (
                       <SelectItem key={cat} value={cat} className="font-medium">{cat}</SelectItem>
                     ))}
                   </SelectContent>
@@ -1781,14 +1921,15 @@ const Vendor = () => {
                 <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Order ID</th>
                 <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Customer Info</th>
                 <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Price</th>
+                <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Delivery Info</th>
                 <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Update Status</th>
-                <th className="px-8 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">View</th>
+                <th className="px-8 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-sm">
               {vendorOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-8 py-20 text-center">
+                  <td colSpan="6" className="px-8 py-20 text-center">
                     <div className="flex flex-col items-center gap-3 text-gray-400">
                       <ShoppingCart className="w-12 h-12 opacity-20" />
                       <p className="font-black italic uppercase tracking-tighter">No orders found.</p>
@@ -1822,6 +1963,23 @@ const Vendor = () => {
                       </td>
                       <td className="px-8 py-6 text-right font-black italic text-violet-600 text-base">₹{o.total_amount}</td>
                       <td className="px-8 py-6">
+                        <div className="flex flex-col gap-1">
+                          {o.delivery_date ? (
+                            <span className="text-[10px] font-bold text-gray-600">
+                              {new Date(o.delivery_date).toLocaleDateString()} {o.delivery_time_slot}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-gray-400">Not scheduled</span>
+                          )}
+                          {o.tracking_number && (
+                            <span className="text-[10px] font-medium text-violet-600">#{o.tracking_number}</span>
+                          )}
+                          <Badge className={`text-[8px] w-fit ${o.delivery_status === 'delivered' ? 'bg-green-50 text-green-600' : o.delivery_status === 'out_for_delivery' ? 'bg-blue-50 text-blue-600' : 'bg-yellow-50 text-yellow-600'}`}>
+                            {o.delivery_status || 'pending'}
+                          </Badge>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
                         <Select
                           defaultValue={myStatus}
                           onValueChange={(val) => handleUpdateOrderStatus(o.id, val)}
@@ -1839,6 +1997,15 @@ const Vendor = () => {
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => openDeliveryDialog(o)}
+                            className="h-10 w-10 rounded-xl border-slate-100 bg-white hover:bg-violet-50 hover:text-violet-600 transition-all"
+                            title="Manage Delivery"
+                          >
+                            <MapPin className="w-4 h-4" />
+                          </Button>
                           <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl border-slate-100 bg-white hover:bg-violet-50 hover:text-violet-600 transition-all">
                             <Eye className="w-4 h-4" />
                           </Button>

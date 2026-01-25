@@ -37,6 +37,7 @@ const Auth = () => {
     address: "",
     password: "",
     business_name: "",
+    business_category: "",
     owner_name: ""
   });
 
@@ -199,6 +200,7 @@ const Auth = () => {
       address: "",
       password: "",
       business_name: "",
+      business_category: "",
       owner_name: ""
     });
     setError("");
@@ -260,6 +262,28 @@ const Auth = () => {
                         placeholder="e.g. Acme Tech Solutions"
                         value={signupData.business_name}
                         onChange={(e) => setSignupData({ ...signupData, business_name: e.target.value })}
+                        className="h-12 rounded-xl border-gray-200 focus:ring-2 focus:ring-indigo-600 transition-all shadow-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-gray-700">Business Category</Label>
+                      <select
+                        value={signupData.business_category}
+                        onChange={(e) => setSignupData({ ...signupData, business_category: e.target.value })}
+                        className="h-12 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-medium focus:ring-2 focus:ring-indigo-600 transition-all shadow-sm"
+                      >
+                        <option value="">Select Category</option>
+                        {["Electronics", "Fashion", "Home & Kitchen", "Food & Beverages", "Beauty & Personal Care", "Books", "Sports & Outdoors", "Toys & Games", "Automotive", "Grocery", "Health & Wellness"].map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-gray-700">Business Address</Label>
+                      <Input
+                        placeholder="e.g. 123 Business Park, Tech City"
+                        value={signupData.address}
+                        onChange={(e) => setSignupData({ ...signupData, address: e.target.value })}
                         className="h-12 rounded-xl border-gray-200 focus:ring-2 focus:ring-indigo-600 transition-all shadow-sm"
                       />
                     </div>
@@ -335,8 +359,8 @@ const Auth = () => {
                         }
                       }
                     } else {
-                      if (!signupData.business_name || !signupData.owner_name || !signupData.phone || !email || !password) {
-                        setError("Please fill in all required fields (Business Name, Owner Name, Phone, Email, and Password)");
+                      if (!signupData.business_name || !signupData.business_category || !signupData.address || !signupData.owner_name || !signupData.phone || !email || !password) {
+                        setError("Please fill in all required fields (Business Name, Category, Address, Owner Name, Phone, Email, and Password)");
                         return;
                       }
                       try {
@@ -347,8 +371,9 @@ const Auth = () => {
                           password: password,
                           gender: "",
                           dob: "",
-                          address: "",
+                          address: signupData.address,
                           business_name: signupData.business_name,
+                          business_category: signupData.business_category,
                           owner_name: signupData.owner_name,
                           user_type: "vendor"
                         };
