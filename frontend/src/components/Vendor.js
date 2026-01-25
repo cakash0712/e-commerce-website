@@ -54,7 +54,8 @@ const Vendor = () => {
       phone: user?.phone || '',
       email: user?.email || '',
       logo: user?.logo || '',
-      banner: user?.banner || ''
+      banner: user?.banner || '',
+      business_category: user?.business_category || ''
     });
   }, [user]);
 
@@ -107,6 +108,7 @@ const Vendor = () => {
 
   // Profile Edit State
   const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [isEditingBusiness, setIsEditingBusiness] = useState(false);
   const [tempAddress, setTempAddress] = useState(user?.address || "");
 
   // Support Tickets State
@@ -193,7 +195,7 @@ const Vendor = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       alert("Store settings updated successfully.");
-      updateUser({ ...user, ...storeSettings });
+      await updateUser(user.id, storeSettings);
     } catch (e) {
       console.error("Failed to update settings:", e.response?.data || e.message);
       alert(`Failed to update settings: ${e.response?.data?.detail || e.message}`);
@@ -202,12 +204,7 @@ const Vendor = () => {
 
   const handleUpdateAddress = async () => {
     try {
-      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-      await axios.put(`${API_BASE}/api/users/${user.id}`,
-        { address: tempAddress },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
-      updateUser({ ...user, address: tempAddress });
+      await updateUser(user.id, { address: tempAddress });
       setIsEditingAddress(false);
       alert("Address updated successfully.");
     } catch (e) {
@@ -378,7 +375,8 @@ const Vendor = () => {
     phone: user?.phone || '',
     email: user?.email || '',
     logo: user?.logo || '',
-    banner: user?.banner || ''
+    banner: user?.banner || '',
+    business_category: user?.business_category || ''
   });
 
   // Dialog states
@@ -675,8 +673,27 @@ const Vendor = () => {
     setShowDeleteDialog(true);
   };
 
+  const [errors, setErrors] = useState({});
+
   const handleAddProduct = async (e) => {
     e.preventDefault();
+
+    // Validation Protocol
+    const newErrors = {};
+    if (!newProduct.name) newErrors.name = "Product Name is required";
+    if (!newProduct.category) newErrors.category = "Category is required";
+    if (!newProduct.price) newErrors.price = "Price is required";
+    if (!newProduct.stock) newErrors.stock = "Stock is required";
+    if (!newProduct.description) newErrors.description = "Description is required";
+    if (!newProduct.image) newErrors.image = "Main Image is required";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      alert("Please fill in all required fields marked with *");
+      return;
+    }
+    setErrors({}); // Clear errors if validation passes
+
     try {
       const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
       const specObj = {};
@@ -815,9 +832,13 @@ const Vendor = () => {
                           required
                           placeholder="Titanium Grade-5 Mechanical Watch"
                           value={newProduct.name}
-                          onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                          className="h-14 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-bold"
+                          onChange={(e) => {
+                            setNewProduct({ ...newProduct, name: e.target.value });
+                            if (errors.name) setErrors({ ...errors, name: null });
+                          }}
+                          className={`h-14 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-bold ${errors.name ? 'border-red-500 bg-red-50/10' : ''}`}
                         />
+                        {errors.name && <span className="text-red-500 text-[10px] uppercase font-bold tracking-wider ml-2 animate-pulse">{errors.name}</span>}
                       </div>
                       <div className="space-y-3">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Brand Name</Label>
@@ -830,8 +851,11 @@ const Vendor = () => {
                       </div>
                       <div className="space-y-3">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Category *</Label>
-                        <Select onValueChange={(val) => setNewProduct({ ...newProduct, category: val })} defaultValue={newProduct.category}>
-                          <SelectTrigger className="h-14 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white font-bold">
+                        <Select onValueChange={(val) => {
+                          setNewProduct({ ...newProduct, category: val });
+                          if (errors.category) setErrors({ ...errors, category: null });
+                        }} defaultValue={newProduct.category}>
+                          <SelectTrigger className={`h-14 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white font-bold ${errors.category ? 'border-red-500 bg-red-50/10' : ''}`}>
                             <SelectValue placeholder="Select Category" />
                           </SelectTrigger>
                           <SelectContent className="rounded-2xl border-none shadow-2xl">
@@ -840,6 +864,7 @@ const Vendor = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                        {errors.category && <span className="text-red-500 text-[10px] uppercase font-bold tracking-wider ml-2 animate-pulse">{errors.category}</span>}
                       </div>
                       <div className="space-y-3">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Primary Material Base</Label>
@@ -861,15 +886,19 @@ const Vendor = () => {
                       </div>
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Description</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Description *</Label>
                       <Textarea
                         required
                         placeholder="Detailed technical and aesthetic overview of the product..."
                         rows={5}
                         value={newProduct.description}
-                        onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                        className="rounded-[2rem] border-slate-100 bg-slate-50/50 focus:bg-white font-medium p-6"
+                        onChange={(e) => {
+                          setNewProduct({ ...newProduct, description: e.target.value });
+                          if (errors.description) setErrors({ ...errors, description: null });
+                        }}
+                        className={`rounded-[2rem] border-slate-100 bg-slate-50/50 focus:bg-white font-medium p-6 ${errors.description ? 'border-red-500 bg-red-50/10' : ''}`}
                       />
+                      {errors.description && <span className="text-red-500 text-[10px] uppercase font-bold tracking-wider ml-2 animate-pulse">{errors.description}</span>}
                     </div>
                   </TabsContent>
 
@@ -883,11 +912,15 @@ const Vendor = () => {
                             type="number"
                             placeholder="0.00"
                             value={newProduct.price}
-                            onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                            className="h-14 rounded-2xl border-slate-100 font-black text-xl pl-10"
+                            onChange={(e) => {
+                              setNewProduct({ ...newProduct, price: e.target.value });
+                              if (errors.price) setErrors({ ...errors, price: null });
+                            }}
+                            className={`h-14 rounded-2xl border-slate-100 font-black text-xl pl-10 ${errors.price ? 'border-red-500 bg-red-50/10' : ''}`}
                           />
                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-black">₹</span>
                         </div>
+                        {errors.price && <span className="text-red-500 text-[10px] uppercase font-bold tracking-wider ml-2 animate-pulse">{errors.price}</span>}
                       </div>
                       <div className="space-y-3">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Discount (%)</Label>
@@ -907,9 +940,13 @@ const Vendor = () => {
                           type="number"
                           placeholder="100"
                           value={newProduct.stock}
-                          onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-                          className="h-14 rounded-2xl border-slate-100 font-black text-xl"
+                          onChange={(e) => {
+                            setNewProduct({ ...newProduct, stock: e.target.value });
+                            if (errors.stock) setErrors({ ...errors, stock: null });
+                          }}
+                          className={`h-14 rounded-2xl border-slate-100 font-black text-xl ${errors.stock ? 'border-red-500 bg-red-50/10' : ''}`}
                         />
+                        {errors.stock && <span className="text-red-500 text-[10px] uppercase font-bold tracking-wider ml-2 animate-pulse">{errors.stock}</span>}
                       </div>
                     </div>
                     <div className="space-y-3">
@@ -925,17 +962,20 @@ const Vendor = () => {
 
                   <TabsContent value="media" className="mt-0 space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Main Image</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Main Image *</Label>
                       <div className="space-y-4">
                         <div className="flex gap-4">
                           <Input
                             required={!newProduct.image}
                             placeholder="https://cdn.zippycart.com/products/master-node.jpg"
                             value={newProduct.image}
-                            onChange={(e) => setNewProduct({ ...newProduct, image: e.target.value })}
-                            className="h-14 rounded-2xl border-slate-100 font-bold flex-1"
+                            onChange={(e) => {
+                              setNewProduct({ ...newProduct, image: e.target.value });
+                              if (errors.image) setErrors({ ...errors, image: null });
+                            }}
+                            className={`h-14 rounded-2xl border-slate-100 font-bold flex-1 ${errors.image ? 'border-red-500 bg-red-50/10' : ''}`}
                           />
-                          <div className="w-14 h-14 bg-slate-50 border border-dashed rounded-2xl flex items-center justify-center overflow-hidden">
+                          <div className={`w-14 h-14 bg-slate-50 border border-dashed rounded-2xl flex items-center justify-center overflow-hidden ${errors.image ? 'border-red-500' : ''}`}>
                             {newProduct.image ? (
                               <img
                                 src={newProduct.image}
@@ -956,10 +996,14 @@ const Vendor = () => {
                             id="image-upload"
                             type="file"
                             accept="image/*"
-                            onChange={handleImageUpload}
+                            onChange={(e) => {
+                              handleImageUpload(e);
+                              if (errors.image) setErrors({ ...errors, image: null });
+                            }}
                             className="h-10 rounded-xl border-slate-100 font-medium flex-1"
                           />
                         </div>
+                        {errors.image && <span className="text-red-500 text-[10px] uppercase font-bold tracking-wider ml-2 animate-pulse">{errors.image}</span>}
                       </div>
                     </div>
                     <div className="space-y-3">
@@ -976,22 +1020,91 @@ const Vendor = () => {
 
                   <TabsContent value="specifications" className="mt-0 space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Item Mass / Weight</Label>
-                        <Input placeholder="e.g. 450g, 1.2kg" value={newProduct.weight} onChange={(e) => setNewProduct({ ...newProduct, weight: e.target.value })} className="h-12 rounded-xl" />
-                      </div>
-                      <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Dimensions (LxBxH)</Label>
-                        <Input placeholder="e.g. 15x10x5 cm" value={newProduct.dimensions} onChange={(e) => setNewProduct({ ...newProduct, dimensions: e.target.value })} className="h-12 rounded-xl" />
-                      </div>
-                      <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Warranty Details</Label>
-                        <Input placeholder="e.g. 2-Year Global Warranty" value={newProduct.warranty} onChange={(e) => setNewProduct({ ...newProduct, warranty: e.target.value })} className="h-12 rounded-xl" />
-                      </div>
-                      <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Inside the Box</Label>
-                        <Input placeholder="e.g. Main Unit, Charger, Manual" value={newProduct.box_contents} onChange={(e) => setNewProduct({ ...newProduct, box_contents: e.target.value })} className="h-12 rounded-xl" />
-                      </div>
+                      {/* Dynamic Fields Based on Category */}
+                      {(newProduct.category === "Fashion" || newProduct.category === "Apparel") && (
+                        <>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Size / Fit</Label>
+                            <Input placeholder="e.g. S, M, L, XL, Regular Fit" value={newProduct.dimensions} onChange={(e) => setNewProduct({ ...newProduct, dimensions: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Fabric / Material</Label>
+                            <Input placeholder="e.g. 100% Cotton, Denim" value={newProduct.material} onChange={(e) => setNewProduct({ ...newProduct, material: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Gender / Target</Label>
+                            <Input placeholder="e.g. Men, Women, Unisex, Kids" value={newProduct.weight} onChange={(e) => setNewProduct({ ...newProduct, weight: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Care Instructions</Label>
+                            <Input placeholder="e.g. Machine Wash Cold" value={newProduct.box_contents} onChange={(e) => setNewProduct({ ...newProduct, box_contents: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                        </>
+                      )}
+
+                      {(newProduct.category === "Grocery" || newProduct.category === "Beauty" || newProduct.category === "Health") && (
+                        <>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Expiry Date / Best Before</Label>
+                            <Input placeholder="e.g. 12 Months from Mfg" value={newProduct.warranty} onChange={(e) => setNewProduct({ ...newProduct, warranty: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Ingredients</Label>
+                            <Input placeholder="e.g. Aloe Vera, Vitamin E" value={newProduct.material} onChange={(e) => setNewProduct({ ...newProduct, material: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Net Weight / Volume</Label>
+                            <Input placeholder="e.g. 500g, 200ml" value={newProduct.weight} onChange={(e) => setNewProduct({ ...newProduct, weight: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Storage Instructions</Label>
+                            <Input placeholder="e.g. Cool & Dry Place" value={newProduct.box_contents} onChange={(e) => setNewProduct({ ...newProduct, box_contents: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                        </>
+                      )}
+
+                      {(newProduct.category === "Books") && (
+                        <>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Author</Label>
+                            <Input placeholder="e.g. J.K. Rowling" value={newProduct.material} onChange={(e) => setNewProduct({ ...newProduct, material: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Publisher</Label>
+                            <Input placeholder="e.g. Penguin Books" value={newProduct.warranty} onChange={(e) => setNewProduct({ ...newProduct, warranty: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">ISBN / Edition</Label>
+                            <Input placeholder="e.g. 978-3-16-148410-0" value={newProduct.dimensions} onChange={(e) => setNewProduct({ ...newProduct, dimensions: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Page Count</Label>
+                            <Input placeholder="e.g. 350 Pages" value={newProduct.weight} onChange={(e) => setNewProduct({ ...newProduct, weight: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                        </>
+                      )}
+
+                      {/* Default Fields for Electronics, Home, Toys, Automotive, etc. if not matched above */}
+                      {!["Fashion", "Apparel", "Grocery", "Beauty", "Health", "Books"].includes(newProduct.category) && (
+                        <>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Item Mass / Weight</Label>
+                            <Input placeholder="e.g. 450g, 1.2kg" value={newProduct.weight} onChange={(e) => setNewProduct({ ...newProduct, weight: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Dimensions (LxBxH)</Label>
+                            <Input placeholder="e.g. 15x10x5 cm" value={newProduct.dimensions} onChange={(e) => setNewProduct({ ...newProduct, dimensions: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Warranty Details</Label>
+                            <Input placeholder="e.g. 2-Year Global Warranty" value={newProduct.warranty} onChange={(e) => setNewProduct({ ...newProduct, warranty: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Inside the Box</Label>
+                            <Input placeholder="e.g. Main Unit, Charger, Manual" value={newProduct.box_contents} onChange={(e) => setNewProduct({ ...newProduct, box_contents: e.target.value })} className="h-12 rounded-xl border-slate-100 font-bold" />
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
@@ -1531,26 +1644,105 @@ const Vendor = () => {
 
         {/* Business Details */}
         <Card className="lg:col-span-2 border-0 shadow-sm rounded-[2rem]">
-          <CardHeader>
-            <CardTitle>Business Information</CardTitle>
-            <CardDescription>Official business details as registered on the platform.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Business Information</CardTitle>
+              <CardDescription>Official business details as registered on the platform.</CardDescription>
+            </div>
+            {isEditingBusiness ? (
+              <div className="flex gap-2">
+                <Button className="bg-emerald-600 hover:bg-emerald-700 rounded-xl" onClick={async (e) => {
+                  try {
+                    await handleUpdateSettings(e);
+                    setIsEditingBusiness(false);
+                  } catch (err) { }
+                }}>Save Changes</Button>
+                <Button variant="ghost" className="rounded-xl" onClick={() => {
+                  setIsEditingBusiness(false);
+                  // Reset to original user data
+                  setStoreSettings({
+                    ...storeSettings,
+                    business_name: user?.business_name || '',
+                    owner_name: user?.owner_name || '',
+                    phone: user?.phone || '',
+                    email: user?.email || '',
+                    business_category: user?.business_category || ''
+                  });
+                }}>Cancel</Button>
+              </div>
+            ) : (
+              <Button className="bg-violet-600 hover:bg-violet-700 rounded-xl" onClick={() => setIsEditingBusiness(true)}>Edit Details</Button>
+            )}
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1">
               <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Business Name</Label>
-              <Input value={user?.business_name || ''} readOnly className="bg-gray-50 border-gray-100 font-bold" />
+              {isEditingBusiness ? (
+                <Input
+                  value={storeSettings.business_name}
+                  onChange={(e) => setStoreSettings({ ...storeSettings, business_name: e.target.value })}
+                  className="bg-white border-violet-200 font-bold"
+                />
+              ) : (
+                <Input value={user?.business_name || ''} readOnly className="bg-gray-50 border-gray-100 font-bold" />
+              )}
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Owner Name</Label>
-              <Input value={user?.owner_name || ''} readOnly className="bg-gray-50 border-gray-100 font-bold" />
+              {isEditingBusiness ? (
+                <Input
+                  value={storeSettings.owner_name}
+                  onChange={(e) => setStoreSettings({ ...storeSettings, owner_name: e.target.value })}
+                  className="bg-white border-violet-200 font-bold"
+                />
+              ) : (
+                <Input value={user?.owner_name || ''} readOnly className="bg-gray-50 border-gray-100 font-bold" />
+              )}
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Business Email</Label>
-              <Input value={user?.email || ''} readOnly className="bg-gray-50 border-gray-100 font-bold" />
+              {isEditingBusiness ? (
+                <Input
+                  value={storeSettings.email}
+                  onChange={(e) => setStoreSettings({ ...storeSettings, email: e.target.value })}
+                  className="bg-white border-violet-200 font-bold"
+                />
+              ) : (
+                <Input value={user?.email || ''} readOnly className="bg-gray-50 border-gray-100 font-bold" />
+              )}
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Contact Number</Label>
-              <Input value={user?.phone || ''} readOnly className="bg-gray-50 border-gray-100 font-bold" />
+              {isEditingBusiness ? (
+                <Input
+                  value={storeSettings.phone}
+                  onChange={(e) => setStoreSettings({ ...storeSettings, phone: e.target.value })}
+                  className="bg-white border-violet-200 font-bold"
+                />
+              ) : (
+                <Input value={user?.phone || ''} readOnly className="bg-gray-50 border-gray-100 font-bold" />
+              )}
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Business Category <span className="text-violet-600">*</span></Label>
+              {isEditingBusiness ? (
+                <Select
+                  value={storeSettings.business_category}
+                  onValueChange={(val) => setStoreSettings({ ...storeSettings, business_category: val })}
+                >
+                  <SelectTrigger className="bg-white border-violet-200 font-bold h-12">
+                    <SelectValue placeholder="Select Primary Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["Electronics", "Fashion", "Home & Kitchen", "Beauty & Personal Care", "Books", "Sports & Outdoors", "Toys & Games", "Automotive", "Grocery", "Health & Wellness"].map(cat => (
+                      <SelectItem key={cat} value={cat} className="font-medium">{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={user?.business_category || 'Not Set'} readOnly className="bg-gray-50 border-gray-100 font-bold text-violet-600" />
+              )}
             </div>
 
             <div className="md:col-span-2 mt-4 p-4 bg-emerald-50 rounded-xl border border-emerald-100 flex items-start gap-4">

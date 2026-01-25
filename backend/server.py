@@ -96,7 +96,10 @@ class User(BaseModel):
     dob: str = ""
     address: str = ""
     avatar: str = ""
+    banner: str = ""
+    logo: str = ""
     business_name: str = ""
+    business_category: str = ""
     owner_name: str = ""
     user_type: str = "user"  # user, admin, vendor
     is_blocked: bool = False
@@ -112,6 +115,7 @@ class UserCreate(BaseModel):
     dob: str = ""
     address: str = ""
     business_name: str = ""
+    business_category: str = ""
     owner_name: str = ""
     user_type: str = "user"
 
@@ -408,6 +412,63 @@ async def login_user(login_data: UserLogin, request: Request):
     # Return user data with token, without password
     user_data = {k: v for k, v in user.items() if k != 'password' and k != '_id'}
     return {**user_data, "token": token}
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    gender: Optional[str] = None
+    dob: Optional[str] = None
+    address: Optional[str] = None
+    avatar: Optional[str] = None
+    banner: Optional[str] = None
+    business_name: Optional[str] = None
+    business_category: Optional[str] = None
+    owner_name: Optional[str] = None
+    logo: Optional[str] = None
+
+@api_router.put("/users/{user_id}")
+async def update_user(user_id: str, user_update: UserUpdate, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['id'] != user_id and current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    update_data = user_update.model_dump(exclude_unset=True)
+    if not update_data:
+         return {"message": "No changes provided"}
+
+    # Determine collection
+    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    
+    # If admin is updating another user, we might need to search both, but for now specific ID update
+    if current_user['user_type'] == 'admin' and current_user['id'] != user_id:
+        # Try finding in users first
+        user = await db.users.find_one({"id": user_id})
+        if user:
+            collection = db.users
+        else:
+            collection = db.vendors
+    
+    result = await collection.update_one({"id": user_id}, {"$set": update_data})
+    
+    if result.matched_count == 0:
+         # Fallback check if user type assumption was wrong (e.g. self-update but logged in as user but actually id is in vendor?)
+         # Usually get_current_user handles this.
+         raise HTTPException(status_code=404, detail="User not found")
+
+    return {"message": "User updated successfully"}
+
+@api_router.put("/vendor/profile")
+async def update_vendor_profile(profile_data: UserUpdate, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Only vendors can update profile via this endpoint")
+        
+    update_data = profile_data.model_dump(exclude_unset=True)
+    if not update_data:
+        return {"message": "No changes provided"}
+
+    await db.vendors.update_one({"id": current_user['id']}, {"$set": update_data})
+    return {"message": "Vendor profile updated"}
+
 
 # Admin Moderation Endpoints
 @api_router.post("/admin/moderation/block/{user_id}")
@@ -710,8 +771,8 @@ async def approve_product(product_id: str, current_user: Annotated[dict, Depends
 
 @api_router.post("/upload/image")
 async def upload_image(current_user: Annotated[dict, Depends(get_current_user)], file: UploadFile = File(...)):
-    if current_user['user_type'] != 'vendor':
-        raise HTTPException(status_code=403, detail="Merchant clearance required.")
+    # if current_user['user_type'] != 'vendor':
+    #     raise HTTPException(status_code=403, detail="Merchant clearance required.")
 
     # Validate file type
     if not file.content_type.startswith('image/'):
