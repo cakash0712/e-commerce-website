@@ -58,6 +58,7 @@ import {
   MapPin,
   Phone,
   Utensils,
+  Bike,
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
@@ -412,99 +413,207 @@ const CouponProvider = ({ children }) => {
 };
 
 // Hero Section
-// Hero Section
 const HeroSection = ({ stats }) => {
   return (
-    <section className="relative min-h-[70vh] flex items-center overflow-hidden bg-gradient-to-br from-violet-900 via-indigo-900 to-purple-900">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-violet-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-20 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-500"></div>
+    <section className="relative min-h-[50vh] md:min-h-[70vh] flex items-center overflow-hidden bg-gradient-to-br from-slate-950 via-violet-950 to-slate-950">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Gradient Orbs */}
+        <div className="absolute top-0 -left-40 w-[500px] h-[500px] bg-violet-600/30 rounded-full filter blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-0 -right-40 w-[600px] h-[600px] bg-indigo-600/20 rounded-full filter blur-[120px] animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-purple-600/10 rounded-full filter blur-[150px]"></div>
+
+        {/* Grid Pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(139,92,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.03)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
+
+        {/* Floating Particles */}
+        <div className="absolute top-20 left-[10%] w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDuration: '3s' }}></div>
+        <div className="absolute top-40 right-[15%] w-3 h-3 bg-amber-400 rounded-full animate-bounce" style={{ animationDuration: '4s', animationDelay: '0.5s' }}></div>
+        <div className="absolute bottom-32 left-[20%] w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDuration: '3.5s', animationDelay: '1s' }}></div>
+        <div className="absolute bottom-40 right-[25%] w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDuration: '2.5s', animationDelay: '0.2s' }}></div>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left Content */}
-          <div className="text-center lg:text-left space-y-8">
-            <Badge className="bg-white/10 text-white border-white/20 px-4 py-1.5 text-sm">
-              <Sparkles className="w-4 h-4 mr-2" />
-              What’s New
-            </Badge>
-            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white leading-tight">
-              Discover Your
-              <span className="block text-amber-400">Perfect Style</span>
-            </h1>
-            <p className="text-lg lg:text-xl text-white/70 max-w-xl mx-auto lg:mx-0">
-              Explore thousands of premium products with exclusive deals and lightning-fast delivery.
-            </p>
+      {/* Main Content Container */}
+      <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
+        <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+
+          {/* Left Content - Text & CTA */}
+          <div className="lg:col-span-6 text-center lg:text-left space-y-8 order-2 lg:order-1">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mt-4">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
+              </span>
+              <span className="text-sm font-medium text-white/80">New Collection</span>
+              <ChevronRight className="w-4 h-4 text-white/60" />
+            </div>
+
+            {/* Main Heading */}
+            <div className="space-y-4">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.1] tracking-tight">
+                <span className="text-white">Discover Your</span>
+                <br />
+                <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 bg-clip-text text-transparent">Perfect Style</span>
+              </h1>
+              <p className="text-lg lg:text-xl text-white/60 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+                Explore premium products with exclusive deals, curated collections, and lightning-fast delivery to your doorstep.
+              </p>
+            </div>
+
+            {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link to="/shop">
-                <Button size="lg" className="bg-white text-violet-900 hover:bg-white/90 px-8 py-6 text-lg group">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 px-8 py-6 text-base font-semibold rounded-xl shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-all duration-300 group"
+                >
+                  <ShoppingCart className="w-5 h-5 mr-2" />
                   Shop Now
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
               <Link to="/categories">
-                <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-8 py-6 text-lg">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto border-white/20 text-white hover:bg-white/10 hover:border-white/30 px-8 py-6 text-base font-semibold rounded-xl backdrop-blur-sm transition-all duration-300"
+                >
+                  <Sparkles className="w-5 h-5 mr-2" />
                   Explore Collections
                 </Button>
               </Link>
             </div>
 
-            {/* Trust Badges */}
-            <div className="flex items-center gap-8 justify-center lg:justify-start pt-8">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-white">{stats.happy_customers?.toLocaleString()}</p>
-                <p className="text-white/60 text-sm">Happy Customers</p>
+            {/* Trust Stats */}
+            <div className="flex items-center gap-6 lg:gap-8 justify-center lg:justify-start pt-6">
+              <div className="text-center lg:text-left">
+                <p className="text-3xl lg:text-4xl font-bold text-white">{stats.happy_customers?.toLocaleString() || '50K+'}</p>
+                <p className="text-sm text-white/50 font-medium mt-1">Happy Customers</p>
               </div>
-              <div className="w-px h-12 bg-white/20"></div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-white">{stats.total_products?.toLocaleString()}</p>
-                <p className="text-white/60 text-sm">Products</p>
+              <div className="w-px h-14 bg-white/10"></div>
+              <div className="text-center lg:text-left">
+                <p className="text-3xl lg:text-4xl font-bold text-white">{stats.total_products?.toLocaleString() || '10K+'}</p>
+                <p className="text-sm text-white/50 font-medium mt-1">Products</p>
               </div>
-              <div className="w-px h-12 bg-white/20"></div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-white">{stats.satisfaction_rate}</p>
-                <p className="text-white/60 text-sm">Satisfaction</p>
+              <div className="w-px h-14 bg-white/10"></div>
+              <div className="text-center lg:text-left">
+                <p className="text-3xl lg:text-4xl font-bold text-white">{stats.satisfaction_rate || '98%'}</p>
+                <p className="text-sm text-white/50 font-medium mt-1">Satisfaction</p>
               </div>
             </div>
           </div>
 
-          {/* Right Content - Hero Image Slider */}
-          <div className="relative hidden lg:block">
+          {/* Right Content - Hero Visual */}
+          <div className="lg:col-span-6 order-1 lg:order-2">
             <div className="relative">
-              <div className="absolute -inset-4 bg-gradient-to-r from-violet-500 to-indigo-500 rounded-3xl blur-2xl opacity-30"></div>
-              <Carousel className="relative rounded-3xl shadow-2xl w-full h-[400px] overflow-hidden">
-                <CarouselContent>
-                  <CarouselItem>
-                    <img
-                      src="https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=600&h=400&fit=crop"
-                      alt="Modern tech products"
-                      className="w-full h-[400px] object-cover"
-                    />
-                  </CarouselItem>
-                  <CarouselItem>
-                    <img
-                      src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=400&fit=crop"
-                      alt="Premium watches"
-                      className="w-full h-[400px] object-cover"
-                    />
-                  </CarouselItem>
-                  <CarouselItem>
-                    <img
-                      src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=400&fit=crop"
-                      alt="Audio equipment"
-                      className="w-full h-[400px] object-cover"
-                    />
-                  </CarouselItem>
-                </CarouselContent>
-                <CarouselPrevious className="left-4" />
-                <CarouselNext className="right-4" />
-              </Carousel>
+              {/* Glow Effect Behind Cards */}
+              <div className="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-indigo-500/20 rounded-[3rem] blur-3xl scale-110"></div>
+
+              {/* Main Image Card */}
+              <div className="relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-[2.5rem] p-2 border border-white/10 shadow-2xl">
+                <Carousel className="relative rounded-[2rem] overflow-hidden">
+                  <CarouselContent>
+                    <CarouselItem>
+                      <div className="relative h-[300px] sm:h-[350px] lg:h-[400px]">
+                        <img
+                          src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop"
+                          alt="Modern fashion collection"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                        <div className="absolute bottom-6 left-6 right-6">
+                          <Badge className="bg-white/90 text-gray-900 border-0 px-3 py-1 text-xs font-bold mb-2">TRENDING</Badge>
+                          <p className="text-white text-lg font-semibold">Summer Collection 2026</p>
+                        </div>
+                      </div>
+                    </CarouselItem>
+                    <CarouselItem>
+                      <div className="relative h-[300px] sm:h-[350px] lg:h-[400px]">
+                        <img
+                          src="https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=800&h=600&fit=crop"
+                          alt="Premium tech products"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                        <div className="absolute bottom-6 left-6 right-6">
+                          <Badge className="bg-violet-500/90 text-white border-0 px-3 py-1 text-xs font-bold mb-2">NEW ARRIVALS</Badge>
+                          <p className="text-white text-lg font-semibold">Premium Electronics</p>
+                        </div>
+                      </div>
+                    </CarouselItem>
+                    <CarouselItem>
+                      <div className="relative h-[300px] sm:h-[350px] lg:h-[400px]">
+                        <img
+                          src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=600&fit=crop"
+                          alt="Luxury watches"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                        <div className="absolute bottom-6 left-6 right-6">
+                          <Badge className="bg-amber-500/90 text-white border-0 px-3 py-1 text-xs font-bold mb-2">FEATURED</Badge>
+                          <p className="text-white text-lg font-semibold">Luxury Accessories</p>
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  </CarouselContent>
+                  <CarouselPrevious className="left-4 bg-white/10 border-white/20 text-white hover:bg-white/20" />
+                  <CarouselNext className="right-4 bg-white/10 border-white/20 text-white hover:bg-white/20" />
+                </Carousel>
+              </div>
+
+              {/* Floating Feature Cards */}
+              <div className="hidden lg:block absolute -left-16 top-1/4 transform -translate-y-1/2 z-20">
+                <div className="bg-white rounded-2xl p-4 shadow-2xl animate-[bounce_3s_ease-in-out_infinite] border border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/30">
+                      <Truck className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">Free Shipping</p>
+                      <p className="text-xs text-gray-500">Orders over ₹499</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="hidden lg:block absolute -right-12 bottom-1/4 transform translate-y-1/2 z-20">
+                <div className="bg-white rounded-2xl p-4 shadow-2xl animate-[bounce_3.5s_ease-in-out_infinite] border border-gray-100" style={{ animationDelay: '0.5s' }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30">
+                      <Star className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">Best Sellers</p>
+                      <p className="text-xs text-gray-500">Top Rated Products</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="hidden lg:block absolute -left-8 bottom-10 z-20">
+                <div className="bg-white rounded-2xl p-4 shadow-2xl animate-[bounce_4s_ease-in-out_infinite] border border-gray-100" style={{ animationDelay: '1s' }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                      <Shield className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">Secure Payment</p>
+                      <p className="text-xs text-gray-500">100% Protected</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Bottom Wave Decoration */}
+      <div className="absolute bottom-0 left-0 right-0">
+        <svg className="w-full h-16 lg:h-24" viewBox="0 0 1440 74" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <path d="M0 24L60 28C120 32 240 40 360 42.7C480 45.3 600 42.7 720 37.3C840 32 960 24 1080 22.7C1200 21.3 1320 26.7 1380 29.3L1440 32V74H1380C1320 74 1200 74 1080 74C960 74 840 74 720 74C600 74 480 74 360 74C240 74 120 74 60 74H0V24Z" fill="white" />
+        </svg>
       </div>
     </section>
   );
@@ -1039,7 +1148,7 @@ const CategoriesSection = () => {
                   to={cat.link}
                   className="group bg-white p-8 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-500 border border-gray-100 flex flex-col items-center text-center"
                 >
-                  <div className="w-28 h-28 bg-violet-50 rounded-full flex items-center justify-center mb-5 group-hover:bg-violet-100 transition-colors relative overflow-hidden shadow-inner">
+                  <div className="w-28 h-28 bg-transparent rounded-full flex items-center justify-center mb-5 group-hover:bg-transparent transition-colors relative overflow-hidden shadow-inner">
                     {firstProduct?.image ? (
                       <img src={firstProduct.image} alt={cat.name} className="w-full h-full object-cover p-3 group-hover:scale-110 transition-transform duration-700" />
                     ) : (

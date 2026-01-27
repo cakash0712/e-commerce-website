@@ -50,6 +50,13 @@ const Admin = () => {
   const [liveFoodOrders, setLiveFoodOrders] = useState([]);
   const [restaurantsList, setRestaurantsList] = useState([]);
   const [deliveryPartners, setDeliveryPartners] = useState([]);
+  const [topRestaurants, setTopRestaurants] = useState([]);
+  const [partnerActivityStats, setPartnerActivityStats] = useState({
+    onDelivery: 0, available: 0, offline: 0
+  });
+  const [deliveryPartnersSummary, setDeliveryPartnersSummary] = useState({
+    totalPartners: 0, onlineNow: 0, onDelivery: 0, avgDeliveryTime: '0 min'
+  });
 
   const [rejectionReasons, setRejectionReasons] = useState({});
   const [replyingTo, setReplyingTo] = useState(null);
@@ -62,10 +69,18 @@ const Admin = () => {
     if (activeSubMenu === 'tickets') fetchSupportTickets();
 
     // Food Delivery Data Fetching
-    if (activeSubMenu === 'food-dashboard') fetchFoodStats();
+    if (activeSubMenu === 'food-dashboard') {
+      fetchFoodStats();
+      fetchTopRestaurants();
+      fetchPartnerActivityStats();
+      fetchLiveFoodOrders();
+    }
     if (activeSubMenu === 'all-restaurants') fetchRestaurants();
     if (activeSubMenu === 'live-food-orders') fetchLiveFoodOrders();
-    if (activeSubMenu === 'all-delivery-partners') fetchDeliveryPartners();
+    if (activeSubMenu === 'all-delivery-partners') {
+      fetchDeliveryPartners();
+      fetchDeliveryPartnersSummary();
+    }
 
     // Main Dashboard Data
     if (activeSubMenu === 'overview') fetchDashboardStats();
@@ -89,6 +104,34 @@ const Admin = () => {
       });
       setFoodStats(response.data);
     } catch (e) { console.error("Food stats fetch fail", e); }
+  };
+
+  const fetchTopRestaurants = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/food/restaurants/top`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setTopRestaurants(response.data);
+    } catch (e) {
+      console.error("Top restaurants fetch fail", e);
+      // Fallback to empty array if API not available
+      setTopRestaurants([]);
+    }
+  };
+
+  const fetchPartnerActivityStats = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/food/partners/activity`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setPartnerActivityStats(response.data);
+    } catch (e) {
+      console.error("Partner activity fetch fail", e);
+      // Fallback if API not available
+      setPartnerActivityStats({ onDelivery: 0, available: 0, offline: 0 });
+    }
   };
 
   const fetchRestaurants = async () => {
@@ -119,6 +162,20 @@ const Admin = () => {
       });
       setDeliveryPartners(response.data);
     } catch (e) { console.error("Partners fetch fail", e); }
+  };
+
+  const fetchDeliveryPartnersSummary = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/food/partners/summary`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setDeliveryPartnersSummary(response.data);
+    } catch (e) {
+      console.error("Partners summary fetch fail", e);
+      // Fallback if API not available
+      setDeliveryPartnersSummary({ totalPartners: 0, onlineNow: 0, onDelivery: 0, avgDeliveryTime: '0 min' });
+    }
   };
 
   const fetchPayoutRequests = async () => {
@@ -301,7 +358,7 @@ const Admin = () => {
   const menuItems = [
     {
       id: 'dashboard',
-      label: 'Admin Dashboard',
+      label: 'Dashboard',
       icon: LayoutDashboard,
       subItems: [
         { id: 'overview', label: 'Control Center' },
@@ -314,20 +371,18 @@ const Admin = () => {
     },
     {
       id: 'users',
-      label: 'User & Access Management',
+      label: 'User Management',
       icon: Users,
       subItems: [
-        { id: 'customers', label: '👥 Customers' },
-        { id: 'customer-list', label: 'Customer List' },
+        { id: 'customer-list', label: 'All Customers' },
         { id: 'kyc', label: 'KYC Verification' },
         { id: 'block-restrict', label: 'Block / Restrict' },
-        { id: 'order-history', label: 'Order & Return History' },
-        { id: 'wallet-logs', label: 'Wallet & Refund Logs' },
-        { id: 'admin-users', label: '👨‍💼 Admin Users' },
+        { id: 'order-history', label: 'Order History' },
+        { id: 'wallet-logs', label: 'Wallet Logs' },
         { id: 'super-admin', label: 'Super Admin' },
         { id: 'sub-admin', label: 'Sub Admin' },
         { id: 'support-staff', label: 'Support Staff' },
-        { id: 'rbac', label: 'Role-based Access (RBAC)' }
+        { id: 'rbac', label: 'Access Control (RBAC)' }
       ]
     },
     {
@@ -335,13 +390,14 @@ const Admin = () => {
       label: 'Vendor Management',
       icon: Store,
       subItems: [
-        { id: 'vendor-onboarding', label: 'Vendor Onboarding' },
+        { id: 'vendor-onboarding', label: 'Onboarding' },
         { id: 'vendor-kyc', label: 'KYC Verification' },
-        { id: 'vendor-categories', label: 'Vendor Categories' },
-        { id: 'vendor-profiles', label: 'Vendor Profile Control' },
-        { id: 'vendor-products', label: 'Vendor Product Listing' },
-        { id: 'commission-rules', label: 'Commission Rules' },
-        { id: 'vendor-penalties', label: 'Penalty / Warning System' },
+        { id: 'vendor-categories', label: 'Categories' },
+        { id: 'vendor-profiles', label: 'Profile Control' },
+        { id: 'vendor-products', label: 'Product Listing' },
+        { id: 'commission-settings', label: 'Commission Settings' },
+        { id: 'vendor-payouts', label: 'Payouts' },
+        { id: 'vendor-penalties', label: 'Penalty System' },
         { id: 'vendor-block', label: 'Block / Suspend' },
         { id: 'vendor-reviews', label: 'Review Moderation' }
       ]
@@ -351,38 +407,36 @@ const Admin = () => {
       label: 'Catalog Management',
       icon: Package,
       subItems: [
-        { id: 'product-control', label: '📦 Product Control' },
         { id: 'all-products', label: 'All Products' },
-        { id: 'product-approvals', label: 'Product Approval Queue' },
-        { id: 'product-edit', label: 'Product Edit / Disable' },
+        { id: 'product-approvals', label: 'Approval Queue' },
+        { id: 'product-edit', label: 'Edit / Disable' },
         { id: 'duplicate-detection', label: 'Duplicate Detection' },
         { id: 'variants', label: 'Variant Management' },
-        { id: 'seo-control', label: 'Product SEO Control' },
-        { id: 'vendor-products-view', label: 'Vendor-wise Product View' },
-        { id: 'categories-system', label: '🗂️ Category System' },
-        { id: 'categories', label: 'Categories / Subcategories' },
+        { id: 'seo-control', label: 'SEO Control' },
+        { id: 'vendor-products-view', label: 'Vendor Products' },
+        { id: 'categories', label: 'Categories' },
         { id: 'attributes', label: 'Attribute Mapping' },
         { id: 'brands', label: 'Brand Management' }
       ]
     },
     {
       id: 'orders',
-      label: 'Order Lifecycle Management',
+      label: 'Order Management',
       icon: ShoppingCart,
       subItems: [
         { id: 'order-dashboard', label: 'Order Dashboard' },
         { id: 'split-orders', label: 'Split Orders' },
-        { id: 'order-status', label: 'Order Status Override' },
-        { id: 'shipping-labels', label: 'Shipping Label Generation' },
-        { id: 'delivery-sla', label: 'Delivery SLA Monitoring' },
+        { id: 'order-status', label: 'Status Override' },
+        { id: 'shipping-labels', label: 'Shipping Labels' },
+        { id: 'delivery-sla', label: 'Delivery SLA' },
         { id: 'auto-cancel', label: 'Auto Cancel Rules' },
         { id: 'cod-verification', label: 'COD Verification' },
-        { id: 'rto', label: 'RTO (Return to Origin)' }
+        { id: 'rto', label: 'Return to Origin' }
       ]
     },
     {
       id: 'returns',
-      label: 'Returns, Refunds & Disputes',
+      label: 'Returns & Refunds',
       icon: RotateCcw,
       subItems: [
         { id: 'return-requests', label: 'Return Requests' },
@@ -395,28 +449,26 @@ const Admin = () => {
     },
     {
       id: 'inventory',
-      label: 'Inventory & Stock Intelligence',
+      label: 'Inventory Control',
       icon: Box,
       subItems: [
         { id: 'real-time-inventory', label: 'Real-time Inventory' },
         { id: 'stock-sync', label: 'Vendor Stock Sync' },
-        { id: 'low-stock-alerts', label: 'Low Stock Auto Alerts' },
-        { id: 'stock-lock', label: 'Stock Lock (Checkout)' },
-        { id: 'damaged-stock', label: 'Damaged / Lost Stock Logs' }
+        { id: 'low-stock-alerts', label: 'Low Stock Alerts' },
+        { id: 'stock-lock', label: 'Stock Lock' },
+        { id: 'damaged-stock', label: 'Damaged Stock Logs' }
       ]
     },
     {
       id: 'payments',
-      label: 'Payments, Earnings & Settlements',
+      label: 'Payments & Settlements',
       icon: CreditCard,
       subItems: [
-        { id: 'admin-finance', label: '💰 Admin Finance' },
         { id: 'platform-earnings', label: 'Platform Earnings' },
         { id: 'commission-breakdown', label: 'Commission Breakdown' },
         { id: 'tax-collection', label: 'Tax Collection' },
         { id: 'gst-reports', label: 'GST/VAT Reports' },
-        { id: 'vendor-settlements', label: '🏦 Vendor Settlements' },
-        { id: 'payout-cycle', label: 'Payout Cycle Settings' },
+        { id: 'payout-cycle', label: 'Payout Cycle' },
         { id: 'vendor-wallet', label: 'Vendor Wallet' },
         { id: 'pending-settlements', label: 'Pending Settlements' },
         { id: 'manual-adjustments', label: 'Manual Adjustments' },
@@ -425,88 +477,88 @@ const Admin = () => {
     },
     {
       id: 'marketing',
-      label: 'Marketing & Growth Engine',
+      label: 'Marketing',
       icon: Megaphone,
       subItems: [
         { id: 'coupons', label: 'Coupons' },
-        { id: 'campaigns', label: 'Campaign Management' },
+        { id: 'campaigns', label: 'Campaigns' },
         { id: 'flash-sales', label: 'Flash Sales' },
         { id: 'sponsored-products', label: 'Sponsored Products' },
-        { id: 'referral', label: 'Referral & Affiliate' },
+        { id: 'referral', label: 'Referral Program' },
         { id: 'email-campaigns', label: 'Email / SMS / Push' },
-        { id: 'abandoned-cart', label: 'Abandoned Cart Recovery' }
+        { id: 'abandoned-cart', label: 'Cart Recovery' }
       ]
     },
     {
       id: 'reviews',
-      label: 'Reviews, Ratings & Trust',
+      label: 'Reviews & Trust',
       icon: Star,
       subItems: [
         { id: 'review-moderation', label: 'Review Moderation' },
         { id: 'fake-review-detection', label: 'Fake Review Detection' },
-        { id: 'vendor-rating', label: 'Vendor Rating Control' },
+        { id: 'vendor-rating', label: 'Vendor Rating' },
         { id: 'abuse-reports', label: 'Abuse Reports' },
         { id: 'qa-flags', label: 'QA Flags' }
       ]
     },
     {
       id: 'support',
-      label: 'Support & Operations',
+      label: 'Support Center',
       icon: MessageSquare,
       subItems: [
-        { id: 'ticket-system', label: 'Ticket System' },
+        { id: 'tickets', label: 'Support Tickets' },
         { id: 'vendor-support', label: 'Vendor Support' },
         { id: 'customer-support', label: 'Customer Support' },
-        { id: 'chat-logs', label: 'Chat & Call Logs' },
+        { id: 'chat-logs', label: 'Chat Logs' },
         { id: 'escalation', label: 'Escalation Matrix' },
         { id: 'sla-tracking', label: 'SLA Tracking' }
       ]
     },
     {
       id: 'cms',
-      label: 'CMS & SEO',
+      label: 'Content & SEO',
       icon: FileText,
       subItems: [
         { id: 'static-pages', label: 'Static Pages' },
-        { id: 'homepage-builder', label: 'Homepage Layout Builder' },
+        { id: 'homepage-builder', label: 'Homepage Builder' },
         { id: 'banners', label: 'Banners & Sliders' },
-        { id: 'blog-articles', label: 'Blog / Help Articles' },
+        { id: 'blog-articles', label: 'Blog Articles' },
         { id: 'seo-meta', label: 'SEO Meta Rules' },
         { id: 'url-management', label: 'URL Management' }
       ]
     },
     {
       id: 'reports',
-      label: 'Reports & Business Intelligence',
+      label: 'Reports & Analytics',
       icon: BarChart3,
       subItems: [
         { id: 'sales-analytics', label: 'Sales Analytics' },
         { id: 'vendor-performance-reports', label: 'Vendor Performance' },
         { id: 'customer-ltv', label: 'Customer LTV' },
-        { id: 'conversion-funnel', label: 'Funnel Conversion' },
+        { id: 'conversion-funnel', label: 'Conversion Funnel' },
         { id: 'category-growth', label: 'Category Growth' },
         { id: 'profit-loss', label: 'Profit & Loss' }
       ]
     },
     {
       id: 'automation',
-      label: 'Automation & Rules Engine',
+      label: 'Automation & Rules',
       icon: Zap,
       subItems: [
-        { id: 'order-auto-assign', label: 'Order Auto Assign' },
-        { id: 'auto-penalization', label: 'Auto Vendor Penalization' },
+        { id: 'order-auto-assign', label: 'Auto Order Assign' },
+        { id: 'auto-penalization', label: 'Auto Penalization' },
         { id: 'auto-refund-rules', label: 'Auto Refund Rules' },
-        { id: 'auto-settlement', label: 'Auto Settlement Rules' },
-        { id: 'fraud-detection', label: 'Fraud Detection Rules' }
+        { id: 'auto-settlement', label: 'Auto Settlement' },
+        { id: 'fraud-detection', label: 'Fraud Detection' }
       ]
     },
     {
       id: 'system',
-      label: 'System Configuration',
+      label: 'System Settings',
       icon: Settings,
       subItems: [
-        { id: 'payment-gateway', label: 'Payment Gateway Setup' },
-        { id: 'shipping-partners', label: 'Shipping Partner Setup' },
+        { id: 'payment-gateway', label: 'Payment Gateway' },
+        { id: 'shipping-partners', label: 'Shipping Partners' },
         { id: 'tax-rules', label: 'Tax Rules' },
         { id: 'commission-rules', label: 'Commission Rules' },
         { id: 'currency-locale', label: 'Currency / Locale' },
@@ -518,47 +570,46 @@ const Admin = () => {
       label: 'Security & Compliance',
       icon: ShieldCheck,
       subItems: [
-        { id: 'activity-logs', label: 'Login & Activity Logs' },
+        { id: 'activity-logs', label: 'Activity Logs' },
         { id: 'ip-whitelisting', label: 'IP Whitelisting' },
         { id: 'rate-limiting', label: 'Rate Limiting' },
         { id: 'fraud-detection-sec', label: 'Fraud Detection' },
-        { id: 'gdpr', label: 'GDPR / Data Control' },
+        { id: 'gdpr', label: 'GDPR Compliance' },
         { id: 'backup-restore', label: 'Backup & Restore' }
       ]
     },
-    // ===== FOOD DELIVERY SECTION =====
     {
       id: 'food-delivery',
-      label: '🍕 Food Delivery Management',
+      label: 'Food Delivery',
       icon: Utensils,
       subItems: [
-        { id: 'food-dashboard', label: 'Food Dashboard' },
+        { id: 'food-dashboard', label: 'Dashboard' },
         { id: 'food-analytics', label: 'Order Analytics' },
         { id: 'delivery-metrics', label: 'Delivery Metrics' }
       ]
     },
     {
       id: 'restaurants',
-      label: 'Restaurant Management',
+      label: 'Restaurants',
       icon: ChefHat,
       subItems: [
         { id: 'all-restaurants', label: 'All Restaurants' },
         { id: 'restaurant-approvals', label: 'Approval Queue' },
-        { id: 'restaurant-categories', label: 'Restaurant Categories' },
+        { id: 'restaurant-categories', label: 'Categories' },
         { id: 'restaurant-ratings', label: 'Ratings & Reviews' },
-        { id: 'restaurant-verification', label: 'Verification (FSSAI)' },
+        { id: 'restaurant-verification', label: 'FSSAI Verification' },
         { id: 'restaurant-suspend', label: 'Suspend / Block' }
       ]
     },
     {
       id: 'food-orders',
-      label: 'Food Order Management',
+      label: 'Food Orders',
       icon: ShoppingCart,
       subItems: [
-        { id: 'live-food-orders', label: '🔴 Live Orders' },
+        { id: 'live-food-orders', label: 'Live Orders' },
         { id: 'food-order-history', label: 'Order History' },
         { id: 'food-refunds', label: 'Refunds & Cancellations' },
-        { id: 'food-complaints', label: 'Customer Complaints' },
+        { id: 'food-complaints', label: 'Complaints' },
         { id: 'food-sla', label: 'Delivery SLA' }
       ]
     },
@@ -571,18 +622,18 @@ const Admin = () => {
         { id: 'partner-onboarding', label: 'Onboarding' },
         { id: 'partner-verification', label: 'KYC Verification' },
         { id: 'partner-payouts', label: 'Payouts' },
-        { id: 'partner-performance', label: 'Performance Metrics' },
+        { id: 'partner-performance', label: 'Performance' },
         { id: 'partner-zones', label: 'Delivery Zones' }
       ]
     },
     {
       id: 'food-menu',
-      label: 'Menu & Cuisine',
+      label: 'Menu Management',
       icon: Tag,
       subItems: [
         { id: 'cuisines', label: 'Cuisines' },
-        { id: 'food-categories', label: 'Food Categories' },
-        { id: 'menu-items', label: 'Menu Item Control' },
+        { id: 'food-categories', label: 'Categories' },
+        { id: 'menu-items', label: 'Menu Items' },
         { id: 'pricing-rules', label: 'Pricing Rules' },
         { id: 'offers-food', label: 'Offers & Discounts' }
       ]
@@ -1695,12 +1746,9 @@ const Admin = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { name: 'Spice Garden', orders: 45, rating: 4.5, revenue: 18500 },
-                { name: 'Pizza Paradise', orders: 38, rating: 4.7, revenue: 22400 },
-                { name: 'Burger Barn', orders: 32, rating: 4.6, revenue: 12800 },
-                { name: 'Dragon Wok', orders: 28, rating: 4.3, revenue: 9600 },
-              ].map((restaurant, i) => (
+              {topRestaurants.length === 0 ? (
+                <div className="p-6 text-center text-gray-400 font-bold uppercase text-xs tracking-widest opacity-50">No restaurant data available</div>
+              ) : topRestaurants.map((restaurant, i) => (
                 <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 font-bold">
@@ -1708,10 +1756,10 @@ const Admin = () => {
                     </div>
                     <div>
                       <p className="font-bold text-gray-900">{restaurant.name}</p>
-                      <p className="text-sm text-gray-500">{restaurant.orders} orders • ⭐ {restaurant.rating}</p>
+                      <p className="text-sm text-gray-500">{restaurant.orders || 0} orders • ⭐ {restaurant.rating || 'N/A'}</p>
                     </div>
                   </div>
-                  <span className="font-bold text-green-600">₹{restaurant.revenue.toLocaleString()}</span>
+                  <span className="font-bold text-green-600">₹{(restaurant.revenue || 0).toLocaleString()}</span>
                 </div>
               ))}
             </div>
@@ -1730,9 +1778,9 @@ const Admin = () => {
         <CardContent>
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { label: 'On Delivery', count: 18, color: 'bg-blue-500' },
-              { label: 'Available', count: 14, color: 'bg-green-500' },
-              { label: 'Offline', count: 8, color: 'bg-gray-400' },
+              { label: 'On Delivery', count: partnerActivityStats.onDelivery, color: 'bg-blue-500' },
+              { label: 'Available', count: partnerActivityStats.available, color: 'bg-green-500' },
+              { label: 'Offline', count: partnerActivityStats.offline, color: 'bg-gray-400' },
             ].map((stat, i) => (
               <div key={i} className="flex items-center gap-4 p-5 bg-gray-50 rounded-xl">
                 <div className={`w-4 h-4 ${stat.color} rounded-full`}></div>
@@ -1920,10 +1968,10 @@ const Admin = () => {
       {/* Stats */}
       <div className="grid md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Partners', value: '40', bg: 'bg-gray-100' },
-          { label: 'Online Now', value: '32', bg: 'bg-green-100', color: 'text-green-600' },
-          { label: 'On Delivery', value: '18', bg: 'bg-blue-100', color: 'text-blue-600' },
-          { label: 'Avg. Delivery Time', value: '28 min', bg: 'bg-amber-100', color: 'text-amber-600' },
+          { label: 'Total Partners', value: deliveryPartnersSummary.totalPartners, bg: 'bg-gray-100' },
+          { label: 'Online Now', value: deliveryPartnersSummary.onlineNow, bg: 'bg-green-100', color: 'text-green-600' },
+          { label: 'On Delivery', value: deliveryPartnersSummary.onDelivery, bg: 'bg-blue-100', color: 'text-blue-600' },
+          { label: 'Avg. Delivery Time', value: deliveryPartnersSummary.avgDeliveryTime, bg: 'bg-amber-100', color: 'text-amber-600' },
         ].map((stat, i) => (
           <div key={i} className={`p-5 ${stat.bg} rounded-2xl`}>
             <p className="text-sm font-bold text-gray-500 mb-1">{stat.label}</p>
@@ -2052,17 +2100,15 @@ const Admin = () => {
 
     // New sections - placeholders for now
     // User Management
-    if (activeSubMenu === 'customers') return renderPlaceholder('👥 Customers', 'Customer management and KYC verification.', Users);
-    if (activeSubMenu === 'customer-list') return renderPlaceholder('Customer List', 'All registered customers.', Users);
+    if (activeSubMenu === 'customer-list') return renderPlaceholder('All Customers', 'Complete directory of registered customers.', Users);
     if (activeSubMenu === 'kyc') return renderPlaceholder('KYC Verification', 'Know Your Customer verification process.', ShieldCheck);
     if (activeSubMenu === 'block-restrict') return renderPlaceholder('Block / Restrict', 'Block or restrict customer accounts.', XCircle);
-    if (activeSubMenu === 'order-history') return renderPlaceholder('Order & Return History', 'Customer order and return history.', History);
-    if (activeSubMenu === 'wallet-logs') return renderPlaceholder('Wallet & Refund Logs', 'Customer wallet and refund logs.', CreditCard);
-    if (activeSubMenu === 'admin-users') return renderPlaceholder('👨‍💼 Admin Users', 'Manage admin user accounts.', Users);
+    if (activeSubMenu === 'order-history') return renderPlaceholder('Order History', 'Customer order and return history.', History);
+    if (activeSubMenu === 'wallet-logs') return renderPlaceholder('Wallet Logs', 'Customer wallet and refund logs.', CreditCard);
     if (activeSubMenu === 'super-admin') return renderPlaceholder('Super Admin', 'Super admin management.', ShieldCheck);
     if (activeSubMenu === 'sub-admin') return renderPlaceholder('Sub Admin', 'Sub admin management.', Users);
     if (activeSubMenu === 'support-staff') return renderPlaceholder('Support Staff', 'Support staff management.', MessageSquare);
-    if (activeSubMenu === 'rbac') return renderPlaceholder('Role-based Access (RBAC)', 'Role-based access control.', ShieldCheck);
+    if (activeSubMenu === 'rbac') return renderPlaceholder('Access Control', 'Role-based access control configuration.', ShieldCheck);
 
     // Vendor Management
     if (activeSubMenu === 'vendor-onboarding') return renderPlaceholder('Vendor Onboarding', 'New vendor registration process.', UserCheck);
@@ -2076,14 +2122,11 @@ const Admin = () => {
     if (activeSubMenu === 'vendor-reviews') return renderPlaceholder('Review Moderation', 'Moderate vendor reviews.', Star);
 
     // Catalog Management
-    if (activeSubMenu === 'product-control') return renderPlaceholder('📦 Product Control', 'Product management and control.', Package);
-    if (activeSubMenu === 'product-approvals') return renderProductApprovals();
-    if (activeSubMenu === 'product-edit') return renderPlaceholder('Product Edit / Disable', 'Edit or disable products.', Settings);
+    if (activeSubMenu === 'product-edit') return renderPlaceholder('Edit / Disable', 'Edit or disable products.', Settings);
     if (activeSubMenu === 'duplicate-detection') return renderPlaceholder('Duplicate Detection', 'Detect duplicate products.', Search);
     if (activeSubMenu === 'variants') return renderPlaceholder('Variant Management', 'Manage product variants.', Box);
-    if (activeSubMenu === 'seo-control') return renderPlaceholder('Product SEO Control', 'SEO control for products.', Globe);
-    if (activeSubMenu === 'vendor-products-view') return renderPlaceholder('Vendor-wise Product View', 'View products by vendor.', Store);
-    if (activeSubMenu === 'categories-system') return renderPlaceholder('🗂️ Category System', 'Category and subcategory management.', Tag);
+    if (activeSubMenu === 'seo-control') return renderPlaceholder('SEO Control', 'Product SEO optimization.', Globe);
+    if (activeSubMenu === 'vendor-products-view') return renderPlaceholder('Vendor Products', 'View products by vendor.', Store);
     if (activeSubMenu === 'attributes') return renderPlaceholder('Attribute Mapping', 'Category to attribute mapping.', Tag);
     if (activeSubMenu === 'brands') return renderPlaceholder('Brand Management', 'Brand management.', Tag);
 
@@ -2112,14 +2155,12 @@ const Admin = () => {
     if (activeSubMenu === 'stock-lock') return renderPlaceholder('Stock Lock (Checkout)', 'Lock stock during checkout.', Box);
     if (activeSubMenu === 'damaged-stock') return renderPlaceholder('Damaged / Lost Stock Logs', 'Damaged or lost stock logs.', Box);
 
-    // Payments, Earnings & Settlements
-    if (activeSubMenu === 'admin-finance') return renderPlaceholder('💰 Admin Finance', 'Admin financial management.', CreditCard);
+    // Payments & Settlements
     if (activeSubMenu === 'platform-earnings') return renderPlaceholder('Platform Earnings', 'Platform earnings tracking.', CreditCard);
     if (activeSubMenu === 'commission-breakdown') return renderPlaceholder('Commission Breakdown', 'Commission breakdown.', CreditCard);
     if (activeSubMenu === 'tax-collection') return renderPlaceholder('Tax Collection', 'Tax collection management.', CreditCard);
     if (activeSubMenu === 'gst-reports') return renderPlaceholder('GST/VAT Reports', 'GST/VAT reports.', BarChart3);
-    if (activeSubMenu === 'vendor-settlements') return renderPlaceholder('🏦 Vendor Settlements', 'Vendor settlement management.', CreditCard);
-    if (activeSubMenu === 'payout-cycle') return renderPlaceholder('Payout Cycle Settings', 'Payout cycle configuration.', CreditCard);
+    if (activeSubMenu === 'payout-cycle') return renderPlaceholder('Payout Cycle', 'Payout cycle configuration.', CreditCard);
     if (activeSubMenu === 'vendor-wallet') return renderPlaceholder('Vendor Wallet', 'Vendor wallet management.', CreditCard);
     if (activeSubMenu === 'pending-settlements') return renderPlaceholder('Pending Settlements', 'Pending settlement management.', CreditCard);
     if (activeSubMenu === 'manual-adjustments') return renderPlaceholder('Manual Adjustments', 'Manual settlement adjustments.', Settings);

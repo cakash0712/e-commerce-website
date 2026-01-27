@@ -105,18 +105,22 @@ const Categories = () => {
       try {
         setLoading(true);
         const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-        const response = await axios.get(`${API_BASE}/api/products`);
-        const products = response.data;
+        const [catRes, prodRes] = await Promise.all([
+          axios.get(`${API_BASE}/api/public/categories`),
+          axios.get(`${API_BASE}/api/products`)
+        ]);
+        const categories = catRes.data;
+        const products = prodRes.data;
         setAllProducts(products);
 
-        const uniqueCategories = [...new Set(products.map(p => p.category))];
-        const categoryObjects = uniqueCategories.map((cat, index) => {
-          const categoryProducts = products.filter(p => p.category === cat);
+        const categoryObjects = categories.map((cat, index) => {
+          const categoryProducts = products.filter(p => p.category?.toLowerCase() === cat.name?.toLowerCase());
           return {
             id: index,
-            name: cat.charAt(0).toUpperCase() + cat.slice(1).replace(/-/g, ' '),
-            slug: cat,
-            productCount: categoryProducts.length
+            name: cat.name,
+            slug: cat.name?.toLowerCase().replace(/\s+/g, '-'),
+            productCount: categoryProducts.length,
+            link: cat.link || `/categories/${cat.name?.toLowerCase().replace(/\s+/g, '-')}`
           };
         });
         setApiCategories(categoryObjects);
@@ -181,18 +185,23 @@ const Categories = () => {
             <p className="text-gray-500">Loading categories...</p>
           </div>
         ) : !selectedCategory ? (
-          /* Categories Grid - Logo Images */
+          /* Categories Grid - Product Images or Icons */
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {apiCategories.map((cat) => {
               const { icon: IconComponent } = getCategoryInfo(cat.slug);
+              const firstProduct = allProducts.find(p => p.category?.toLowerCase() === cat.slug?.toLowerCase());
               return (
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat)}
                   className="group bg-white rounded-xl border border-gray-200 p-8 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-xl hover:border-violet-200 transition-all duration-300 min-h-[220px]"
                 >
-                  <div className="w-20 h-20 bg-violet-50 rounded-full flex items-center justify-center mb-6 group-hover:bg-violet-100 transition-colors duration-300">
-                    <IconComponent className="w-10 h-10 text-violet-600" />
+                  <div className="w-20 h-20 bg-transparent rounded-full flex items-center justify-center mb-6 group-hover:bg-transparent transition-colors duration-300 relative overflow-hidden shadow-inner">
+                    {firstProduct?.image ? (
+                      <img src={firstProduct.image} alt={cat.name} className="w-full h-full object-cover p-2 group-hover:scale-110 transition-transform duration-700" />
+                    ) : (
+                      <IconComponent className="w-10 h-10 text-violet-600" />
+                    )}
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-violet-600 transition-colors">
                     {cat.name}
