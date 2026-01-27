@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
-  Info
+  Info,
+  Utensils
 } from "lucide-react";
 import CartDrawer from "./CartDrawer";
 
@@ -233,24 +234,16 @@ const Navigation = () => {
               Home
             </Link>
             <div className="relative group">
-              <button className="text-sm font-medium text-gray-600 transition-colors hover:text-violet-600 flex items-center gap-1">
+
+
+              <Link
+                to="/shop"
+                className="text-sm font-medium text-gray-600 transition-colors hover:text-violet-600"
+              >
                 Products
-                <ChevronDown className="w-4 h-4 group-hover:rotate-180 transition-transform" />
-              </button>
-              <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                <Link
-                  to="/shop"
-                  className="block px-4 py-2 text-sm text-gray-600 hover:text-violet-600 hover:bg-violet-50 transition-colors"
-                >
-                  All Products
-                </Link>
-                <Link
-                  to="/food"
-                  className="block px-4 py-2 text-sm text-gray-600 hover:text-violet-600 hover:bg-violet-50 transition-colors"
-                >
-                  Food
-                </Link>
-              </div>
+              </Link>
+
+
             </div>
             {["Categories", "Deals", "About"].map((item) => (
               <Link
@@ -390,6 +383,18 @@ const Navigation = () => {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center space-x-2">
+            {/* Switch to Food App */}
+            <button
+              onClick={() => {
+                localStorage.setItem('zippy_app_mode', 'food');
+                window.location.href = '/food';
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-orange-600 bg-orange-50 rounded-full hover:bg-orange-100 transition-colors"
+            >
+              <Utensils className="w-4 h-4" />
+              <span className="hidden xl:inline">Food</span>
+            </button>
+
             <Link to="/wishlist">
               <Button
                 variant="ghost"
@@ -557,13 +562,16 @@ const Navigation = () => {
                 >
                   All Products
                 </Link>
-                <Link
-                  to="/food"
-                  className="block py-2 px-3 text-gray-600 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
+                <button
+                  onClick={() => {
+                    localStorage.setItem('zippy_app_mode', 'food');
+                    window.location.href = '/food';
+                  }}
+                  className="flex items-center gap-2 py-2 px-3 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors w-full text-left"
                 >
-                  Food
-                </Link>
+                  <Utensils className="w-4 h-4" />
+                  Order Food
+                </button>
               </div>
               {["Categories", "Deals", "About"].map((item) => (
                 <Link

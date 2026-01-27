@@ -1,9 +1,10 @@
 import { useEffect, useState, createContext, useContext } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import LandingSelector from "./components/LandingSelector";
+import FoodApp from "./components/FoodDelivery/FoodApp";
 import Shop from "./components/Shop";
-import Food from "./components/Food";
 import Categories from "./components/Categories";
 import Deals from "./components/Deals";
 import About from "./components/About";
@@ -59,7 +60,7 @@ import {
   Utensils,
 } from "lucide-react";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 const API = `${BACKEND_URL}/api`;
 
 // Scroll to Top Component
@@ -411,7 +412,8 @@ const CouponProvider = ({ children }) => {
 };
 
 // Hero Section
-const HeroSection = () => {
+// Hero Section
+const HeroSection = ({ stats }) => {
   return (
     <section className="relative min-h-[70vh] flex items-center overflow-hidden bg-gradient-to-br from-violet-900 via-indigo-900 to-purple-900">
       {/* Background Pattern */}
@@ -427,36 +429,24 @@ const HeroSection = () => {
           <div className="text-center lg:text-left space-y-8">
             <Badge className="bg-white/10 text-white border-white/20 px-4 py-1.5 text-sm">
               <Sparkles className="w-4 h-4 mr-2" />
-              Summer Collection 2025
+              What’s New
             </Badge>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white leading-tight">
               Discover Your
-              <span className="block bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 bg-clip-text text-transparent">
-                Perfect Style
-              </span>
+              <span className="block text-amber-400">Perfect Style</span>
             </h1>
             <p className="text-lg lg:text-xl text-white/70 max-w-xl mx-auto lg:mx-0">
-              Explore thousands of premium products with exclusive deals,
-              lightning-fast delivery, and unmatched customer service.
+              Explore thousands of premium products with exclusive deals and lightning-fast delivery.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link to="/shop">
-                <Button
-                  size="lg"
-                  className="bg-white text-violet-900 hover:bg-white/90 px-8 py-6 text-lg group"
-                  data-testid="shop-now-btn"
-                >
+                <Button size="lg" className="bg-white text-violet-900 hover:bg-white/90 px-8 py-6 text-lg group">
                   Shop Now
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
               <Link to="/categories">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-white/30 text-white hover:bg-white/10 px-8 py-6 text-lg"
-                  data-testid="explore-btn"
-                >
+                <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-8 py-6 text-lg">
                   Explore Collections
                 </Button>
               </Link>
@@ -465,17 +455,17 @@ const HeroSection = () => {
             {/* Trust Badges */}
             <div className="flex items-center gap-8 justify-center lg:justify-start pt-8">
               <div className="text-center">
-                <p className="text-3xl font-bold text-white">50K+</p>
+                <p className="text-3xl font-bold text-white">{stats.happy_customers?.toLocaleString()}</p>
                 <p className="text-white/60 text-sm">Happy Customers</p>
               </div>
               <div className="w-px h-12 bg-white/20"></div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-white">10K+</p>
+                <p className="text-3xl font-bold text-white">{stats.total_products?.toLocaleString()}</p>
                 <p className="text-white/60 text-sm">Products</p>
               </div>
               <div className="w-px h-12 bg-white/20"></div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-white">99%</p>
+                <p className="text-3xl font-bold text-white">{stats.satisfaction_rate}</p>
                 <p className="text-white/60 text-sm">Satisfaction</p>
               </div>
             </div>
@@ -508,49 +498,12 @@ const HeroSection = () => {
                       className="w-full h-[400px] object-cover"
                     />
                   </CarouselItem>
-                  <CarouselItem>
-                    <img
-                      src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&h=400&fit=crop"
-                      alt="Fashion items"
-                      className="w-full h-[400px] object-cover"
-                    />
-                  </CarouselItem>
                 </CarouselContent>
                 <CarouselPrevious className="left-4" />
                 <CarouselNext className="right-4" />
               </Carousel>
             </div>
-            {/* Floating Cards */}
-            <div className="absolute -left-8 top-20 bg-white rounded-2xl p-4 shadow-xl animate-bounce-slow">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                  <Truck className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">Free Shipping</p>
-                  <p className="text-sm text-gray-500">On orders $50+</p>
-                </div>
-              </div>
-            </div>
-            <div className="absolute -right-4 bottom-20 bg-white rounded-2xl p-4 shadow-xl animate-bounce-slow delay-500">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-violet-100 rounded-xl flex items-center justify-center">
-                  <Shield className="w-6 h-6 text-violet-600" />
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">Secure Payment</p>
-                  <p className="text-sm text-gray-500">100% Protected</p>
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-        <div className="w-8 h-12 border-2 border-white/30 rounded-full flex justify-center pt-2">
-          <div className="w-1.5 h-3 bg-white/60 rounded-full animate-scroll"></div>
         </div>
       </div>
     </section>
@@ -563,7 +516,7 @@ const FeaturesSection = () => {
     {
       icon: Truck,
       title: "Free Shipping",
-      description: "Free shipping on all orders over $50",
+      description: "Free shipping on all orders over ₹999",
       color: "bg-blue-500",
     },
     {
@@ -587,9 +540,10 @@ const FeaturesSection = () => {
   ];
 
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
           {features.map((feature, index) => (
             <Card
               key={index}
@@ -634,7 +588,7 @@ const ModernBentoGrid = () => {
       description: "Minimalist desk setups for maximum focus.",
       width: "col-span-1",
       height: "h-[320px] lg:h-[400px]",
-      link: "/shop?category=electronics"
+      link: "/shop?category=home-garden"
     },
     {
       title: "Active Life",
@@ -659,14 +613,13 @@ const ModernBentoGrid = () => {
   return (
     <section className="py-24 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col mb-16 space-y-4">
-          <Badge className="w-fit bg-violet-600 text-white rounded-full px-4 font-bold border-none">The Lookbook</Badge>
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <h2 className="text-4xl lg:text-6xl font-black text-gray-900 leading-tight">
-              Curated <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-pink-500 italic">Collections</span>
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
+          <div>
+            <Badge className="mb-4 bg-violet-100 text-violet-600 border-violet-200">The Lookbook</Badge>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+              Curated Collections
             </h2>
-            <p className="text-gray-500 text-lg max-w-md">
+            <p className="text-gray-600 max-w-xl">
               A bespoke selection of items chosen for their design, utility, and timeless appeal.
             </p>
           </div>
@@ -724,7 +677,7 @@ const FeaturedProductsSection = () => {
     const fetchProducts = async () => {
       try {
         const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-        const response = await axios.get(`${API_BASE}/api/products?limit=8`);
+        const response = await axios.get(`${API_BASE}/api/products?limit=8&sort=trending`);
         setProducts(response.data);
       } catch (error) {
         console.error("Failed to fetch products", error);
@@ -771,7 +724,7 @@ const FeaturedProductsSection = () => {
   }
 
   return (
-    <section className="py-24 bg-gray-50/50">
+    <section className="py-24 bg-gray-50/50 mb-[3px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
           <div>
@@ -780,8 +733,7 @@ const FeaturedProductsSection = () => {
               Trending Products
             </h2>
             <p className="text-gray-600 max-w-xl">
-              Discover our most popular and highly-rated products loved by
-              thousands of customers
+              Discover the perfect blend of high-performance favorites and fresh new arrivals trending right now.
             </p>
           </div>
           <Link
@@ -800,89 +752,88 @@ const FeaturedProductsSection = () => {
               className="group border-0 shadow-md hover:shadow-2xl transition-all duration-500 overflow-hidden bg-white flex flex-col"
               data-testid={`product-${product.id}`}
             >
-              <div className="relative overflow-hidden aspect-square">
+              <div className="relative overflow-hidden aspect-[5/4] bg-gray-50/80 p-4">
                 <img
                   src={product.image}
                   alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 mx-auto"
                   onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop" }}
                 />
                 {/* Badges */}
-                <div className="absolute top-4 left-4 flex flex-col gap-2">
+                <div className="absolute top-2 left-2 flex flex-col gap-1">
                   {product.discount && (
-                    <Badge className="bg-violet-600 text-white border-0 font-bold px-3 py-1 text-xs shadow-xl">
+                    <Badge className="bg-violet-600 text-white border-0 font-bold px-2 py-0.5 text-[10px] shadow-xl">
                       -{product.discount}%
                     </Badge>
                   )}
                   {product.isNew && (
-                    <Badge className="bg-indigo-500 text-white border-0 font-bold px-3 py-1 text-xs shadow-xl">
+                    <Badge className="bg-indigo-500 text-white border-0 font-bold px-2 py-0.5 text-[10px] shadow-xl">
                       NEW
                     </Badge>
                   )}
-                  {product.isBestSeller && (
-                    <Badge className="bg-amber-500 text-white border-0 font-bold px-3 py-1 text-xs shadow-xl">
-                      BEST SELLER
-                    </Badge>
-                  )}
                   {product.offers && (
-                    <Badge className="bg-emerald-500 text-white border-0 font-bold px-3 py-1 text-xs shadow-xl max-w-[150px] truncate">
+                    <Badge className="bg-emerald-500 text-white border-0 font-bold px-2 py-0.5 text-[10px] shadow-xl max-w-[120px] truncate">
                       {product.offers}
                     </Badge>
                   )}
                 </div>
                 {/* Quick Actions */}
-                <div className="absolute top-4 right-4 translate-y-2 lg:translate-y-4 lg:opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                <div className="absolute top-2 right-2 flex flex-col gap-2">
                   <Button
                     size="icon"
                     variant="secondary"
-                    className={`rounded-2xl bg-white shadow-2xl hover:bg-white ${isInWishlist(product.id) ? 'text-violet-600' : 'text-gray-400'}`}
-                    onClick={() => isInWishlist(product.id) ? removeFromWishlist(product.id) : addToWishlist(product)}
+                    className={`w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm shadow-xl hover:bg-white transition-all transform active:scale-95 ${isInWishlist(product.id) ? 'text-rose-500' : 'text-gray-400'}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      isInWishlist(product.id) ? removeFromWishlist(product.id) : addToWishlist(product);
+                    }}
                   >
-                    <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+                    <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
                   </Button>
                 </div>
               </div>
-              <CardContent className="p-6 flex flex-col flex-1">
+              <CardContent className="p-4 flex flex-col flex-1">
                 <div className="flex-1">
-                  <div className="flex items-center gap-1 mb-3">
+                  <div className="flex items-center gap-1 mb-1">
                     <div className="flex">{renderStars(product.rating)}</div>
                     <span className="text-[10px] font-black text-gray-400 ml-1">
                       ({product.reviews})
                     </span>
                   </div>
                   <Link to={`/shop`}>
-                    <h3 className="font-bold text-gray-900 mb-2 group-hover:text-violet-600 transition-colors line-clamp-2 text-lg leading-tight">
+                    <h3 className="font-bold text-gray-900 mb-1 group-hover:text-violet-600 transition-colors line-clamp-2 text-sm leading-tight h-8">
                       {product.name}
                     </h3>
                   </Link>
-                  <div className="flex items-baseline gap-2 mb-6">
-                    <span className="text-2xl font-black text-gray-900 tracking-tighter">
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-xl font-black text-gray-900 tracking-tighter">
                       ₹{product.price}
                     </span>
                     {product.originalPrice && (
-                      <span className="text-sm text-gray-400 line-through font-bold">
+                      <span className="text-xs text-gray-400 line-through font-bold">
                         ₹{product.originalPrice}
                       </span>
                     )}
                   </div>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <Button
-                    className="flex-1 h-12 bg-gray-900 hover:bg-violet-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 group/btn overflow-hidden relative shadow-lg shadow-gray-200"
+                    className="flex-1 h-9 bg-gray-900 hover:bg-violet-600 text-white rounded-lg font-black text-[9px] uppercase tracking-widest transition-all active:scale-95 group/btn overflow-hidden relative shadow-lg shadow-gray-200"
                     onClick={() => addToCart(product)}
                   >
-                    <ShoppingCart className="w-4 h-4 mr-2 group-hover/btn:animate-bounce" />
+                    <ShoppingCart className="w-3 h-3 mr-1 group-hover/btn:animate-bounce" />
                     Cart
                   </Button>
                   <Button
                     variant="outline"
-                    className="flex-1 h-12 border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95"
+                    className="flex-1 h-9 border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white rounded-lg font-black text-[9px] uppercase tracking-widest transition-all active:scale-95"
                     onClick={() => {
                       addToCart(product);
                       window.location.href = '/payment';
                     }}
                   >
-                    Buy Now
+                    Buy
                   </Button>
                 </div>
               </CardContent>
@@ -896,172 +847,217 @@ const FeaturedProductsSection = () => {
 
 // Promo Banner Section
 const PromoBannerSection = () => {
+  const [bestDeal, setBestDeal] = useState(null);
+  const [timeLeft, setTimeLeft] = useState({ days: '00', hours: '00', mins: '00', secs: '00' });
+
+  useEffect(() => {
+    const fetchBestDeal = async () => {
+      try {
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const response = await axios.get(`${API_BASE}/api/products`);
+        const products = response.data;
+        if (products.length > 0) {
+          // Find product with max discount that has an expiry date if possible, otherwise just max discount
+          const sorted = [...products].sort((a, b) => b.discount - a.discount);
+          setBestDeal(sorted[0]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch deals", error);
+      }
+    };
+    fetchBestDeal();
+  }, []);
+
+  useEffect(() => {
+    const targetDate = bestDeal?.offer_expires_at ? new Date(bestDeal.offer_expires_at) : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = targetDate.getTime() - now;
+
+      if (distance < 0) {
+        clearInterval(timer);
+        return;
+      }
+
+      setTimeLeft({
+        days: Math.floor(distance / (1000 * 60 * 60 * 24)).toString().padStart(2, '0'),
+        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0'),
+        mins: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0'),
+        secs: Math.floor((distance % (1000 * 60)) / 1000).toString().padStart(2, '0')
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [bestDeal]);
+
   return (
-    <section className="py-20 bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 relative overflow-hidden">
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-      </div>
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div className="text-center lg:text-left">
-            <Badge className="bg-white/20 text-white border-white/30 mb-6">
-              Limited Time Offer
-            </Badge>
-            <h2 className="text-3xl lg:text-5xl font-bold text-white mb-6">
-              Summer Sale
-              <span className="block text-amber-300">Up to 50% Off</span>
+    <section className="relative overflow-hidden bg-gradient-to-br from-indigo-700 via-violet-800 to-purple-900 border-y border-white/10">
+      {/* Decorative background elements */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-rose-500/10 rounded-full blur-[100px]"></div>
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
+
+      <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-20 relative z-10">
+        <div className="grid lg:grid-cols-[3fr_2fr] gap-8 items-center">
+          <div className="space-y-4 text-center lg:text-left pt-10 lg:pt-16 pb-5 lg:pb-8">
+            <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-white text-[9px] font-black uppercase tracking-[0.2em]">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              Elite Deal Protocol
+            </div>
+
+            <h2 className="text-3xl lg:text-7xl font-black text-white leading-[0.9] tracking-tighter">
+              THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-rose-300 to-violet-300">ULTIMATE</span>
+              <span className="block mt-1">FLASH SALE.</span>
             </h2>
-            <p className="text-white/80 text-lg mb-8 max-w-lg mx-auto lg:mx-0">
-              Do not miss out on our biggest sale of the season. Get exclusive
-              deals on thousands of products.
+
+            <p className="text-white/60 text-sm md:text-base max-w-xl mx-auto lg:mx-0 font-medium leading-relaxed">
+              Unlock exclusive elite-tier discounts across our entire synchronized inventory.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5">
               <Link to="/deals">
                 <Button
                   size="lg"
-                  className="bg-white text-violet-700 hover:bg-white/90 px-8"
-                  data-testid="shop-sale-btn"
+                  className="bg-white text-indigo-900 hover:bg-white/90 px-8 h-12 rounded-xl font-black shadow-[0_0_40px_rgba(255,255,255,0.15)] transition-all hover:scale-105 active:scale-95 text-xs"
                 >
-                  Shop the Sale
-                  <ArrowRight className="ml-2 w-5 h-5" />
+                  ACCESS DEALS
+                  <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </Link>
-            </div>
 
-            {/* Countdown Timer (Static for demo) */}
-            <div className="flex justify-center lg:justify-start gap-4 mt-8">
-              {[
-                { value: "12", label: "Days" },
-                { value: "08", label: "Hours" },
-                { value: "45", label: "Mins" },
-                { value: "30", label: "Secs" },
-              ].map((item, index) => (
-                <div
-                  key={index}
-                  className="bg-white/10 backdrop-blur-sm rounded-lg p-3 min-w-[70px]"
-                >
-                  <p className="text-2xl font-bold text-white">{item.value}</p>
-                  <p className="text-xs text-white/70">{item.label}</p>
+              <div className="flex gap-3 p-2.5 bg-black/20 backdrop-blur-2xl rounded-xl border border-white/10">
+                {[
+                  { v: timeLeft.days, l: "DAYS" },
+                  { v: timeLeft.hours, l: "HOURS" },
+                  { v: timeLeft.mins, l: "MINS" },
+                  { v: timeLeft.secs, l: "SECS" }
+                ].map((t, i) => (
+                  <div key={i} className="text-center min-w-[40px]">
+                    <p className="text-xl font-black text-white leading-none tracking-tighter">{t.v}</p>
+                    <p className="text-[7px] text-white/40 uppercase font-bold mt-1 tracking-widest leading-none">{t.l}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="relative hidden lg:block">
+            <div className="relative group p-4 transform scale-100">
+              <div className="absolute -inset-6 bg-gradient-to-tr from-rose-500/10 to-violet-600/10 rounded-full blur-[80px] opacity-50 group-hover:opacity-100 transition-opacity"></div>
+              <Link to={bestDeal ? `/product/${bestDeal.id}` : '#'} className="block">
+                <div className="relative bg-white/5 backdrop-blur-md rounded-[40px] p-6 border border-white/10 shadow-2xl overflow-hidden transform rotate-2 group-hover:rotate-0 transition-transform duration-1000 max-w-[400px] ml-auto cursor-pointer">
+                  <img
+                    src={bestDeal?.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=800&fit=crop"}
+                    alt={bestDeal?.name || "Premium Deal"}
+                    className="w-full object-contain rounded-[40px] brightness-90 group-hover:brightness-100 transition-all duration-700 mx-auto"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/80 via-transparent to-transparent"></div>
+                  <div className="absolute bottom-10 left-8 right-8 text-center lg:text-left">
+                    <p className="text-white font-black text-4xl leading-none tracking-tighter ml-6">{bestDeal?.discount || '60'}% OFF</p>
+                    <p className="text-white/60 text-[10px] font-bold uppercase mt-2 tracking-widest ml-6">Limited Batch Reveal</p>
+                  </div>
                 </div>
-              ))}
+              </Link>
             </div>
           </div>
-          <div className="hidden lg:block">
-            <img
-              src="https://images.unsplash.com/photo-1524289286702-f07229da36f5?w=600&h=400&fit=crop"
-              alt="Sale products"
-              className="rounded-2xl shadow-2xl"
-            />
-          </div>
         </div>
       </div>
     </section>
   );
 };
 
-// Testimonials Section - Placeholder for dynamic testimonials
-const TestimonialsSection = () => {
-  return (
-    <section className="py-20 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <Badge className="mb-4 bg-violet-100 text-violet-600 border-violet-200">Testimonials</Badge>
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-            Customer Reviews
-          </h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Real reviews from our satisfied customers will appear here once products are purchased and reviewed.
-          </p>
-        </div>
 
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Quote className="w-8 h-8 text-violet-600" />
-          </div>
-          <p className="text-gray-500">No reviews yet. Be the first to leave a review after your purchase!</p>
-        </div>
-      </div>
-    </section>
-  );
-};
 
-// Newsletter Section
-const NewsletterSection = () => {
-  return (
-    <section className="py-20 bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-3xl p-8 lg:p-12 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
 
-          <div className="relative text-center max-w-2xl mx-auto">
-            <Mail className="w-12 h-12 text-white/80 mx-auto mb-6" />
-            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
-              Stay in the Loop
-            </h2>
-            <p className="text-white/80 mb-8">
-              Subscribe to our newsletter and be the first to know about
-              exclusive deals, new arrivals, and special offers.
-            </p>
-            <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:bg-white/20"
-                data-testid="newsletter-email"
-              />
-              <Button
-                type="submit"
-                className="bg-white text-violet-700 hover:bg-white/90 px-8"
-                data-testid="newsletter-submit"
-              >
-                Subscribe
-              </Button>
-            </form>
-            <p className="text-white/60 text-sm mt-4">
-              No spam, unsubscribe at any time.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
+
 
 // Categories Section
 const CategoriesSection = () => {
-  const categories = [
-    { name: "Electronics", icon: Laptop, link: "/shop?category=electronics" },
-    { name: "Fashion", icon: Shirt, link: "/shop?category=fashion" },
-    { name: "Food & Beverages", icon: Utensils, link: "/shop?category=groceries" },
-    { name: "Home & Kitchen", icon: HomeIcon, link: "/shop?category=home-decoration" },
-    { name: "Sports", icon: Dumbbell, link: "/shop?category=sports" },
-  ];
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const [catRes, prodRes] = await Promise.all([
+          axios.get(`${API_BASE}/api/public/categories`),
+          axios.get(`${API_BASE}/api/products`)
+        ]);
+        setCategories(catRes.data);
+        setProducts(prodRes.data);
+      } catch (error) {
+        console.error("Failed to fetch discovery data", error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (categories.length === 0) return null;
 
   return (
-    <section className="py-10 bg-gray-50">
+    <section className="py-24 bg-gray-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Shop by Category</h2>
-          <Link to="/categories" className="text-sm text-violet-600 hover:text-violet-700 hover:underline font-medium">
-            View All
+        <div className="flex items-center justify-between mb-12">
+          <div>
+            <Badge className="mb-4 bg-violet-100 text-violet-600 border-none px-4 py-1.5 font-black text-[10px] uppercase tracking-widest">
+              Collections
+            </Badge>
+            <h2 className="text-3xl lg:text-4xl font-black text-gray-900 tracking-tighter">
+              SHOP BY <span className="text-violet-600">CATEGORY.</span>
+            </h2>
+          </div>
+          <Link to="/categories">
+            <Button variant="ghost" className="text-violet-600 hover:text-violet-700 font-black uppercase text-[10px] tracking-widest group">
+              View All
+              <ChevronRight className="ml-1 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Button>
           </Link>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {categories.map((cat, i) => (
-            <Link key={i} to={cat.link} className="bg-white p-5 rounded-xl shadow-sm hover:shadow-lg transition-shadow border border-gray-100 group">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-violet-200 transition-colors">
-                  <cat.icon className="w-8 h-8 text-violet-600" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{cat.name}</h3>
-                <span className="text-sm text-violet-600 hover:text-violet-700 hover:underline font-medium">
-                  Shop now
-                </span>
-              </div>
-            </Link>
-          ))}
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {categories
+            .slice(0, 4)
+            .map((cat, i) => {
+              const firstProduct = products.find(p => p.category?.toLowerCase() === cat.name?.toLowerCase());
+
+              const iconMap = {
+                'electronics': Laptop,
+                'fashion': Shirt,
+                'home & garden': HomeIcon,
+                'home': HomeIcon,
+                'sports': Dumbbell,
+                'beauty': Sparkles,
+                'books': BookOpen
+              };
+              const IconComponent = iconMap[cat.name?.toLowerCase()] || Sparkles;
+
+              return (
+                <Link
+                  key={i}
+                  to={cat.link}
+                  className="group bg-white p-8 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-500 border border-gray-100 flex flex-col items-center text-center"
+                >
+                  <div className="w-28 h-28 bg-violet-50 rounded-full flex items-center justify-center mb-5 group-hover:bg-violet-100 transition-colors relative overflow-hidden shadow-inner">
+                    {firstProduct?.image ? (
+                      <img src={firstProduct.image} alt={cat.name} className="w-full h-full object-cover p-3 group-hover:scale-110 transition-transform duration-700" />
+                    ) : (
+                      <IconComponent className="w-12 h-12 text-violet-600" />
+                    )}
+                  </div>
+                  <h3 className="text-lg font-black text-gray-900 group-hover:text-violet-600 transition-colors uppercase tracking-tight">
+                    {cat.name}
+                  </h3>
+                  <div className="mt-4 flex items-center gap-1.5 px-4 py-1.5 bg-violet-50 rounded-full group-hover:bg-violet-600 transition-all duration-300">
+                    <span className="text-[10px] font-black text-violet-600 group-hover:text-white uppercase tracking-widest">
+                      Explore
+                    </span>
+                    <ChevronRight className="w-3.5 h-3.5 text-violet-600 group-hover:text-white transition-colors" />
+                  </div>
+                </Link>
+              );
+            })}
         </div>
       </div>
     </section>
@@ -1070,32 +1066,188 @@ const CategoriesSection = () => {
 
 // Home Page Component
 const Home = () => {
-  const helloWorldApi = async () => {
+  const [stats, setStats] = useState({
+    happy_customers: 0,
+    total_products: 0,
+    total_vendors: 0,
+    satisfaction_rate: "100%"
+  });
+  const [reviews, setReviews] = useState([]);
+
+  const fetchStats = async () => {
     try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
+      const response = await axios.get(`${API}/public/stats`);
+      setStats(response.data);
     } catch (e) {
-      console.error(e, `errored out requesting / api`);
+      console.error("Failed to fetch platform stats", e);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      const response = await axios.get(`${API}/public/reviews`);
+      setReviews(response.data);
+    } catch (e) {
+      console.error("Failed to fetch public reviews", e);
     }
   };
 
   useEffect(() => {
-    helloWorldApi();
+    fetchStats();
+    fetchReviews();
   }, []);
 
   return (
     <div className="min-h-screen">
       <Navigation />
-      <HeroSection />
+      <HeroSection stats={stats} />
       <FeaturesSection />
       <CategoriesSection />
       <ModernBentoGrid />
-      <FeaturedProductsSection />
       <PromoBannerSection />
-      <TestimonialsSection />
-      <NewsletterSection />
+      <FeaturedProductsSection />
+
       <Footer />
     </div>
+  );
+};
+
+// App Mode Context - allows switching between e-commerce and food delivery
+const AppModeContext = createContext();
+
+export const useAppMode = () => {
+  const context = useContext(AppModeContext);
+  if (!context) {
+    throw new Error('useAppMode must be used within an AppModeProvider');
+  }
+  return context;
+};
+
+// E-commerce Routes Component
+const EcommerceRoutes = ({ onSwitchApp }) => {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/product/:id" element={<DetailsView />} />
+      <Route path="/shop" element={<Shop />} />
+      <Route path="/categories" element={<Categories />} />
+      <Route path="/deals" element={<Deals />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/faq" element={<FAQ />} />
+      <Route path="/shipping" element={<ShippingInfo />} />
+      <Route path="/returns" element={<Returns />} />
+      <Route path="/track-order" element={<TrackOrder />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsOfService />} />
+      <Route path="/cookies" element={<Cookies />} />
+      <Route path="/cart" element={<Cart />} />
+      <Route path="/payment" element={<Payment />} />
+      <Route path="/wishlist" element={
+        <ProtectedRoute>
+          <Wishlist />
+        </ProtectedRoute>
+      } />
+      <Route path="*" element={<Home />} />
+    </Routes>
+  );
+};
+
+// Main App Router Component
+const AppRouter = () => {
+  const [appMode, setAppMode] = useState(() => {
+    // Check localStorage for saved preference
+    return localStorage.getItem('zippy_app_mode') || null;
+  });
+  const navigate = useNavigate();
+
+  const handleSelectApp = (mode) => {
+    setAppMode(mode);
+    localStorage.setItem('zippy_app_mode', mode);
+    if (mode === 'ecommerce') {
+      navigate('/');
+    } else if (mode === 'food') {
+      navigate('/food');
+    }
+  };
+
+  const switchToLanding = () => {
+    setAppMode(null);
+    localStorage.removeItem('zippy_app_mode');
+    navigate('/');
+  };
+
+  const switchToEcommerce = () => {
+    setAppMode('ecommerce');
+    localStorage.setItem('zippy_app_mode', 'ecommerce');
+    navigate('/');
+  };
+
+  const switchToFood = () => {
+    setAppMode('food');
+    localStorage.setItem('zippy_app_mode', 'food');
+    navigate('/food');
+  };
+
+  // Common protected and auth routes that should be accessible in both modes
+  const commonRoutes = (
+    <>
+      <Route path="/admin/*" element={
+        <ProtectedRoute requiredRole="admin">
+          <Admin />
+        </ProtectedRoute>
+      } />
+      <Route path="/vendor/*" element={
+        <ProtectedRoute requiredRole="vendor">
+          <Vendor />
+        </ProtectedRoute>
+      } />
+      <Route path="/auth/*" element={<Auth />} />
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <Profile />
+        </ProtectedRoute>
+      } />
+      <Route path="/account" element={
+        <ProtectedRoute>
+          <Profile />
+        </ProtectedRoute>
+      } />
+    </>
+  );
+
+  // If no app mode selected, show landing selector
+  if (!appMode) {
+    return (
+      <Routes>
+        <Route path="/" element={<LandingSelector onSelect={handleSelectApp} />} />
+        {commonRoutes}
+        {/* Redirect others back to home/selector */}
+        <Route path="*" element={<LandingSelector onSelect={handleSelectApp} />} />
+      </Routes>
+    );
+  }
+
+  // Render based on app mode
+  if (appMode === 'food') {
+    return (
+      <Routes>
+        <Route path="/food/*" element={<FoodApp onSwitchApp={switchToEcommerce} />} />
+        {commonRoutes}
+        {/* If we are in food mode but land on any other page, go to FoodApp */}
+        <Route path="*" element={<FoodApp onSwitchApp={switchToEcommerce} />} />
+      </Routes>
+    );
+  }
+
+  // Default: E-commerce mode (ZippyCart)
+  return (
+    <Routes>
+      <Route path="/food/*" element={<FoodApp onSwitchApp={switchToEcommerce} />} />
+      {commonRoutes}
+      {/* All other e-commerce pages are handled within EcommerceRoutes */}
+      <Route path="*" element={<EcommerceRoutes onSwitchApp={switchToFood} />} />
+    </Routes>
   );
 };
 
@@ -1109,55 +1261,7 @@ function App() {
               <OrderProvider>
                 <BrowserRouter>
                   <ScrollToTop />
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/product/:id" element={<DetailsView />} />
-                    <Route path="/shop" element={<Shop />} />
-                    <Route path="/food" element={<Food />} />
-                    <Route path="/categories" element={<Categories />} />
-                    <Route path="/deals" element={<Deals />} />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/faq" element={<FAQ />} />
-                    <Route path="/shipping" element={<ShippingInfo />} />
-                    <Route path="/returns" element={<Returns />} />
-                    <Route path="/track-order" element={<TrackOrder />} />
-                    <Route path="/privacy" element={<PrivacyPolicy />} />
-                    <Route path="/terms" element={<TermsOfService />} />
-                    <Route path="/cookies" element={<Cookies />} />
-                    <Route path="/cart" element={<Cart />} />
-                    <Route path="/payment" element={<Payment />} />
-                    <Route path="/wishlist" element={
-                      <ProtectedRoute>
-                        <Wishlist />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/profile" element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    } />
-                    {/* Alias /account to /profile for consistency */}
-                    <Route path="/account" element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/admin/*" element={
-                      <ProtectedRoute requiredRole="admin">
-                        <Admin />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/vendor/*" element={
-                      <ProtectedRoute requiredRole="vendor">
-                        <Vendor />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/auth/admin" element={<Auth />} />
-                    <Route path="/auth/vendor" element={<Auth />} />
-                    <Route path="*" element={<Home />} />
-                  </Routes>
+                  <AppRouter />
                 </BrowserRouter>
               </OrderProvider>
             </WishlistProvider>

@@ -15,7 +15,8 @@ import {
   AlertCircle, CheckCircle2, XCircle, Search, Filter,
   Plus, MoreVertical, MessageSquare, FileText, Bell,
   ShieldCheck, Languages, Truck, Globe, Mail,
-  Megaphone, Star, ChevronRight, ChevronDown, Box, Trash2, Zap, History, RotateCcw
+  Megaphone, Star, ChevronRight, ChevronDown, Box, Trash2, Zap, History, RotateCcw,
+  Utensils, Bike, ChefHat, MapPin, Clock
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -29,33 +30,96 @@ const Admin = () => {
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [activeSubMenu, setActiveSubMenu] = useState('overview');
   const [expandedMenus, setExpandedMenus] = useState(['dashboard', 'vendors']);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
-  // Dummy data for commissions and payouts
+  // States for dynamic data
   const [commissionRate, setCommissionRate] = useState(10);
   const [payoutRequests, setPayoutRequests] = useState([]);
   const [entities, setEntities] = useState([]);
-
   const [pendingProducts, setPendingProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
-  const [rejectionReasons, setRejectionReasons] = useState({});
   const [supportTickets, setSupportTickets] = useState([]);
+
+  // Food Delivery States
+  const [foodStats, setFoodStats] = useState({
+    liveOrders: 0, todayOrders: 0, activeRestaurants: 0, partnersOnline: 0
+  });
+  const [dashboardStats, setDashboardStats] = useState({
+    totalRevenue: 0, conversionRate: 0, activeSessions: 0, dailySales: 0
+  });
+  const [liveFoodOrders, setLiveFoodOrders] = useState([]);
+  const [restaurantsList, setRestaurantsList] = useState([]);
+  const [deliveryPartners, setDeliveryPartners] = useState([]);
+
+  const [rejectionReasons, setRejectionReasons] = useState({});
   const [replyingTo, setReplyingTo] = useState(null);
   const [adminReply, setAdminReply] = useState('');
 
   useEffect(() => {
-    if (activeSubMenu === 'product-approvals') {
-      fetchPendingProducts();
-    }
-    if (activeSubMenu === 'all-products') {
-      fetchAllProducts();
-    }
-    if (activeSubMenu === 'vendor-payouts') {
-      fetchPayoutRequests();
-    }
-    if (activeSubMenu === 'tickets') {
-      fetchSupportTickets();
-    }
+    if (activeSubMenu === 'product-approvals') fetchPendingProducts();
+    if (activeSubMenu === 'all-products') fetchAllProducts();
+    if (activeSubMenu === 'vendor-payouts') fetchPayoutRequests();
+    if (activeSubMenu === 'tickets') fetchSupportTickets();
+
+    // Food Delivery Data Fetching
+    if (activeSubMenu === 'food-dashboard') fetchFoodStats();
+    if (activeSubMenu === 'all-restaurants') fetchRestaurants();
+    if (activeSubMenu === 'live-food-orders') fetchLiveFoodOrders();
+    if (activeSubMenu === 'all-delivery-partners') fetchDeliveryPartners();
+
+    // Main Dashboard Data
+    if (activeSubMenu === 'overview') fetchDashboardStats();
   }, [activeSubMenu]);
+
+  const fetchDashboardStats = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/dashboard/stats`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setDashboardStats(response.data);
+    } catch (e) { console.error("Dashboard stats fetch fail", e); }
+  };
+
+  const fetchFoodStats = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/food/stats`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setFoodStats(response.data);
+    } catch (e) { console.error("Food stats fetch fail", e); }
+  };
+
+  const fetchRestaurants = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/food/restaurants`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setRestaurantsList(response.data);
+    } catch (e) { console.error("Restaurants fetch fail", e); }
+  };
+
+  const fetchLiveFoodOrders = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/food/orders/live`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setLiveFoodOrders(response.data);
+    } catch (e) { console.error("Live orders fetch fail", e); }
+  };
+
+  const fetchDeliveryPartners = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/food/partners`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setDeliveryPartners(response.data);
+    } catch (e) { console.error("Partners fetch fail", e); }
+  };
 
   const fetchPayoutRequests = async () => {
     try {
@@ -214,7 +278,9 @@ const Admin = () => {
 
   const handleMenuClick = (menuId) => {
     setActiveMenu(menuId);
-    if (!expandedMenus.includes(menuId)) {
+    if (expandedMenus.includes(menuId)) {
+      setExpandedMenus(expandedMenus.filter(id => id !== menuId));
+    } else {
       setExpandedMenus([...expandedMenus, menuId]);
     }
     const menu = menuItems.find(m => m.id === menuId);
@@ -459,6 +525,67 @@ const Admin = () => {
         { id: 'gdpr', label: 'GDPR / Data Control' },
         { id: 'backup-restore', label: 'Backup & Restore' }
       ]
+    },
+    // ===== FOOD DELIVERY SECTION =====
+    {
+      id: 'food-delivery',
+      label: '🍕 Food Delivery Management',
+      icon: Utensils,
+      subItems: [
+        { id: 'food-dashboard', label: 'Food Dashboard' },
+        { id: 'food-analytics', label: 'Order Analytics' },
+        { id: 'delivery-metrics', label: 'Delivery Metrics' }
+      ]
+    },
+    {
+      id: 'restaurants',
+      label: 'Restaurant Management',
+      icon: ChefHat,
+      subItems: [
+        { id: 'all-restaurants', label: 'All Restaurants' },
+        { id: 'restaurant-approvals', label: 'Approval Queue' },
+        { id: 'restaurant-categories', label: 'Restaurant Categories' },
+        { id: 'restaurant-ratings', label: 'Ratings & Reviews' },
+        { id: 'restaurant-verification', label: 'Verification (FSSAI)' },
+        { id: 'restaurant-suspend', label: 'Suspend / Block' }
+      ]
+    },
+    {
+      id: 'food-orders',
+      label: 'Food Order Management',
+      icon: ShoppingCart,
+      subItems: [
+        { id: 'live-food-orders', label: '🔴 Live Orders' },
+        { id: 'food-order-history', label: 'Order History' },
+        { id: 'food-refunds', label: 'Refunds & Cancellations' },
+        { id: 'food-complaints', label: 'Customer Complaints' },
+        { id: 'food-sla', label: 'Delivery SLA' }
+      ]
+    },
+    {
+      id: 'delivery-partners',
+      label: 'Delivery Partners',
+      icon: Bike,
+      subItems: [
+        { id: 'all-delivery-partners', label: 'All Partners' },
+        { id: 'partner-onboarding', label: 'Onboarding' },
+        { id: 'partner-verification', label: 'KYC Verification' },
+        { id: 'partner-payouts', label: 'Payouts' },
+        { id: 'partner-performance', label: 'Performance Metrics' },
+        { id: 'partner-zones', label: 'Delivery Zones' }
+      ]
+    },
+    {
+      id: 'food-menu',
+      label: 'Menu & Cuisine',
+      icon: Tag,
+      subItems: [
+        { id: 'cuisines', label: 'Cuisines' },
+        { id: 'food-categories', label: 'Food Categories' },
+        { id: 'menu-items', label: 'Menu Item Control' },
+        { id: 'pricing-rules', label: 'Pricing Rules' },
+        { id: 'offers-food', label: 'Offers & Discounts' }
+      ]
     }
   ];
 
@@ -475,10 +602,10 @@ const Admin = () => {
       {/* Upper Stats Row */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Total Revenue', value: '₹0', change: '0%', icon: CreditCard, color: 'text-violet-600', bg: 'bg-violet-100' },
-          { label: 'Conversion Rate', value: '0%', change: '0%', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-100' },
-          { label: 'Active Sessions', value: '0', change: '0%', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-100' },
-          { label: 'Daily Sales', value: '0', change: '0%', icon: ShoppingCart, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+          { label: 'Total Revenue', value: `₹${dashboardStats.totalRevenue.toLocaleString()}`, change: '0%', icon: CreditCard, color: 'text-violet-600', bg: 'bg-violet-100' },
+          { label: 'Conversion Rate', value: `${dashboardStats.conversionRate}%`, change: '0%', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-100' },
+          { label: 'Active Sessions', value: dashboardStats.activeSessions.toLocaleString(), change: '0%', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-100' },
+          { label: 'Daily Sales', value: dashboardStats.dailySales.toLocaleString(), change: '0%', icon: ShoppingCart, color: 'text-emerald-600', bg: 'bg-emerald-100' },
         ].map((stat, i) => (
           <Card key={i} className="border-0 shadow-sm hover:shadow-xl transition-all duration-300">
             <CardContent className="p-6">
@@ -1485,6 +1612,383 @@ const Admin = () => {
     </div>
   );
 
+  // ===== FOOD DELIVERY RENDER FUNCTIONS =====
+  const renderFoodDashboard = () => (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-3xl font-black italic">Food Delivery <span className="text-orange-500">Dashboard.</span></h3>
+          <p className="text-gray-500 font-medium mt-1">Real-time overview of your food delivery operations.</p>
+        </div>
+        <Badge className="bg-orange-100 text-orange-600 border-orange-200 px-4 py-2 text-sm font-bold">
+          <span className="w-2 h-2 bg-orange-500 rounded-full inline-block mr-2 animate-pulse"></span>
+          Live View
+        </Badge>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          { label: 'Live Orders', value: foodStats.liveOrders, change: '+12%', icon: Clock, color: 'text-orange-600', bg: 'bg-orange-100' },
+          { label: 'Today\'s Orders', value: foodStats.todayOrders, change: '+18%', icon: ShoppingCart, color: 'text-green-600', bg: 'bg-green-100' },
+          { label: 'Active Restaurants', value: foodStats.activeRestaurants, change: '+5%', icon: ChefHat, color: 'text-purple-600', bg: 'bg-purple-100' },
+          { label: 'Delivery Partners Online', value: foodStats.partnersOnline, change: '+8%', icon: Bike, color: 'text-blue-600', bg: 'bg-blue-100' },
+        ].map((stat, i) => (
+          <Card key={i} className="border-0 shadow-sm hover:shadow-xl transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`p-3 rounded-xl ${stat.bg}`}>
+                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                </div>
+                <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">{stat.change}</Badge>
+              </div>
+              <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">{stat.label}</p>
+              <p className="text-3xl font-black text-gray-900 tracking-tighter">{stat.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Live Orders & Restaurant Status */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Live Orders */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="bg-orange-500 text-white">
+            <CardTitle className="text-lg font-black uppercase tracking-widest flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Live Food Orders
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-gray-100">
+              {liveFoodOrders.length === 0 ? (
+                <div className="p-10 text-center text-gray-400 font-bold uppercase text-xs tracking-widest opacity-50">No live orders detected</div>
+              ) : liveFoodOrders.map((order, i) => (
+                <div key={i} className="p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-mono text-sm text-gray-400">#{order.id}</span>
+                    <Badge className={`text-[10px] uppercase font-bold ${order.status === 'Out for Delivery' ? 'bg-blue-100 text-blue-600' :
+                      order.status === 'Preparing' ? 'bg-amber-100 text-amber-600' :
+                        'bg-green-100 text-green-600'
+                      }`}>{order.status}</Badge>
+                  </div>
+                  <p className="font-bold text-gray-900">{order.restaurant}</p>
+                  <div className="flex items-center justify-between mt-1 text-sm text-gray-500">
+                    <span>{order.customer} • {order.items} items</span>
+                    <span className="font-bold text-orange-600">₹{order.amount}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">{order.time}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Restaurant Stats */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-black uppercase tracking-widest flex items-center gap-2">
+              <ChefHat className="w-5 h-5 text-purple-600" />
+              Top Restaurants Today
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[
+                { name: 'Spice Garden', orders: 45, rating: 4.5, revenue: 18500 },
+                { name: 'Pizza Paradise', orders: 38, rating: 4.7, revenue: 22400 },
+                { name: 'Burger Barn', orders: 32, rating: 4.6, revenue: 12800 },
+                { name: 'Dragon Wok', orders: 28, rating: 4.3, revenue: 9600 },
+              ].map((restaurant, i) => (
+                <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 font-bold">
+                      #{i + 1}
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900">{restaurant.name}</p>
+                      <p className="text-sm text-gray-500">{restaurant.orders} orders • ⭐ {restaurant.rating}</p>
+                    </div>
+                  </div>
+                  <span className="font-bold text-green-600">₹{restaurant.revenue.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Delivery Partner Status */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg font-black uppercase tracking-widest flex items-center gap-2">
+            <Bike className="w-5 h-5 text-blue-600" />
+            Delivery Partner Activity
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { label: 'On Delivery', count: 18, color: 'bg-blue-500' },
+              { label: 'Available', count: 14, color: 'bg-green-500' },
+              { label: 'Offline', count: 8, color: 'bg-gray-400' },
+            ].map((stat, i) => (
+              <div key={i} className="flex items-center gap-4 p-5 bg-gray-50 rounded-xl">
+                <div className={`w-4 h-4 ${stat.color} rounded-full`}></div>
+                <div>
+                  <p className="text-2xl font-black text-gray-900">{stat.count}</p>
+                  <p className="text-sm text-gray-500">{stat.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderRestaurants = () => (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-3xl font-black italic">Restaurant <span className="text-purple-600">Registry.</span></h3>
+          <p className="text-gray-500 font-medium mt-1">Manage all registered restaurants on ZippyBites.</p>
+        </div>
+        <Button className="h-14 bg-purple-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest px-8 shadow-xl hover:bg-purple-700 transition-all">
+          <Plus className="w-4 h-4 mr-2" /> Add Restaurant
+        </Button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search restaurants..."
+            className="w-full h-12 pl-12 pr-4 rounded-xl bg-gray-100 border-0 focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+        <Button variant="outline" className="h-12 px-6 rounded-xl">
+          <Filter className="w-4 h-4 mr-2" /> Filters
+        </Button>
+      </div>
+
+      {/* Restaurant Table */}
+      <Card className="border-0 shadow-sm overflow-hidden rounded-2xl">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-900 text-white">
+                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest">Restaurant</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest">Cuisine</th>
+                <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest">Rating</th>
+                <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest">Orders Today</th>
+                <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest">Status</th>
+                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {restaurantsList.length === 0 ? (
+                <tr><td colSpan="6" className="py-20 text-center text-gray-400 font-bold uppercase text-xs tracking-widest opacity-50">No restaurants in database</td></tr>
+              ) : restaurantsList.map((restaurant, i) => (
+                <tr key={i} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                        <ChefHat className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900">{restaurant.name}</p>
+                        {restaurant.verified && <span className="text-xs text-green-600">✓ FSSAI Verified</span>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-gray-600">{restaurant.cuisine}</td>
+                  <td className="px-6 py-4 text-center">
+                    <Badge className="bg-amber-100 text-amber-700 border-amber-200">⭐ {restaurant.rating}</Badge>
+                  </td>
+                  <td className="px-6 py-4 text-center font-bold">{restaurant.orders}</td>
+                  <td className="px-6 py-4 text-center">
+                    <Badge className={`${restaurant.status === 'Active' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                      {restaurant.status}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+
+  const renderLiveFoodOrders = () => (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-3xl font-black italic">Live <span className="text-red-500">Orders.</span></h3>
+          <p className="text-gray-500 font-medium mt-1">Real-time order tracking and management.</p>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-600 rounded-full text-sm font-bold">
+          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+          {liveFoodOrders.length} Active Orders
+        </div>
+      </div>
+
+      {/* Order Status Filters */}
+      <div className="flex gap-3 flex-wrap">
+        {['All Orders', 'Order Placed', 'Preparing', 'Ready for Pickup', 'Out for Delivery', 'Delivered'].map((status, i) => (
+          <Button key={i} variant={i === 0 ? 'default' : 'outline'} className={`rounded-full ${i === 0 ? 'bg-gray-900' : ''}`}>
+            {status}
+          </Button>
+        ))}
+      </div>
+
+      {/* Orders Grid */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {liveFoodOrders.length === 0 ? (
+          <div className="col-span-full py-20 text-center text-gray-400 font-bold uppercase text-xs tracking-widest opacity-50 bg-gray-50 rounded-3xl border border-dashed border-gray-200">No active orders monitored on live network</div>
+        ) : liveFoodOrders.map((order, i) => (
+          <Card key={i} className={`border-0 shadow-sm overflow-hidden ${order.status === 'Order Placed' ? 'ring-2 ring-green-500' : ''
+            }`}>
+            <div className={`p-3 ${order.status === 'Out for Delivery' ? 'bg-blue-500' :
+              order.status === 'Preparing' ? 'bg-amber-500' :
+                order.status === 'Ready for Pickup' ? 'bg-purple-500' :
+                  'bg-green-500'
+              }`}>
+              <div className="flex items-center justify-between text-white">
+                <span className="font-mono font-bold">#{order.id}</span>
+                <span className="text-sm font-bold uppercase">{order.status}</span>
+              </div>
+            </div>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="font-bold text-gray-900">{order.restaurant}</p>
+                <span className="text-xs text-gray-400">{order.time}</span>
+              </div>
+              <div className="text-sm text-gray-600">
+                <p><strong>Customer:</strong> {order.customer}</p>
+                <p><strong>Phone:</strong> {order.phone}</p>
+              </div>
+              <div className="text-sm bg-gray-50 p-2 rounded-lg">
+                {order.items.map((item, j) => (
+                  <p key={j} className="text-gray-600">{item}</p>
+                ))}
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">📍 {order.address.split(',')[0]}</span>
+                <span className="font-bold text-orange-600">₹{order.amount}</span>
+              </div>
+              {order.partner && (
+                <div className="flex items-center gap-2 text-sm text-blue-600">
+                  <Bike className="w-4 h-4" />
+                  <span className="font-medium">{order.partner}</span>
+                </div>
+              )}
+              <div className="flex gap-2 pt-2">
+                <Button size="sm" className="flex-1 bg-gray-900 text-white">View Details</Button>
+                {!order.partner && order.status === 'Order Placed' && (
+                  <Button size="sm" variant="outline" className="flex-1">Assign Partner</Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderDeliveryPartners = () => (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-3xl font-black italic">Delivery <span className="text-blue-600">Partners.</span></h3>
+          <p className="text-gray-500 font-medium mt-1">Manage your delivery fleet.</p>
+        </div>
+        <Button className="h-14 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest px-8 shadow-xl hover:bg-blue-700 transition-all">
+          <Plus className="w-4 h-4 mr-2" /> Add Partner
+        </Button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Partners', value: '40', bg: 'bg-gray-100' },
+          { label: 'Online Now', value: '32', bg: 'bg-green-100', color: 'text-green-600' },
+          { label: 'On Delivery', value: '18', bg: 'bg-blue-100', color: 'text-blue-600' },
+          { label: 'Avg. Delivery Time', value: '28 min', bg: 'bg-amber-100', color: 'text-amber-600' },
+        ].map((stat, i) => (
+          <div key={i} className={`p-5 ${stat.bg} rounded-2xl`}>
+            <p className="text-sm font-bold text-gray-500 mb-1">{stat.label}</p>
+            <p className={`text-2xl font-black ${stat.color || 'text-gray-900'}`}>{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Partners Table */}
+      <Card className="border-0 shadow-sm overflow-hidden rounded-2xl">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-900 text-white">
+                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest">Partner</th>
+                <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest">Status</th>
+                <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest">Today's Deliveries</th>
+                <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest">Rating</th>
+                <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest">Earnings Today</th>
+                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {deliveryPartners.length === 0 ? (
+                <tr><td colSpan="6" className="py-20 text-center text-gray-400 font-bold uppercase text-xs tracking-widest opacity-50">No delivery partners registered</td></tr>
+              ) : deliveryPartners.map((partner, i) => (
+                <tr key={i} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Bike className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900">{partner.name}</p>
+                        <p className="text-xs text-gray-500">{partner.phone}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <Badge className={`${partner.status === 'Available' ? 'bg-green-100 text-green-600' :
+                      partner.status === 'On Delivery' ? 'bg-blue-100 text-blue-600' :
+                        'bg-gray-100 text-gray-500'
+                      }`}>
+                      {partner.status}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4 text-center font-bold">{partner.deliveries}</td>
+                  <td className="px-6 py-4 text-center">
+                    <Badge className="bg-amber-100 text-amber-700">⭐ {partner.rating}</Badge>
+                  </td>
+                  <td className="px-6 py-4 text-center font-bold text-green-600">₹{partner.earnings}</td>
+                  <td className="px-6 py-4 text-right">
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+
   const renderPlaceholder = (title, description, icon = Box) => {
     const Icon = icon;
     return (
@@ -1686,28 +2190,74 @@ const Admin = () => {
     // Settings
     if (activeMenu === 'settings') return renderPlaceholder('System Configuration', 'Global system settings and preferences.', Settings);
 
+    // Food Delivery Section
+    if (activeSubMenu === 'food-dashboard') return renderFoodDashboard();
+    if (activeSubMenu === 'food-analytics') return renderPlaceholder('Food Analytics', 'Detailed analytics for food delivery performance.', BarChart3);
+    if (activeSubMenu === 'delivery-metrics') return renderPlaceholder('Delivery Metrics', 'Key performance indicators for delivery operations.', Bike);
+
+    // Restaurant Management
+    if (activeSubMenu === 'all-restaurants') return renderRestaurants();
+    if (activeSubMenu === 'restaurant-approvals') return renderPlaceholder('Restaurant Approvals', 'Queue for approving new restaurant partners.', UserCheck);
+    if (activeSubMenu === 'restaurant-categories') return renderPlaceholder('Restaurant Categories', 'Manage categories like Fine Dining, Fast Food, etc.', Utensils);
+    if (activeSubMenu === 'restaurant-ratings') return renderPlaceholder('Ratings & Reviews', 'Moderate customer feedback for restaurants.', Star);
+    if (activeSubMenu === 'restaurant-verification') return renderPlaceholder('FSSAI Verification', 'Verify legal documents and food safety certifications.', ShieldCheck);
+
+    // Food Order Management
+    if (activeSubMenu === 'live-food-orders') return renderLiveFoodOrders();
+    if (activeSubMenu === 'food-order-history') return renderPlaceholder('Food Order History', 'Archived records of all past food deliveries.', History);
+    if (activeSubMenu === 'food-refunds') return renderPlaceholder('Food Refunds', 'Handle refund requests for canceled food orders.', CreditCard);
+
+    // Delivery Partners
+    if (activeSubMenu === 'all-delivery-partners') return renderDeliveryPartners();
+    if (activeSubMenu === 'partner-onboarding') return renderPlaceholder('Partner Onboarding', 'Registration portal for new delivery executives.', UserCheck);
+    if (activeSubMenu === 'partner-verification') return renderPlaceholder('KYC Verification', 'Identity and vehicle verification for partners.', ShieldCheck);
+    if (activeSubMenu === 'partner-zones') return renderPlaceholder('Delivery Zones', 'Configure operational geographic boundaries.', MapPin);
+
+    // Food Menu & Cuisine
+    if (activeSubMenu === 'cuisines') return renderPlaceholder('Cuisine Management', 'Manage types of food offered (Italian, Indian, etc.).', ChefHat);
+    if (activeSubMenu === 'food-categories') return renderPlaceholder('Food Categories', 'Appetizers, Main Course, Desserts, etc.', Tag);
+    if (activeSubMenu === 'menu-items') return renderPlaceholder('Global Menu Control', 'Direct management of restaurant menu items.', Package);
+
     // Default
     return renderPlaceholder('Module Incoming', `We are currently synchronizing the ${activeSubMenu || activeMenu} module with the Master Node.`);
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col relative">
       <Navigation />
-      <div className="flex flex-1 pt-20 overflow-hidden">
-        <aside className="w-72 bg-gray-900 text-gray-300 flex flex-col border-r border-gray-800 shrink-0">
-          <div className="p-6 border-b border-gray-800">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center text-white">
+
+      {/* Sidebar Toggle Button */}
+      <button
+        onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+        className={`fixed z-[60] bottom-8 left-8 w-14 h-14 bg-gray-900 text-white rounded-2xl shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 ${!isSidebarVisible ? 'rotate-180' : ''}`}
+        title={isSidebarVisible ? "Collapse Menu" : "Expand Menu"}
+      >
+        <ChevronRight className={`w-6 h-6 transition-transform ${isSidebarVisible ? 'rotate-180' : ''}`} />
+      </button>
+
+      <div className="flex flex-1 pt-20 overflow-hidden relative">
+        {/* Sidebar */}
+        <aside className={`bg-gray-900 text-gray-300 flex flex-col border-r border-gray-800 shrink-0 transition-all duration-300 ease-in-out ${isSidebarVisible ? 'w-72 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-full overflow-hidden'}`}>
+          <div className="p-6 border-b border-gray-800 whitespace-nowrap overflow-hidden flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center text-white shrink-0">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <div>
-                <h2 className="font-bold text-white tracking-tight italic uppercase">Admin<span className="text-violet-400">Core.</span></h2>
+              <div className="transition-opacity">
+                <h2 className="font-bold text-white tracking-tight italic uppercase text-sm">Admin<span className="text-violet-400">Core.</span></h2>
                 <span className="text-[10px] uppercase font-black text-gray-500">Master Level 9</span>
               </div>
             </div>
+            {/* Close sidebar button inside header */}
+            <button
+              onClick={() => setIsSidebarVisible(false)}
+              className="p-2 hover:bg-gray-800 rounded-lg text-gray-500 hover:text-white transition-colors lg:hidden"
+            >
+              <XCircle className="w-5 h-5" />
+            </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto py-4">
+          <div className="flex-1 overflow-y-auto py-4 whitespace-nowrap">
             {menuItems.map((menu) => (
               <div key={menu.id} className="mb-1">
                 <button
@@ -1715,10 +2265,10 @@ const Admin = () => {
                   className={`w-full flex items-center justify-between px-6 py-4 transition-all ${activeMenu === menu.id ? 'bg-violet-600 text-white' : 'hover:bg-gray-800'}`}
                 >
                   <div className="flex items-center gap-3">
-                    <menu.icon className={`w-5 h-5 ${activeMenu === menu.id ? 'text-white' : 'text-gray-500'}`} />
+                    <menu.icon className={`w-5 h-5 shrink-0 ${activeMenu === menu.id ? 'text-white' : 'text-gray-500'}`} />
                     <span className="text-xs font-black uppercase tracking-widest italic">{menu.label}</span>
                   </div>
-                  {menu.subItems && <ChevronDown className={`w-4 h-4 transition-transform ${expandedMenus.includes(menu.id) ? 'rotate-180' : ''}`} />}
+                  {menu.subItems && <ChevronDown className={`w-4 h-4 transition-transform shrink-0 ${expandedMenus.includes(menu.id) ? 'rotate-180' : ''}`} />}
                 </button>
                 {menu.subItems && expandedMenus.includes(menu.id) && (
                   <div className="bg-black/20 py-2">
@@ -1737,20 +2287,20 @@ const Admin = () => {
             ))}
           </div>
 
-          <div className="p-6 border-t border-gray-800">
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-gray-500 hover:text-white font-black uppercase text-[10px] tracking-widest"
-              onClick={() => { logout(); navigate('/auth'); }}
+          <div className="p-6 border-t border-gray-800 mt-auto whitespace-nowrap overflow-hidden">
+            <button
+              onClick={logout}
+              className="flex items-center gap-3 text-red-400 hover:text-red-300 transition-colors w-full"
             >
-              <LogIn className="w-4 h-4 mr-3" />
-              Terminate Session
-            </Button>
+              <LogIn className="w-5 h-5 rotate-180" />
+              <span className="text-[10px] font-black uppercase tracking-widest italic">Terminate Session</span>
+            </button>
           </div>
         </aside>
 
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-12">
-          <div className="max-w-7xl mx-auto space-y-12">
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-8 lg:p-12 transition-all duration-300">
+          <div className="max-w-7xl mx-auto min-h-screen">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-gray-200 pb-10">
               <div>
                 <Badge className="bg-violet-50 text-violet-600 border-none px-3 py-1 text-[10px] font-black uppercase italic mb-4">Internal Node Access</Badge>

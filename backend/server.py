@@ -35,6 +35,23 @@ async def lifespan(app: FastAPI):
     # Create uploads directory if it doesn't exist
     uploads_dir = ROOT_DIR / 'uploads'
     uploads_dir.mkdir(exist_ok=True)
+    
+    # Seed Categories if empty
+    cat_count = await db.categories.count_documents({})
+    if cat_count == 0:
+        initial_categories = [
+            { "name": "Electronics", "image": "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&q=80", "items": "2.4k+ Products", "link": "/shop?category=Electronics" },
+            { "name": "Fashion", "image": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=500&q=80", "items": "1.8k+ Products", "link": "/shop?category=Fashion" },
+            { "name": "Home & Garden", "image": "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=500&q=80", "items": "950+ Products", "link": "/shop?category=Home" },
+            { "name": "Sports", "image": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=500&q=80", "items": "1.2k+ Products", "link": "/shop?category=Sports" },
+            { "name": "Beauty", "image": "https://images.unsplash.com/photo-1596462502278-27bfdc4033c8?w=500&q=80", "items": "800+ Products", "link": "/shop?category=Beauty" },
+            { "name": "Books", "image": "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=500&q=80", "items": "3.5k+ Products", "link": "/shop?category=Books" }
+        ]
+        for cat in initial_categories:
+            cat['id'] = str(uuid.uuid4())
+            cat['created_at'] = datetime.now(timezone.utc)
+            await db.categories.insert_one(cat)
+
     yield
     # Shutdown
     client.close()
@@ -148,8 +165,10 @@ class Product(BaseModel):
     material: str = ""
     vendor_id: str
     offers: str = ""
+    offer_expires_at: Optional[datetime] = None
     status: str = "approved" # pending, approved, rejected
     rejection_reason: Optional[str] = None
+    sales_count: int = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ProductCreate(BaseModel):
@@ -172,6 +191,7 @@ class ProductCreate(BaseModel):
     dimensions: str = ""
     material: str = ""
     offers: str = ""
+    offer_expires_at: Optional[datetime] = None
 
 class Notification(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -181,6 +201,15 @@ class Notification(BaseModel):
     message: str
     type: str = "info" # info, success, warning, error
     is_read: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class Category(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    image: str
+    items: str = "0 Products"
+    link: str = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class OrderItem(BaseModel):
@@ -292,6 +321,15 @@ class Review(BaseModel):
     rating: int  # 1-5
     comment: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class NewsletterSubscription(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class NewsletterCreate(BaseModel):
+    email: str
 
 # Add your routes to the router instead of directly to app
 
@@ -571,6 +609,13 @@ async def checkout(order_data: OrderCreate, request: Request, current_user: Anno
             {"$inc": {"usage": 1}}
         )
 
+    # Increment product sales count
+    for item in order_data.items:
+        await db.products.update_one(
+            {"id": item.product_id},
+            {"$inc": {"sales_count": item.quantity}}
+        )
+
     # Trigger Notifications for order placement
     # Notify User
     await db.notifications.insert_one({
@@ -597,6 +642,20 @@ async def checkout(order_data: OrderCreate, request: Request, current_user: Anno
         })
     
     return {"message": "Transaction authorized.", "order_id": order_obj.id}
+
+@api_router.post("/newsletter/subscribe")
+async def subscribe_newsletter(data: NewsletterCreate):
+    # Check if email is already subscribed
+    existing = await db.newsletter_subscriptions.find_one({"email": data.email.lower()})
+    if existing:
+        return {"message": "You are already a part of our ecosystem."}
+    
+    sub_obj = NewsletterSubscription(email=data.email.lower())
+    doc = sub_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    
+    await db.newsletter_subscriptions.insert_one(doc)
+    return {"message": "Successfully synchronized with our newsletter protocol."}
 
 # --- Product Endpoints ---
 
@@ -627,16 +686,39 @@ async def add_product(product_data: ProductCreate, current_user: Annotated[dict,
     return {"message": "Inventory queued for auditing.", "product_id": product_obj.id}
 
 @api_router.get("/products")
-async def list_public_products():
-    # Only show approved products
-    products_cursor = db.products.find({"status": "approved"})
+async def list_public_products(
+    limit: int = 20, 
+    sort: str = "newest", 
+    category: Optional[str] = None
+):
+    # Base filter: only show approved products
+    query = {"status": "approved"}
+    if category:
+        query["category"] = category
+        
+    products_cursor = db.products.find(query)
+    
+    # Apply sorting
+    if sort == "trending":
+        # Trending = High sales + New arrival (weighted)
+        products_cursor = products_cursor.sort([("sales_count", -1), ("created_at", -1)])
+    elif sort == "newest":
+        products_cursor = products_cursor.sort("created_at", -1)
+    elif sort == "price_low":
+        products_cursor = products_cursor.sort("price", 1)
+    elif sort == "price_high":
+        products_cursor = products_cursor.sort("price", -1)
+        
+    # Apply limit
+    products_cursor = products_cursor.limit(limit)
+    
     products = []
     async for p in products_cursor:
         p_id = p.get('id') or str(p['_id'])
         p['id'] = p_id
         if '_id' in p: del p['_id']
 
-        # Add vendor information
+        # Add vendor information efficiently (could be optimized with a join/lookup)
         vendor_id = p.get('vendor_id')
         if vendor_id:
             vendor = await db.vendors.find_one({"id": vendor_id})
@@ -1344,6 +1426,76 @@ async def get_user(user_id: str):
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+@api_router.get("/public/stats")
+async def get_public_stats():
+    """
+    Returns platform-wide metrics for public display
+    """
+    user_count = await db.users.count_documents({})
+    vendor_count = await db.vendors.count_documents({})
+    product_count = await db.products.count_documents({"status": "approved"})
+    
+    # Real dynamic counts from database
+    return {
+        "happy_customers": user_count,
+        "total_products": product_count,
+        "total_vendors": vendor_count,
+        "satisfaction_rate": "100%"
+    }
+
+@api_router.get("/public/reviews")
+async def get_public_reviews():
+    """
+    Returns latest reviews for public display
+    """
+    reviews_cursor = db.reviews.find().sort("created_at", -1).limit(6)
+    reviews = []
+    async for review in reviews_cursor:
+        review['id'] = str(review.get('id') or review['_id'])
+        if '_id' in review: del review['_id']
+        
+        # Fetch user name
+        user = await db.users.find_one({"id": review['user_id']})
+        if user:
+            review['user_name'] = user['name']
+        else:
+            review['user_name'] = "Anonymous"
+            
+        reviews.append(review)
+    return reviews
+
+@api_router.get("/public/categories")
+async def get_public_categories():
+    """
+    Returns all categories for home page display
+    """
+    categories_cursor = db.categories.find().sort("name", 1)
+    categories = []
+    async for cat in categories_cursor:
+        cat['id'] = str(cat.get('id') or cat['_id'])
+        if '_id' in cat: del cat['_id']
+        categories.append(cat)
+    return categories
+
+@api_router.post("/categories")
+async def add_category(category: Category, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Only admins can add categories")
+    
+    cat_dict = category.model_dump()
+    cat_dict['created_at'] = datetime.now(timezone.utc)
+    await db.categories.insert_one(cat_dict)
+    return {"message": "Category added successfully."}
+
+@api_router.post("/reviews")
+async def add_review(review: Review, current_user: Annotated[dict, Depends(get_current_user)]):
+    review_dict = review.model_dump()
+    review_dict['user_id'] = current_user['id']
+    review_dict['created_at'] = review_dict['created_at'].isoformat()
+    
+    await db.reviews.insert_one(review_dict)
+    return {"message": "Review submitted successfully."}
 
 @api_router.put("/users/{user_id}")
 async def update_user(user_id: str, update_data: dict, current_user: Annotated[dict, Depends(get_current_user)]):

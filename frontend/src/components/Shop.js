@@ -60,41 +60,57 @@ const Shop = () => {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Helper function to get proxied image URL
   const getImageUrl = (imageUrl) => {
-    if (!imageUrl) return '/assets/zlogo.png';
+    if (!imageUrl) {
+      console.log('No image URL provided, using fallback');
+      return '/assets/zlogo.png';
+    }
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-      return `${API_BASE}/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+      const proxiedUrl = `${API_BASE}/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+      console.log('Using proxied URL for:', imageUrl, '->', proxiedUrl);
+      return proxiedUrl;
     }
+    console.log('Using direct URL:', imageUrl);
     return imageUrl;
   };
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-        const response = await axios.get(`${API_BASE}/api/products`);
-        setProducts(response.data);
+
+        // Fetch products
+        const prodRes = await axios.get(`${API_BASE}/api/products`);
+        setProducts(prodRes.data);
+
+        // Fetch categories
+        const catRes = await axios.get(`${API_BASE}/api/public/categories`);
+        setCategories(catRes.data.map(cat => ({ name: cat.name, sub: [] })));
       } catch (err) {
-        console.error("Error fetching products:", err);
-        setError("Unable to load products. Please try again later.");
+        console.error("Error fetching shop data:", err);
+        setError("Unable to load store data. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
-    fetchProducts();
+    fetchData();
   }, []);
 
   const filteredProducts = useMemo(() => {
     let result = products.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.category.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = !filters.category || (product.category?.toLowerCase() === filters.category.toLowerCase().replace(/\s+/g, '-') || (filters.subCategory && product.category?.toLowerCase() === filters.subCategory.toLowerCase().replace(/\s+/g, '-')));
+      const normalize = (str) => str?.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const matchesCategory = !filters.category ||
+        (normalize(product.category) === normalize(filters.category)) ||
+        (filters.subCategory && normalize(product.category) === normalize(filters.subCategory));
       const matchesPrice = product.price >= filters.priceRange[0] && product.price <= filters.priceRange[1];
       const matchesRating = filters.rating === 0 || product.rating >= filters.rating;
       return matchesSearch && matchesCategory && matchesPrice && matchesRating;
@@ -110,17 +126,7 @@ const Shop = () => {
     return result;
   }, [products, searchQuery, filters, sortBy]);
 
-  const categoriesData = [
-    { name: 'Electronics', sub: [] },
-    { name: 'Fashion', sub: [] },
-    { name: 'Home & Garden', sub: [] },
-    { name: 'Sports', sub: [] },
-    { name: 'Food', sub: ['Fast Food', 'Bakery', 'Groceries', 'Beverages'] },
-    { name: 'Beauty', sub: [] },
-    { name: 'Books', sub: [] },
-    { name: 'Automotive', sub: [] },
-  ];
-  const categories = categoriesData;
+
 
   const clearFilters = () => {
     setFilters({ category: "", subCategory: "", priceRange: [0, 100000], rating: 0 });
@@ -453,6 +459,7 @@ const Shop = () => {
                               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                               loading="lazy"
                               onError={(e) => {
+                                console.log('Image failed to load (list view):', e.target.src, 'for product:', product.name);
                                 e.target.src = '/assets/zlogo.png'; // Fallback image
                               }}
                             />

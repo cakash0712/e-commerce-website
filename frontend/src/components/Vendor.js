@@ -718,6 +718,7 @@ const Vendor = () => {
   const [newProduct, setNewProduct] = useState({
     name: '', category: user?.business_category || '', sub_category: '', price: '', stock: '', image: '', description: '',
     brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
+    offer_expires_at: '',
     images: '', highlights: '', specifications: '', warranty: '', box_contents: ''
   });
 
@@ -742,7 +743,8 @@ const Vendor = () => {
       weight: product.weight || '',
       dimensions: product.dimensions || '',
       material: product.material || '',
-      offers: product.offers || ''
+      offers: product.offers || '',
+      offer_expires_at: product.offer_expires_at ? new Date(product.offer_expires_at).toISOString().slice(0, 16) : ''
     });
     setShowAddForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -810,7 +812,8 @@ const Vendor = () => {
         images: newProduct.images.split(',').map(c => c.trim()).filter(c => c),
         highlights: newProduct.highlights.split('\n').map(c => c.trim()).filter(c => c),
         specifications: specObj,
-        offers: newProduct.offers
+        offers: newProduct.offers,
+        offer_expires_at: newProduct.offer_expires_at ? new Date(newProduct.offer_expires_at).toISOString() : null
       };
 
       if (editingProduct) {
@@ -828,8 +831,8 @@ const Vendor = () => {
       setShowAddForm(false);
       setEditingProduct(null);
       setNewProduct({
-        name: '', category: user?.business_category || '', sub_category: '', price: '', stock: '', image: '', description: '',
         brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
+        offer_expires_at: '',
         images: '', highlights: '', specifications: '', warranty: '', box_contents: ''
       });
       fetchVendorProducts();
@@ -1063,14 +1066,25 @@ const Vendor = () => {
                           {errors.stock && <span className="text-red-500 text-[10px] uppercase font-bold tracking-wider ml-2 animate-pulse">{errors.stock}</span>}
                         </div>
                       </div>
-                      <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Special Offers</Label>
-                        <Input
-                          placeholder="e.g. Buy 1 Get 1, Use code FIRST50 for 50% extra credit"
-                          value={newProduct.offers}
-                          onChange={(e) => setNewProduct({ ...newProduct, offers: e.target.value })}
-                          className="h-14 rounded-2xl border-slate-100 font-bold"
-                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-3">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Special Offers</Label>
+                          <Input
+                            placeholder="e.g. Buy 1 Get 1, Use code FIRST50 for 50% extra credit"
+                            value={newProduct.offers}
+                            onChange={(e) => setNewProduct({ ...newProduct, offers: e.target.value })}
+                            className="h-14 rounded-2xl border-slate-100 font-bold"
+                          />
+                        </div>
+                        <div className="space-y-3">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 italic text-violet-600">Offer end date & time</Label>
+                          <Input
+                            type="datetime-local"
+                            value={newProduct.offer_expires_at}
+                            onChange={(e) => setNewProduct({ ...newProduct, offer_expires_at: e.target.value })}
+                            className="h-14 rounded-2xl border-slate-100 font-bold"
+                          />
+                        </div>
                       </div>
                     </TabsContent>
 
