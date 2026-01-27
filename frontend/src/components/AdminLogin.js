@@ -31,17 +31,17 @@ const AdminLogin = () => {
             navigate("/admin/dashboard");
         } catch (err) {
             // Demo admin fallback for testing
-            if (email === 'admin@admin.com' && password === 'admin123') {
+            if (email === 'admin@zippy.com' && password === 'admin_password') {
                 const adminData = {
-                    id: 999,
+                    id: 'admin-id',
                     name: 'Super Admin',
-                    email: 'admin@admin.com',
+                    email: 'admin@zippy.com',
                     user_type: 'admin',
                     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin'
                 };
                 setUser(adminData);
                 localStorage.setItem('user_data', JSON.stringify(adminData));
-                localStorage.setItem('token', 'admin_token');
+                localStorage.setItem('token', 'admin_token_demo');
                 navigate("/admin/dashboard");
                 return;
             }

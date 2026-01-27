@@ -39,6 +39,7 @@ const Shop = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     category: searchParams.get("category") || "",
+    subCategory: "",
     priceRange: [0, 100000],
     rating: 0
   });
@@ -93,7 +94,7 @@ const Shop = () => {
     let result = products.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.category.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = !filters.category || product.category?.toLowerCase() === filters.category?.toLowerCase();
+      const matchesCategory = !filters.category || (product.category?.toLowerCase() === filters.category.toLowerCase().replace(/\s+/g, '-') || (filters.subCategory && product.category?.toLowerCase() === filters.subCategory.toLowerCase().replace(/\s+/g, '-')));
       const matchesPrice = product.price >= filters.priceRange[0] && product.price <= filters.priceRange[1];
       const matchesRating = filters.rating === 0 || product.rating >= filters.rating;
       return matchesSearch && matchesCategory && matchesPrice && matchesRating;
@@ -109,15 +110,26 @@ const Shop = () => {
     return result;
   }, [products, searchQuery, filters, sortBy]);
 
-  const categories = Array.from(new Set(products.map(p => p.category)));
+  const categoriesData = [
+    { name: 'Electronics', sub: [] },
+    { name: 'Fashion', sub: [] },
+    { name: 'Home & Garden', sub: [] },
+    { name: 'Sports', sub: [] },
+    { name: 'Food', sub: ['Fast Food', 'Bakery', 'Groceries', 'Beverages'] },
+    { name: 'Beauty', sub: [] },
+    { name: 'Books', sub: [] },
+    { name: 'Automotive', sub: [] },
+  ];
+  const categories = categoriesData;
 
   const clearFilters = () => {
-    setFilters({ category: "", priceRange: [0, 100000], rating: 0 });
+    setFilters({ category: "", subCategory: "", priceRange: [0, 100000], rating: 0 });
     setSearchQuery("");
   };
 
   const activeFilterCount = [
     filters.category,
+    filters.subCategory,
     filters.rating > 0,
     filters.priceRange[0] > 0 || filters.priceRange[1] < 100000
   ].filter(Boolean).length;
@@ -132,17 +144,25 @@ const Shop = () => {
           <nav className="text-sm text-gray-500 mb-3">
             <Link to="/" className="hover:text-violet-600">Home</Link>
             <span className="mx-2">›</span>
-            <span className="text-gray-900 font-medium">Shop</span>
+            <span className="text-gray-900 font-medium">Products</span>
             {filters.category && (
               <>
                 <span className="mx-2">›</span>
                 <span className="text-violet-600 font-medium capitalize">{filters.category}</span>
+                {filters.subCategory && (
+                  <>
+                    <span className="mx-2">›</span>
+                    <span className="text-violet-600 font-medium capitalize">{filters.subCategory}</span>
+                  </>
+                )}
               </>
             )}
           </nav>
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">
-              {filters.category ? (
+              {filters.subCategory ? (
+                <span className="capitalize">{filters.subCategory.replace(/-/g, ' ')}</span>
+              ) : filters.category ? (
                 <span className="capitalize">{filters.category.replace(/-/g, ' ')}</span>
               ) : (
                 "All Products"
@@ -249,61 +269,107 @@ const Shop = () => {
               <div className="space-y-3">
                 <h4 className="text-sm font-semibold text-gray-900">Categories</h4>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  <button
-                    className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors ${!filters.category ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-                    onClick={() => setFilters({ ...filters, category: "" })}
-                  >
-                    All Categories
-                  </button>
-                  {categories.map(cat => (
-                    <button
-                      key={cat}
-                      className={`w-full text-left text-sm py-1.5 px-2 rounded capitalize transition-colors ${filters.category === cat ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-                      onClick={() => setFilters({ ...filters, category: cat })}
-                    >
-                      {cat.replace(/-/g, ' ')}
-                    </button>
-                  ))}
+                  {filters.category === "Food" ? (
+                    <>
+                      <button
+                        className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors ${!filters.subCategory ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                        onClick={() => setFilters({ ...filters, subCategory: "" })}
+                      >
+                        All Food
+                      </button>
+                      {categories.find(cat => cat.name === "Food")?.sub.map(sub => (
+                        <button
+                          key={sub}
+                          className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors ${filters.subCategory === sub ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                          onClick={() => setFilters({ ...filters, subCategory: sub })}
+                        >
+                          {sub}
+                        </button>
+                      ))}
+                      <button
+                        className="w-full text-left text-sm py-1.5 px-2 rounded transition-colors text-gray-500 hover:bg-gray-50"
+                        onClick={() => setFilters({ ...filters, category: "", subCategory: "" })}
+                      >
+                        ← Back to All Categories
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors ${!filters.category ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                        onClick={() => setFilters({ ...filters, category: "", subCategory: "" })}
+                      >
+                        All Categories
+                      </button>
+                      {categories.map(cat => (
+                        <div key={cat.name}>
+                          <button
+                            className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors ${filters.category === cat.name && !filters.subCategory ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                            onClick={() => setFilters({ ...filters, category: cat.name, subCategory: "" })}
+                          >
+                            {cat.name}
+                          </button>
+                          {cat.sub.length > 0 && (
+                            <div className="ml-4 space-y-1">
+                              {cat.sub.map(sub => (
+                                <button
+                                  key={sub}
+                                  className={`w-full text-left text-sm py-1 px-2 rounded transition-colors ${filters.category === cat.name && filters.subCategory === sub ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}
+                                  onClick={() => setFilters({ ...filters, category: cat.name, subCategory: sub })}
+                                >
+                                  {sub}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
 
-              {/* Price Range */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-gray-900">Price Range</h4>
-                  <span className="text-xs text-gray-500">₹{filters.priceRange[0]} - ₹{filters.priceRange[1].toLocaleString()}</span>
-                </div>
-                <Slider
-                  value={filters.priceRange}
-                  onValueChange={(v) => setFilters({ ...filters, priceRange: v })}
-                  max={100000}
-                  step={500}
-                  className="py-2"
-                />
-              </div>
+              {filters.category !== "Food" && (
+                <>
+                  {/* Price Range */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-gray-900">Price Range</h4>
+                      <span className="text-xs text-gray-500">₹{filters.priceRange[0]} - ₹{filters.priceRange[1].toLocaleString()}</span>
+                    </div>
+                    <Slider
+                      value={filters.priceRange}
+                      onValueChange={(v) => setFilters({ ...filters, priceRange: v })}
+                      max={100000}
+                      step={500}
+                      className="py-2"
+                    />
+                  </div>
 
-              {/* Rating */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-gray-900">Rating</h4>
-                <div className="space-y-2">
-                  {[4, 3, 2, 0].map((rating) => (
-                    <label key={rating} className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={filters.rating === rating}
-                        onCheckedChange={() => setFilters({ ...filters, rating: filters.rating === rating ? 0 : rating })}
-                        className="border-gray-300 data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600"
-                      />
-                      <span className="text-sm text-gray-600 flex items-center gap-1">
-                        {rating === 0 ? "All Ratings" : (
-                          <>
-                            {rating}+ <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                          </>
-                        )}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+                  {/* Rating */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-gray-900">Rating</h4>
+                    <div className="space-y-2">
+                      {[4, 3, 2, 0].map((rating) => (
+                        <label key={rating} className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={filters.rating === rating}
+                            onCheckedChange={() => setFilters({ ...filters, rating: filters.rating === rating ? 0 : rating })}
+                            className="border-gray-300 data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600"
+                          />
+                          <span className="text-sm text-gray-600 flex items-center gap-1">
+                            {rating === 0 ? "All Ratings" : (
+                              <>
+                                {rating}+ <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                              </>
+                            )}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </aside>
 
@@ -420,8 +486,8 @@ const Shop = () => {
                           <p className="text-sm text-gray-500 line-clamp-2 mb-3">{product.description}</p>
                           <div className="mt-auto flex items-center justify-between">
                             <div className="flex items-baseline gap-2">
-                              <span className="text-xl font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
-                              {product.originalPrice > product.price && (
+                              <span className="text-xl font-bold text-gray-900">₹{product.price ? product.price.toLocaleString() : 'N/A'}</span>
+                              {product.originalPrice && product.originalPrice > product.price && (
                                 <span className="text-sm text-gray-400 line-through">₹{product.originalPrice.toLocaleString()}</span>
                               )}
                             </div>
@@ -506,8 +572,8 @@ const Shop = () => {
                             <span className="text-xs text-gray-500">({product.reviews})</span>
                           </div>
                           <div className="flex items-baseline gap-2 mb-1">
-                            <span className="text-lg font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
-                            {product.originalPrice > product.price && (
+                            <span className="text-lg font-bold text-gray-900">₹{product.price ? product.price.toLocaleString() : 'N/A'}</span>
+                            {product.originalPrice && product.originalPrice > product.price && (
                               <span className="text-sm text-gray-400 line-through">₹{product.originalPrice.toLocaleString()}</span>
                             )}
                           </div>

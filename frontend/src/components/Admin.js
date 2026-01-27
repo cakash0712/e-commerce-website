@@ -36,6 +36,7 @@ const Admin = () => {
   const [entities, setEntities] = useState([]);
 
   const [pendingProducts, setPendingProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
   const [rejectionReasons, setRejectionReasons] = useState({});
   const [supportTickets, setSupportTickets] = useState([]);
   const [replyingTo, setReplyingTo] = useState(null);
@@ -44,6 +45,9 @@ const Admin = () => {
   useEffect(() => {
     if (activeSubMenu === 'product-approvals') {
       fetchPendingProducts();
+    }
+    if (activeSubMenu === 'all-products') {
+      fetchAllProducts();
     }
     if (activeSubMenu === 'vendor-payouts') {
       fetchPayoutRequests();
@@ -105,6 +109,18 @@ const Admin = () => {
     }
   };
 
+  const fetchAllProducts = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/products/all`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setAllProducts(response.data);
+    } catch (e) {
+      console.error("Failed to fetch all products:", e);
+    }
+  };
+
   const handleApproveProduct = async (productId) => {
     try {
       const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
@@ -126,6 +142,33 @@ const Admin = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setPendingProducts(prev => prev.filter(p => p.id !== productId));
+      alert("Inventory Item rejected for non-compliance.");
+    } catch (e) {
+      alert("Rejection protocol failed.");
+    }
+  };
+
+  const handleApproveProductAll = async (productId) => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      await axios.post(`${API_BASE}/api/admin/products/approve/${productId}`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setAllProducts(prev => prev.map(p => p.id === productId ? { ...p, status: 'approved' } : p));
+      alert("Inventory Item successfully authorized for live network.");
+    } catch (e) {
+      alert("Authorization protocol failed. Check security logs.");
+    }
+  };
+
+  const handleRejectProductAll = async (productId) => {
+    try {
+      const reason = rejectionReasons[productId] || "Fails to meet compliance standards.";
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      await axios.post(`${API_BASE}/api/admin/products/reject/${productId}`, { reason }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setAllProducts(prev => prev.map(p => p.id === productId ? { ...p, status: 'rejected' } : p));
       alert("Inventory Item rejected for non-compliance.");
     } catch (e) {
       alert("Rejection protocol failed.");
@@ -192,21 +235,33 @@ const Admin = () => {
   const menuItems = [
     {
       id: 'dashboard',
-      label: 'Dashboard',
+      label: 'Admin Dashboard',
       icon: LayoutDashboard,
       subItems: [
-        { id: 'overview', label: 'Overview' },
-        { id: 'revenue-charts', label: 'Revenue Charts' },
-        { id: 'recent-activity', label: 'Recent Activity' }
+        { id: 'overview', label: 'Control Center' },
+        { id: 'live-sales', label: 'Live Sales' },
+        { id: 'orders-funnel', label: 'Orders Funnel' },
+        { id: 'vendor-snapshot', label: 'Vendor Performance' },
+        { id: 'pending-approvals', label: 'Pending Approvals' },
+        { id: 'alerts', label: 'Alerts & Health' }
       ]
     },
     {
       id: 'users',
-      label: 'User Management',
+      label: 'User & Access Management',
       icon: Users,
       subItems: [
-        { id: 'all-users', label: 'All Users' },
-        { id: 'roles-permissions', label: 'Roles & Permissions' }
+        { id: 'customers', label: '👥 Customers' },
+        { id: 'customer-list', label: 'Customer List' },
+        { id: 'kyc', label: 'KYC Verification' },
+        { id: 'block-restrict', label: 'Block / Restrict' },
+        { id: 'order-history', label: 'Order & Return History' },
+        { id: 'wallet-logs', label: 'Wallet & Refund Logs' },
+        { id: 'admin-users', label: '👨‍💼 Admin Users' },
+        { id: 'super-admin', label: 'Super Admin' },
+        { id: 'sub-admin', label: 'Sub Admin' },
+        { id: 'support-staff', label: 'Support Staff' },
+        { id: 'rbac', label: 'Role-based Access (RBAC)' }
       ]
     },
     {
@@ -214,83 +269,195 @@ const Admin = () => {
       label: 'Vendor Management',
       icon: Store,
       subItems: [
-        { id: 'vendor-list', label: 'Vendor List' },
-        { id: 'vendor-approvals', label: 'Approvals' },
-        { id: 'vendor-performance', label: 'Performance' },
-        { id: 'commission-settings', label: 'Commissions' },
-        { id: 'vendor-payouts', label: 'Payouts' }
+        { id: 'vendor-onboarding', label: 'Vendor Onboarding' },
+        { id: 'vendor-kyc', label: 'KYC Verification' },
+        { id: 'vendor-categories', label: 'Vendor Categories' },
+        { id: 'vendor-profiles', label: 'Vendor Profile Control' },
+        { id: 'vendor-products', label: 'Vendor Product Listing' },
+        { id: 'commission-rules', label: 'Commission Rules' },
+        { id: 'vendor-penalties', label: 'Penalty / Warning System' },
+        { id: 'vendor-block', label: 'Block / Suspend' },
+        { id: 'vendor-reviews', label: 'Review Moderation' }
       ]
     },
     {
-      id: 'products',
-      label: 'Product Management',
+      id: 'catalog',
+      label: 'Catalog Management',
       icon: Package,
       subItems: [
+        { id: 'product-control', label: '📦 Product Control' },
         { id: 'all-products', label: 'All Products' },
-        { id: 'product-approvals', label: 'Approvals' },
-        { id: 'categories', label: 'Categories' }
+        { id: 'product-approvals', label: 'Product Approval Queue' },
+        { id: 'product-edit', label: 'Product Edit / Disable' },
+        { id: 'duplicate-detection', label: 'Duplicate Detection' },
+        { id: 'variants', label: 'Variant Management' },
+        { id: 'seo-control', label: 'Product SEO Control' },
+        { id: 'vendor-products-view', label: 'Vendor-wise Product View' },
+        { id: 'categories-system', label: '🗂️ Category System' },
+        { id: 'categories', label: 'Categories / Subcategories' },
+        { id: 'attributes', label: 'Attribute Mapping' },
+        { id: 'brands', label: 'Brand Management' }
       ]
     },
     {
       id: 'orders',
-      label: 'Order Management',
+      label: 'Order Lifecycle Management',
       icon: ShoppingCart,
       subItems: [
-        { id: 'all-orders', label: 'All Orders' },
-        { id: 'returns-refunds', label: 'Returns & Refunds' },
-        { id: 'shipping-status', label: 'Shipping Status' }
+        { id: 'order-dashboard', label: 'Order Dashboard' },
+        { id: 'split-orders', label: 'Split Orders' },
+        { id: 'order-status', label: 'Order Status Override' },
+        { id: 'shipping-labels', label: 'Shipping Label Generation' },
+        { id: 'delivery-sla', label: 'Delivery SLA Monitoring' },
+        { id: 'auto-cancel', label: 'Auto Cancel Rules' },
+        { id: 'cod-verification', label: 'COD Verification' },
+        { id: 'rto', label: 'RTO (Return to Origin)' }
+      ]
+    },
+    {
+      id: 'returns',
+      label: 'Returns, Refunds & Disputes',
+      icon: RotateCcw,
+      subItems: [
+        { id: 'return-requests', label: 'Return Requests' },
+        { id: 'refund-approval', label: 'Refund Approval' },
+        { id: 'disputes', label: 'Dispute Management' },
+        { id: 'evidence-upload', label: 'Evidence Upload' },
+        { id: 'auto-refund', label: 'Auto Refund Rules' },
+        { id: 'chargeback', label: 'Chargeback Handling' }
+      ]
+    },
+    {
+      id: 'inventory',
+      label: 'Inventory & Stock Intelligence',
+      icon: Box,
+      subItems: [
+        { id: 'real-time-inventory', label: 'Real-time Inventory' },
+        { id: 'stock-sync', label: 'Vendor Stock Sync' },
+        { id: 'low-stock-alerts', label: 'Low Stock Auto Alerts' },
+        { id: 'stock-lock', label: 'Stock Lock (Checkout)' },
+        { id: 'damaged-stock', label: 'Damaged / Lost Stock Logs' }
+      ]
+    },
+    {
+      id: 'payments',
+      label: 'Payments, Earnings & Settlements',
+      icon: CreditCard,
+      subItems: [
+        { id: 'admin-finance', label: '💰 Admin Finance' },
+        { id: 'platform-earnings', label: 'Platform Earnings' },
+        { id: 'commission-breakdown', label: 'Commission Breakdown' },
+        { id: 'tax-collection', label: 'Tax Collection' },
+        { id: 'gst-reports', label: 'GST/VAT Reports' },
+        { id: 'vendor-settlements', label: '🏦 Vendor Settlements' },
+        { id: 'payout-cycle', label: 'Payout Cycle Settings' },
+        { id: 'vendor-wallet', label: 'Vendor Wallet' },
+        { id: 'pending-settlements', label: 'Pending Settlements' },
+        { id: 'manual-adjustments', label: 'Manual Adjustments' },
+        { id: 'failed-payouts', label: 'Failed Payouts' }
       ]
     },
     {
       id: 'marketing',
-      label: 'Marketing',
+      label: 'Marketing & Growth Engine',
       icon: Megaphone,
       subItems: [
         { id: 'coupons', label: 'Coupons' },
-        { id: 'promotions', label: 'Promos' },
-        { id: 'newsletter', label: 'Newsletter' }
+        { id: 'campaigns', label: 'Campaign Management' },
+        { id: 'flash-sales', label: 'Flash Sales' },
+        { id: 'sponsored-products', label: 'Sponsored Products' },
+        { id: 'referral', label: 'Referral & Affiliate' },
+        { id: 'email-campaigns', label: 'Email / SMS / Push' },
+        { id: 'abandoned-cart', label: 'Abandoned Cart Recovery' }
       ]
     },
     {
-      id: 'cms',
-      label: 'CMS / Content',
-      icon: FileText,
+      id: 'reviews',
+      label: 'Reviews, Ratings & Trust',
+      icon: Star,
       subItems: [
-        { id: 'pages', label: 'Pages' },
-        { id: 'reviews', label: 'Reviews & Moderation' },
-        { id: 'faq', label: 'FAQ' },
-        { id: 'blog', label: 'Blog & News' }
+        { id: 'review-moderation', label: 'Review Moderation' },
+        { id: 'fake-review-detection', label: 'Fake Review Detection' },
+        { id: 'vendor-rating', label: 'Vendor Rating Control' },
+        { id: 'abuse-reports', label: 'Abuse Reports' },
+        { id: 'qa-flags', label: 'QA Flags' }
       ]
     },
     {
       id: 'support',
-      label: 'Support',
+      label: 'Support & Operations',
       icon: MessageSquare,
       subItems: [
-        { id: 'tickets', label: 'Support Tickets' },
-        { id: 'chat-support', label: 'Live Chat' }
+        { id: 'ticket-system', label: 'Ticket System' },
+        { id: 'vendor-support', label: 'Vendor Support' },
+        { id: 'customer-support', label: 'Customer Support' },
+        { id: 'chat-logs', label: 'Chat & Call Logs' },
+        { id: 'escalation', label: 'Escalation Matrix' },
+        { id: 'sla-tracking', label: 'SLA Tracking' }
+      ]
+    },
+    {
+      id: 'cms',
+      label: 'CMS & SEO',
+      icon: FileText,
+      subItems: [
+        { id: 'static-pages', label: 'Static Pages' },
+        { id: 'homepage-builder', label: 'Homepage Layout Builder' },
+        { id: 'banners', label: 'Banners & Sliders' },
+        { id: 'blog-articles', label: 'Blog / Help Articles' },
+        { id: 'seo-meta', label: 'SEO Meta Rules' },
+        { id: 'url-management', label: 'URL Management' }
       ]
     },
     {
       id: 'reports',
-      label: 'Reports & Analytics',
+      label: 'Reports & Business Intelligence',
       icon: BarChart3,
       subItems: [
-        { id: 'sales-reports', label: 'Sales Reports' },
-        { id: 'vendor-reports', label: 'Vendor Reports' },
-        { id: 'customer-reports', label: 'Customer Reports' }
+        { id: 'sales-analytics', label: 'Sales Analytics' },
+        { id: 'vendor-performance-reports', label: 'Vendor Performance' },
+        { id: 'customer-ltv', label: 'Customer LTV' },
+        { id: 'conversion-funnel', label: 'Funnel Conversion' },
+        { id: 'category-growth', label: 'Category Growth' },
+        { id: 'profit-loss', label: 'Profit & Loss' }
       ]
     },
     {
-      id: 'settings',
-      label: 'Settings',
+      id: 'automation',
+      label: 'Automation & Rules Engine',
+      icon: Zap,
+      subItems: [
+        { id: 'order-auto-assign', label: 'Order Auto Assign' },
+        { id: 'auto-penalization', label: 'Auto Vendor Penalization' },
+        { id: 'auto-refund-rules', label: 'Auto Refund Rules' },
+        { id: 'auto-settlement', label: 'Auto Settlement Rules' },
+        { id: 'fraud-detection', label: 'Fraud Detection Rules' }
+      ]
+    },
+    {
+      id: 'system',
+      label: 'System Configuration',
       icon: Settings,
       subItems: [
-        { id: 'site-settings', label: 'Site Settings' },
-        { id: 'currency-language', label: 'Currency & Language' },
-        { id: 'shipping-rules', label: 'Shipping Rules' },
-        { id: 'notification-settings', label: 'Notifications' },
-        { id: 'security', label: 'Security' }
+        { id: 'payment-gateway', label: 'Payment Gateway Setup' },
+        { id: 'shipping-partners', label: 'Shipping Partner Setup' },
+        { id: 'tax-rules', label: 'Tax Rules' },
+        { id: 'commission-rules', label: 'Commission Rules' },
+        { id: 'currency-locale', label: 'Currency / Locale' },
+        { id: 'feature-toggles', label: 'Feature Toggles' }
+      ]
+    },
+    {
+      id: 'security',
+      label: 'Security & Compliance',
+      icon: ShieldCheck,
+      subItems: [
+        { id: 'activity-logs', label: 'Login & Activity Logs' },
+        { id: 'ip-whitelisting', label: 'IP Whitelisting' },
+        { id: 'rate-limiting', label: 'Rate Limiting' },
+        { id: 'fraud-detection-sec', label: 'Fraud Detection' },
+        { id: 'gdpr', label: 'GDPR / Data Control' },
+        { id: 'backup-restore', label: 'Backup & Restore' }
       ]
     }
   ];
@@ -955,7 +1122,7 @@ const Admin = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Price Point</p>
-                        <p className="text-3xl font-black italic text-violet-600 tracking-tighter">₹{product.price.toLocaleString()}</p>
+                        <p className="text-3xl font-black italic text-violet-600 tracking-tighter">₹{product.price ? product.price.toLocaleString() : 'N/A'}</p>
                       </div>
                     </div>
 
@@ -1066,6 +1233,116 @@ const Admin = () => {
           ))
         )}
       </div>
+    </div>
+  );
+
+  const renderAllProducts = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h3 className="text-3xl font-black italic">Global <span className="text-violet-600">Inventory.</span></h3>
+          <p className="text-gray-500 font-medium">Manage all vendor products across the platform.</p>
+        </div>
+        <Badge className="bg-blue-50 text-blue-600 border-none px-6 py-2 rounded-xl font-black italic text-sm">
+          {allProducts.length} TOTAL PRODUCTS
+        </Badge>
+      </div>
+
+      <Card className="border-0 shadow-xl rounded-[2.5rem] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-900 text-white">
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Image</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Product</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Category</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Price</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Stock</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Vendor</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Status</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {allProducts.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-16 text-center">
+                    <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No products found.</p>
+                  </td>
+                </tr>
+              ) : (
+                allProducts.map(product => (
+                  <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-12 h-12 object-cover rounded-lg border border-gray-100"
+                      />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="max-w-xs">
+                        <p className="font-black text-gray-900 text-sm truncate">{product.name}</p>
+                        <p className="text-gray-400 text-xs truncate">{product.description}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant="outline" className="text-xs">{product.category}</Badge>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="font-bold text-violet-600">₹{product.price ? product.price.toLocaleString() : 'N/A'}</p>
+                      {product.discount > 0 && (
+                        <p className="text-xs text-green-600">{product.discount}% OFF</p>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant="secondary" className="text-xs">{product.stock} Units</Badge>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-xs font-mono text-gray-600">{product.vendor_id.slice(0, 8)}...</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge className={`text-xs ${product.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                        product.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                          'bg-amber-100 text-amber-700'
+                        }`}>
+                        {product.status}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {product.status !== 'approved' && (
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            onClick={() => handleApproveProductAll(product.id)}
+                            size="sm"
+                            className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            onClick={() => handleRejectProductAll(product.id)}
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-red-200 text-red-600 hover:bg-red-50 text-xs"
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                      {product.status === 'approved' && (
+                        <Badge className="bg-emerald-100 text-emerald-700 text-xs">
+                          Live
+                        </Badge>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   );
 
@@ -1242,7 +1519,7 @@ const Admin = () => {
     if (activeSubMenu === 'vendor-payouts') return renderVendorPayouts();
 
     // Product Management
-    if (activeSubMenu === 'all-products') return renderPlaceholder('Global Inventory', 'Master list of all products across all vendors.', Package);
+    if (activeSubMenu === 'all-products') return renderAllProducts();
     if (activeSubMenu === 'product-approvals') return renderProductApprovals();
     if (activeSubMenu === 'categories') return renderPlaceholder('Category Structure', 'Manage product taxonomy and category hierarchy.', Tag);
 
@@ -1268,6 +1545,143 @@ const Admin = () => {
 
     // Reports
     if (activeMenu === 'reports') return renderPlaceholder('Data Warehouse', 'Comprehensive system reports and data export tools.', BarChart3);
+
+    // New sections - placeholders for now
+    // User Management
+    if (activeSubMenu === 'customers') return renderPlaceholder('👥 Customers', 'Customer management and KYC verification.', Users);
+    if (activeSubMenu === 'customer-list') return renderPlaceholder('Customer List', 'All registered customers.', Users);
+    if (activeSubMenu === 'kyc') return renderPlaceholder('KYC Verification', 'Know Your Customer verification process.', ShieldCheck);
+    if (activeSubMenu === 'block-restrict') return renderPlaceholder('Block / Restrict', 'Block or restrict customer accounts.', XCircle);
+    if (activeSubMenu === 'order-history') return renderPlaceholder('Order & Return History', 'Customer order and return history.', History);
+    if (activeSubMenu === 'wallet-logs') return renderPlaceholder('Wallet & Refund Logs', 'Customer wallet and refund logs.', CreditCard);
+    if (activeSubMenu === 'admin-users') return renderPlaceholder('👨‍💼 Admin Users', 'Manage admin user accounts.', Users);
+    if (activeSubMenu === 'super-admin') return renderPlaceholder('Super Admin', 'Super admin management.', ShieldCheck);
+    if (activeSubMenu === 'sub-admin') return renderPlaceholder('Sub Admin', 'Sub admin management.', Users);
+    if (activeSubMenu === 'support-staff') return renderPlaceholder('Support Staff', 'Support staff management.', MessageSquare);
+    if (activeSubMenu === 'rbac') return renderPlaceholder('Role-based Access (RBAC)', 'Role-based access control.', ShieldCheck);
+
+    // Vendor Management
+    if (activeSubMenu === 'vendor-onboarding') return renderPlaceholder('Vendor Onboarding', 'New vendor registration process.', UserCheck);
+    if (activeSubMenu === 'vendor-kyc') return renderPlaceholder('KYC Verification', 'Vendor KYC verification.', ShieldCheck);
+    if (activeSubMenu === 'vendor-categories') return renderPlaceholder('Vendor Categories', 'Gold / Silver / New vendor categories.', Star);
+    if (activeSubMenu === 'vendor-profiles') return renderPlaceholder('Vendor Profile Control', 'Manage vendor profiles.', Store);
+    if (activeSubMenu === 'vendor-products') return renderPlaceholder('Vendor Product Listing', 'Vendor product management.', Package);
+    if (activeSubMenu === 'commission-rules') return renderPlaceholder('Commission Rules', 'Commission and fee management.', CreditCard);
+    if (activeSubMenu === 'vendor-penalties') return renderPlaceholder('Penalty / Warning System', 'Vendor penalty and warning management.', AlertCircle);
+    if (activeSubMenu === 'vendor-block') return renderPlaceholder('Block / Suspend', 'Block or suspend vendors.', XCircle);
+    if (activeSubMenu === 'vendor-reviews') return renderPlaceholder('Review Moderation', 'Moderate vendor reviews.', Star);
+
+    // Catalog Management
+    if (activeSubMenu === 'product-control') return renderPlaceholder('📦 Product Control', 'Product management and control.', Package);
+    if (activeSubMenu === 'product-approvals') return renderProductApprovals();
+    if (activeSubMenu === 'product-edit') return renderPlaceholder('Product Edit / Disable', 'Edit or disable products.', Settings);
+    if (activeSubMenu === 'duplicate-detection') return renderPlaceholder('Duplicate Detection', 'Detect duplicate products.', Search);
+    if (activeSubMenu === 'variants') return renderPlaceholder('Variant Management', 'Manage product variants.', Box);
+    if (activeSubMenu === 'seo-control') return renderPlaceholder('Product SEO Control', 'SEO control for products.', Globe);
+    if (activeSubMenu === 'vendor-products-view') return renderPlaceholder('Vendor-wise Product View', 'View products by vendor.', Store);
+    if (activeSubMenu === 'categories-system') return renderPlaceholder('🗂️ Category System', 'Category and subcategory management.', Tag);
+    if (activeSubMenu === 'attributes') return renderPlaceholder('Attribute Mapping', 'Category to attribute mapping.', Tag);
+    if (activeSubMenu === 'brands') return renderPlaceholder('Brand Management', 'Brand management.', Tag);
+
+    // Order Management
+    if (activeSubMenu === 'order-dashboard') return renderPlaceholder('Order Dashboard', 'Order management dashboard.', ShoppingCart);
+    if (activeSubMenu === 'split-orders') return renderPlaceholder('Split Orders', 'Multi-vendor order splitting.', ShoppingCart);
+    if (activeSubMenu === 'order-status') return renderPlaceholder('Order Status Override', 'Override order status.', Settings);
+    if (activeSubMenu === 'shipping-labels') return renderPlaceholder('Shipping Label Generation', 'Generate shipping labels.', Truck);
+    if (activeSubMenu === 'delivery-sla') return renderPlaceholder('Delivery SLA Monitoring', 'Monitor delivery SLAs.', Truck);
+    if (activeSubMenu === 'auto-cancel') return renderPlaceholder('Auto Cancel Rules', 'Automatic order cancellation rules.', XCircle);
+    if (activeSubMenu === 'cod-verification') return renderPlaceholder('COD Verification', 'Cash on delivery verification.', CreditCard);
+    if (activeSubMenu === 'rto') return renderPlaceholder('RTO (Return to Origin)', 'Return to origin management.', RotateCcw);
+
+    // Returns, Refunds & Disputes
+    if (activeSubMenu === 'return-requests') return renderPlaceholder('Return Requests', 'Manage return requests.', RotateCcw);
+    if (activeSubMenu === 'refund-approval') return renderPlaceholder('Refund Approval', 'Approve refunds.', CreditCard);
+    if (activeSubMenu === 'disputes') return renderPlaceholder('Dispute Management', 'Manage customer-vendor disputes.', AlertCircle);
+    if (activeSubMenu === 'evidence-upload') return renderPlaceholder('Evidence Upload', 'Upload dispute evidence.', FileText);
+    if (activeSubMenu === 'auto-refund') return renderPlaceholder('Auto Refund Rules', 'Automatic refund rules.', CreditCard);
+    if (activeSubMenu === 'chargeback') return renderPlaceholder('Chargeback Handling', 'Handle chargebacks.', CreditCard);
+
+    // Inventory & Stock Intelligence
+    if (activeSubMenu === 'real-time-inventory') return renderPlaceholder('Real-time Inventory', 'Real-time inventory tracking.', Box);
+    if (activeSubMenu === 'stock-sync') return renderPlaceholder('Vendor Stock Sync', 'Sync vendor stock.', Box);
+    if (activeSubMenu === 'low-stock-alerts') return renderPlaceholder('Low Stock Auto Alerts', 'Low stock alerts.', AlertCircle);
+    if (activeSubMenu === 'stock-lock') return renderPlaceholder('Stock Lock (Checkout)', 'Lock stock during checkout.', Box);
+    if (activeSubMenu === 'damaged-stock') return renderPlaceholder('Damaged / Lost Stock Logs', 'Damaged or lost stock logs.', Box);
+
+    // Payments, Earnings & Settlements
+    if (activeSubMenu === 'admin-finance') return renderPlaceholder('💰 Admin Finance', 'Admin financial management.', CreditCard);
+    if (activeSubMenu === 'platform-earnings') return renderPlaceholder('Platform Earnings', 'Platform earnings tracking.', CreditCard);
+    if (activeSubMenu === 'commission-breakdown') return renderPlaceholder('Commission Breakdown', 'Commission breakdown.', CreditCard);
+    if (activeSubMenu === 'tax-collection') return renderPlaceholder('Tax Collection', 'Tax collection management.', CreditCard);
+    if (activeSubMenu === 'gst-reports') return renderPlaceholder('GST/VAT Reports', 'GST/VAT reports.', BarChart3);
+    if (activeSubMenu === 'vendor-settlements') return renderPlaceholder('🏦 Vendor Settlements', 'Vendor settlement management.', CreditCard);
+    if (activeSubMenu === 'payout-cycle') return renderPlaceholder('Payout Cycle Settings', 'Payout cycle configuration.', CreditCard);
+    if (activeSubMenu === 'vendor-wallet') return renderPlaceholder('Vendor Wallet', 'Vendor wallet management.', CreditCard);
+    if (activeSubMenu === 'pending-settlements') return renderPlaceholder('Pending Settlements', 'Pending settlement management.', CreditCard);
+    if (activeSubMenu === 'manual-adjustments') return renderPlaceholder('Manual Adjustments', 'Manual settlement adjustments.', Settings);
+    if (activeSubMenu === 'failed-payouts') return renderPlaceholder('Failed Payouts', 'Failed payout management.', AlertCircle);
+
+    // Marketing & Growth Engine
+    if (activeSubMenu === 'campaigns') return renderPlaceholder('Campaign Management', 'Marketing campaign management.', Megaphone);
+    if (activeSubMenu === 'flash-sales') return renderPlaceholder('Flash Sales', 'Flash sales management.', Zap);
+    if (activeSubMenu === 'sponsored-products') return renderPlaceholder('Sponsored Products', 'Sponsored product management.', Star);
+    if (activeSubMenu === 'referral') return renderPlaceholder('Referral & Affiliate', 'Referral and affiliate management.', Users);
+    if (activeSubMenu === 'email-campaigns') return renderPlaceholder('Email / SMS / Push', 'Email, SMS, and push campaigns.', Mail);
+    if (activeSubMenu === 'abandoned-cart') return renderPlaceholder('Abandoned Cart Recovery', 'Abandoned cart recovery.', ShoppingCart);
+
+    // Reviews, Ratings & Trust
+    if (activeSubMenu === 'review-moderation') return renderPlaceholder('Review Moderation', 'Moderate reviews and ratings.', Star);
+    if (activeSubMenu === 'fake-review-detection') return renderPlaceholder('Fake Review Detection', 'Detect fake reviews.', Search);
+    if (activeSubMenu === 'vendor-rating') return renderPlaceholder('Vendor Rating Control', 'Control vendor ratings.', Star);
+    if (activeSubMenu === 'abuse-reports') return renderPlaceholder('Abuse Reports', 'Manage abuse reports.', AlertCircle);
+    if (activeSubMenu === 'qa-flags') return renderPlaceholder('QA Flags', 'Quality assurance flags.', CheckCircle2);
+
+    // Support & Operations
+    if (activeSubMenu === 'ticket-system') return renderPlaceholder('Ticket System', 'Support ticket system.', MessageSquare);
+    if (activeSubMenu === 'vendor-support') return renderPlaceholder('Vendor Support', 'Vendor support management.', MessageSquare);
+    if (activeSubMenu === 'customer-support') return renderPlaceholder('Customer Support', 'Customer support management.', MessageSquare);
+    if (activeSubMenu === 'chat-logs') return renderPlaceholder('Chat & Call Logs', 'Chat and call logs.', MessageSquare);
+    if (activeSubMenu === 'escalation') return renderPlaceholder('Escalation Matrix', 'Support escalation matrix.', AlertCircle);
+    if (activeSubMenu === 'sla-tracking') return renderPlaceholder('SLA Tracking', 'SLA tracking for support.', BarChart3);
+
+    // CMS & SEO
+    if (activeSubMenu === 'static-pages') return renderPlaceholder('Static Pages', 'Manage static pages.', FileText);
+    if (activeSubMenu === 'homepage-builder') return renderPlaceholder('Homepage Layout Builder', 'Build homepage layout.', LayoutDashboard);
+    if (activeSubMenu === 'banners') return renderPlaceholder('Banners & Sliders', 'Manage banners and sliders.', FileText);
+    if (activeSubMenu === 'blog-articles') return renderPlaceholder('Blog / Help Articles', 'Manage blog and help articles.', FileText);
+    if (activeSubMenu === 'seo-meta') return renderPlaceholder('SEO Meta Rules', 'SEO meta rules.', Globe);
+    if (activeSubMenu === 'url-management') return renderPlaceholder('URL Management', 'URL management.', Globe);
+
+    // Reports & Business Intelligence
+    if (activeSubMenu === 'sales-analytics') return renderPlaceholder('Sales Analytics', 'Sales analytics.', BarChart3);
+    if (activeSubMenu === 'vendor-performance-reports') return renderPlaceholder('Vendor Performance', 'Vendor performance reports.', BarChart3);
+    if (activeSubMenu === 'customer-ltv') return renderPlaceholder('Customer LTV', 'Customer lifetime value.', BarChart3);
+    if (activeSubMenu === 'conversion-funnel') return renderPlaceholder('Funnel Conversion', 'Conversion funnel analysis.', BarChart3);
+    if (activeSubMenu === 'category-growth') return renderPlaceholder('Category Growth', 'Category growth analysis.', BarChart3);
+    if (activeSubMenu === 'profit-loss') return renderPlaceholder('Profit & Loss', 'Profit and loss reports.', BarChart3);
+
+    // Automation & Rules Engine
+    if (activeSubMenu === 'order-auto-assign') return renderPlaceholder('Order Auto Assign', 'Automatic order assignment.', Zap);
+    if (activeSubMenu === 'auto-penalization') return renderPlaceholder('Auto Vendor Penalization', 'Automatic vendor penalization.', AlertCircle);
+    if (activeSubMenu === 'auto-refund-rules') return renderPlaceholder('Auto Refund Rules', 'Automatic refund rules.', CreditCard);
+    if (activeSubMenu === 'auto-settlement') return renderPlaceholder('Auto Settlement Rules', 'Automatic settlement rules.', CreditCard);
+    if (activeSubMenu === 'fraud-detection') return renderPlaceholder('Fraud Detection Rules', 'Fraud detection rules.', ShieldCheck);
+
+    // System Configuration
+    if (activeSubMenu === 'payment-gateway') return renderPlaceholder('Payment Gateway Setup', 'Payment gateway configuration.', CreditCard);
+    if (activeSubMenu === 'shipping-partners') return renderPlaceholder('Shipping Partner Setup', 'Shipping partner setup.', Truck);
+    if (activeSubMenu === 'tax-rules') return renderPlaceholder('Tax Rules', 'Tax rules configuration.', CreditCard);
+    if (activeSubMenu === 'commission-rules') return renderPlaceholder('Commission Rules', 'Commission rules.', CreditCard);
+    if (activeSubMenu === 'currency-locale') return renderPlaceholder('Currency / Locale', 'Currency and locale settings.', Globe);
+    if (activeSubMenu === 'feature-toggles') return renderPlaceholder('Feature Toggles', 'Feature toggles.', Settings);
+
+    // Security & Compliance
+    if (activeSubMenu === 'activity-logs') return renderPlaceholder('Login & Activity Logs', 'Activity logs.', History);
+    if (activeSubMenu === 'ip-whitelisting') return renderPlaceholder('IP Whitelisting', 'IP whitelisting.', ShieldCheck);
+    if (activeSubMenu === 'rate-limiting') return renderPlaceholder('Rate Limiting', 'Rate limiting.', ShieldCheck);
+    if (activeSubMenu === 'fraud-detection-sec') return renderPlaceholder('Fraud Detection', 'Fraud detection.', ShieldCheck);
+    if (activeSubMenu === 'gdpr') return renderPlaceholder('GDPR / Data Control', 'GDPR compliance.', ShieldCheck);
+    if (activeSubMenu === 'backup-restore') return renderPlaceholder('Backup & Restore', 'Backup and restore.', Settings);
 
     // Settings
     if (activeMenu === 'settings') return renderPlaceholder('System Configuration', 'Global system settings and preferences.', Settings);

@@ -129,6 +129,7 @@ class Product(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     category: str
+    sub_category: str = ""
     brand: str = ""
     price: float
     originalPrice: Optional[float] = None
@@ -154,6 +155,7 @@ class Product(BaseModel):
 class ProductCreate(BaseModel):
     name: str
     category: str
+    sub_category: str = ""
     brand: str = ""
     price: float
     discount: int = 0
@@ -602,11 +604,11 @@ async def checkout(order_data: OrderCreate, request: Request, current_user: Anno
 async def add_product(product_data: ProductCreate, current_user: Annotated[dict, Depends(get_current_user)]):
     if current_user['user_type'] != 'vendor':
         raise HTTPException(status_code=403, detail="Merchant clearance required.")
-        
-    product_obj = Product(**product_data.model_dump(), vendor_id=current_user['id'])
+
+    product_obj = Product(**product_data.model_dump(), vendor_id=current_user['id'], status="pending")
     doc = product_obj.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
-    
+
     await db.products.insert_one(doc)
     
     # Notify Admins of new pending product
@@ -762,6 +764,13 @@ async def list_pending_products(current_user: Annotated[dict, Depends(get_curren
     products = await db.products.find({"status": "pending"}, {"_id": 0}).to_list(1000)
     return products
 
+@api_router.get("/admin/products/all")
+async def list_all_products(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Security clearance insufficient.")
+    products = await db.products.find({}, {"_id": 0}).to_list(1000)
+    return products
+
 @api_router.post("/admin/products/approve/{product_id}")
 async def approve_product(product_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
     if current_user['user_type'] != 'admin':
@@ -820,7 +829,17 @@ async def proxy_image(url: str):
             raise HTTPException(status_code=400, detail="Invalid URL")
 
         # Only allow certain domains for security
-        allowed_domains = ['m.media-amazon.com', 'images-na.ssl-images-amazon.com', 'localhost', '127.0.0.1']
+        allowed_domains = [
+            'm.media-amazon.com',
+            'images-na.ssl-images-amazon.com',
+            'localhost',
+            '127.0.0.1',
+            'www.yummytummyaarthi.com',
+            'encrypted-tbn0.gstatic.com',
+            'images.unsplash.com',
+            'picsum.photos',
+            'via.placeholder.com'
+        ]
         from urllib.parse import urlparse
         parsed_url = urlparse(url)
         if parsed_url.netloc not in allowed_domains:
@@ -1371,3 +1390,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -207,8 +207,10 @@ const Deals = () => {
 
                     <div>
                       <div className="flex items-baseline gap-2 mb-3">
-                        <span className="text-lg font-bold text-gray-900">₹{deal.price.toLocaleString()}</span>
-                        <span className="text-xs text-gray-400 line-through">₹{deal.originalPrice.toLocaleString()}</span>
+                        <span className="text-lg font-bold text-gray-900">₹{deal.price ? deal.price.toLocaleString() : 'N/A'}</span>
+                        {deal.originalPrice && (
+                          <span className="text-xs text-gray-400 line-through">₹{deal.originalPrice.toLocaleString()}</span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2 text-[10px] font-bold text-rose-500 mb-3 bg-rose-50 px-2 py-1 rounded-lg w-fit">

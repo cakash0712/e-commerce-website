@@ -3,6 +3,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import Shop from "./components/Shop";
+import Food from "./components/Food";
 import Categories from "./components/Categories";
 import Deals from "./components/Deals";
 import About from "./components/About";
@@ -1112,6 +1113,7 @@ function App() {
                     <Route path="/" element={<Home />} />
                     <Route path="/product/:id" element={<DetailsView />} />
                     <Route path="/shop" element={<Shop />} />
+                    <Route path="/food" element={<Food />} />
                     <Route path="/categories" element={<Categories />} />
                     <Route path="/deals" element={<Deals />} />
                     <Route path="/about" element={<About />} />
