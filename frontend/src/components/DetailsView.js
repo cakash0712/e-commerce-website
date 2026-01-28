@@ -34,7 +34,7 @@ const DetailsView = () => {
     const navigate = useNavigate();
     const { addToCart } = useCart();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
-
+    
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -102,6 +102,7 @@ const DetailsView = () => {
                     originalPrice: p.discount > 0 ? Math.round(p.price / (1 - p.discount / 100)) : p.price,
                     discount: p.discount,
                     description: p.description,
+
                     images: p.images && p.images.length > 0 ? [p.image, ...p.images] : [p.image],
                     category: p.category,
                     rating: p.rating || 0,
@@ -115,22 +116,14 @@ const DetailsView = () => {
                     warranty: p.warranty || "N/A",
                     box_contents: p.box_contents || "N/A",
                     specifications: p.specifications || {},
+                    features: p.highlights && p.highlights.length > 0 ? p.highlights : [],
+                    reviews: p.reviews || [],
                     vendor: {
-                        name: p.vendor_name || "ZippyCart Vendor",
-                        id: p.vendor_id,
-                        rating: 4.8
+                        name: p.vendor?.business_name ?? "Unknown Vendor",
+                        id: p.vendor?.business_id,
+                        rating: p.vendor?.business_rating ?? 0
                     },
-                    features: p.highlights && p.highlights.length > 0 ? p.highlights : [
-                        "Premium Quality Materials",
-                        "Ergonomic Design",
-                        "Quality Certified",
-                        "2-Year Warranty"
-                    ],
-                    detailedReviews: [
-                        { user: "Arjun K.", rating: 5, date: "2 days ago", comment: "Exceptional quality! Exactly what I was looking for. The delivery was lightning fast too.", verified: true },
-                        { user: "Sneha M.", rating: 4, date: "1 week ago", comment: "Very good product. The build quality feels premium. Small lag in customer support but product is 10/10.", verified: true },
-                        { user: "Raj P.", rating: 5, date: "2 weeks ago", comment: "Great value for money. The packaging was very secure.", verified: false }
-                    ]
+                    detailedReviews: p.reviews || []
                 };
 
                 setProduct(mappedProduct);
@@ -516,32 +509,40 @@ const DetailsView = () => {
                                     )}
 
                                     <div className="space-y-4">
-                                        {product.detailedReviews.map((rev, i) => (
-                                            <div key={i} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                                <div className="flex items-start justify-between mb-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-violet-600 text-white rounded-full flex items-center justify-center font-semibold">
-                                                            {rev.user.charAt(0)}
+                                        {product.detailedReviews && product.detailedReviews.length > 0 ? (
+                                            product.detailedReviews.map((rev, i) => (
+                                                <div key={i} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                                    <div className="flex items-start justify-between mb-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 bg-violet-600 text-white rounded-full flex items-center justify-center font-semibold uppercase">
+                                                                {(rev.user_name || rev.user || "A").charAt(0)}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-medium text-gray-900">{rev.user_name || rev.user || "Anonymous"}</p>
+                                                                <p className="text-xs text-gray-500">
+                                                                    {rev.created_at ? new Date(rev.created_at).toLocaleDateString() : (rev.date || "Recently")}
+                                                                </p>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <p className="font-medium text-gray-900">{rev.user}</p>
-                                                            <p className="text-xs text-gray-500">{rev.date}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            {rev.verified && (
+                                                                <Badge className="bg-green-100 text-green-700 text-xs border-none">Verified</Badge>
+                                                            )}
+                                                            <div className="flex">
+                                                                {[...Array(5)].map((_, j) => (
+                                                                    <Star key={j} className={`w-3 h-3 ${j < (rev.rating || 0) ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
+                                                                ))}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        {rev.verified && (
-                                                            <Badge className="bg-green-100 text-green-700 text-xs border-none">Verified</Badge>
-                                                        )}
-                                                        <div className="flex">
-                                                            {[...Array(5)].map((_, j) => (
-                                                                <Star key={j} className={`w-3 h-3 ${j < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
-                                                            ))}
-                                                        </div>
-                                                    </div>
+                                                    <p className="text-gray-600">{rev.comment || rev.review_text || ""}</p>
                                                 </div>
-                                                <p className="text-gray-600">{rev.comment}</p>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                                <p>No reviews yet. Be the first to review this product!</p>
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
                                 </div>
                             )}

@@ -27,6 +27,15 @@ import {
   Settings
 } from "lucide-react";
 import CartDrawer from "./CartDrawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -214,22 +223,101 @@ const Navigation = () => {
   };
 
   const trendingSearches = ['iPhone', 'Laptop', 'Headphones', 'Watch', 'Shoes', 'Perfume'];
-  const [selectedLocation, setSelectedLocation] = useState(() => {
-    return localStorage.getItem('user_location') || "Select a location";
-  });
+  // Initialize location based on user
+  const [selectedLocation, setSelectedLocation] = useState("Select a location");
+  // Update location when user changes
+  useEffect(() => {
+    if (user?.id) {
+      const saved = localStorage.getItem(`user_location_${user.id}`);
+      setSelectedLocation(saved || "Select a location");
+    } else {
+      setSelectedLocation("Select a location");
+    }
+  }, [user]);
+
+  // Location Dialog State
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [pincode, setPincode] = useState("");
+  const [savedAddresses, setSavedAddresses] = useState([]);
+
+  useEffect(() => {
+    // Load saved addresses from local storage (synced with Profile)
+    const loadAddresses = () => {
+      if (user?.id) {
+        try {
+          const saved = localStorage.getItem(`user_addresses_${user.id}`);
+          if (saved) {
+            setSavedAddresses(JSON.parse(saved));
+          } else {
+            setSavedAddresses([]);
+          }
+        } catch (e) {
+          console.error("Failed to load addresses", e);
+          setSavedAddresses([]);
+        }
+      } else {
+        setSavedAddresses([]);
+      }
+    };
+    loadAddresses();
+
+    // Refresh addresses when location/profile updates
+    window.addEventListener('location_updated', loadAddresses);
+    return () => window.removeEventListener('location_updated', loadAddresses);
+  }, [user]);
 
   const handleLocationClick = () => {
-    const loc = prompt("Enter your delivery location:", selectedLocation === "Select a location" ? "" : selectedLocation);
-    if (loc !== null) {
-      const finalLoc = loc.trim() || "Select a location";
-      setSelectedLocation(finalLoc);
-      localStorage.setItem('user_location', finalLoc);
+    setIsLocationDialogOpen(true);
+  };
+
+  const handleSelectAddress = (addr) => {
+    // Format: "City - Pincode" or just "Address" or full address truncated
+    let displayLoc = addr.addr;
+    const finalLoc = displayLoc.length > 25 ? displayLoc.substring(0, 25) + "..." : displayLoc;
+
+    setSelectedLocation(finalLoc);
+
+    if (user?.id) {
+      localStorage.setItem(`user_location_${user.id}`, finalLoc);
+    }
+
+    setIsLocationDialogOpen(false);
+    window.dispatchEvent(new Event('location_updated'));
+  };
+
+  const handlePincodeSubmit = (e) => {
+    e.preventDefault();
+    if (pincode.length === 6) {
+      const loc = `Pincode: ${pincode}`;
+      setSelectedLocation(loc);
+      if (user?.id) {
+        localStorage.setItem(`user_location_${user.id}`, loc);
+      }
+      setIsLocationDialogOpen(false);
+      setPincode("");
+      window.dispatchEvent(new Event('location_updated'));
+    } else {
+      alert("Please enter a valid 6-digit pincode");
     }
   };
 
+  useEffect(() => {
+    const handleLocationUpdate = () => {
+      if (user?.id) {
+        const saved = localStorage.getItem(`user_location_${user.id}`);
+        if (saved) {
+          setSelectedLocation(saved);
+        }
+      }
+    };
+
+    window.addEventListener('location_updated', handleLocationUpdate);
+    return () => window.removeEventListener('location_updated', handleLocationUpdate);
+  }, [user]);
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-gray-100 transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20 gap-4">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-0 shrink-0">
@@ -240,6 +328,23 @@ const Navigation = () => {
             />
 
           </Link>
+
+
+          {/* Desktop Delivery Location - Hide for Vendors */}
+          {(!user || user.user_type !== "vendor") && (
+            <button
+              onClick={handleLocationClick}
+              className="hidden lg:flex flex-col items-start ml-2 mr-4 px-2 py-1 hover:bg-gray-50 rounded-lg transition-colors group cursor-pointer"
+            >
+              <span className="text-[10px] text-gray-500 font-medium ml-5 group-hover:text-violet-600 transition-colors">Deliver to</span>
+              <div className="flex items-center gap-1">
+                <MapPin className="w-4 h-4 text-gray-900 group-hover:text-violet-600 transition-colors" />
+                <span className="font-bold text-gray-900 text-sm max-w-[140px] truncate group-hover:text-violet-700 transition-colors">
+                  {selectedLocation}
+                </span>
+              </div>
+            </button>
+          )}
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-6">
@@ -743,6 +848,61 @@ const Navigation = () => {
           </button>
         </div>
       </div>
+
+      {/* Location Dialog */}
+      <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Choose your location</DialogTitle>
+            <DialogDescription>
+              Select a delivery location to see product availability and delivery options
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {savedAddresses.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Saved Addresses</p>
+                <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                  {savedAddresses.map((addr) => (
+                    <div key={addr.id} className="p-3 border rounded-lg hover:border-violet-500 hover:bg-violet-50 cursor-pointer transition-all" onClick={() => handleSelectAddress(addr)}>
+                      <p className="font-bold text-sm text-gray-900">{addr.name}</p>
+                      <p className="text-xs text-gray-600 truncate">{addr.addr}</p>
+                      <p className="text-xs text-gray-400 mt-1">{addr.phone}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or enter pincode</span>
+              </div>
+            </div>
+
+            <form onSubmit={handlePincodeSubmit} className="flex gap-2">
+              <div className="grid w-full items-center gap-1.5">
+                <Input
+                  id="pincode"
+                  placeholder="Enter 6-digit Pincode"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  maxLength={6}
+                />
+              </div>
+              <Button type="submit" disabled={pincode.length !== 6}>Apply</Button>
+            </form>
+          </div>
+          <DialogFooter className="sm:justify-start">
+            <Link to="/profile" onClick={() => setIsLocationDialogOpen(false)} className="text-xs text-violet-600 hover:underline">
+              Manage address book
+            </Link>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </nav>
   );
 };

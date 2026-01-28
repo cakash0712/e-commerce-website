@@ -2485,3 +2485,12 @@ INFO:     127.0.0.1:50210 - "GET /api/notifications HTTP/1.1" 200 OK
 INFO:     127.0.0.1:50212 - "GET /uploads/31005e5b-3f20-4fee-b4ec-d1a9de51074c_3e21626b-cbc2-431f-ba74-bebf69d394d2.avif?t=1769508240806 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:47646 - "GET /api/notifications HTTP/1.1" 200 OK
 INFO:     127.0.0.1:47658 - "GET /uploads/31005e5b-3f20-4fee-b4ec-d1a9de51074c_3e21626b-cbc2-431f-ba74-bebf69d394d2.avif?t=1769508270806 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54838 - "GET /api/notifications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54850 - "GET /uploads/31005e5b-3f20-4fee-b4ec-d1a9de51074c_3e21626b-cbc2-431f-ba74-bebf69d394d2.avif?t=1769508300823 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59382 - "GET /api/notifications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59388 - "GET /uploads/31005e5b-3f20-4fee-b4ec-d1a9de51074c_3e21626b-cbc2-431f-ba74-bebf69d394d2.avif?t=1769508344326 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [45702]
+INFO:     Stopping reloader process [27645]

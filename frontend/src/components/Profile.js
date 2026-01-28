@@ -22,18 +22,34 @@ const Profile = () => {
   const fileInputRef = useRef(null);
 
   // Address State
-  // Address State
-  const [addresses, setAddresses] = useState(() => {
-    const saved = localStorage.getItem('user_addresses');
-    return saved ? JSON.parse(saved) : [
-      { id: 1, type: "HOME", name: "demo", addr: "404 Sky Heights, Sector 72, Bangalore, KA 560102", phone: "+91 98765 43210" },
-      { id: 2, type: "WORK", name: "demo", addr: "Tech Park East, Block B-12, Gachibowli, Hyderabad, TS 500032", phone: "+91 99887 76655" }
-    ];
-  });
+  const [addresses, setAddresses] = useState([]);
 
+  // Load addresses specific to the logged-in user
   useEffect(() => {
-    localStorage.setItem('user_addresses', JSON.stringify(addresses));
-  }, [addresses]);
+    if (user?.id) {
+      const key = `user_addresses_${user.id}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        setAddresses(JSON.parse(saved));
+      } else {
+        // Default demo addresses for new users (optional, can be empty)
+        setAddresses([
+          { id: 1, type: "HOME", name: user.name, addr: "404 Sky Heights, Sector 72, Bangalore, KA 560102", phone: user.phone || "+91 98765 43210" },
+        ]);
+      }
+    } else {
+      // If no user, clear addresses or set to an empty array
+      setAddresses([]);
+    }
+  }, [user]);
+
+  // Save addresses to user-specific key
+  useEffect(() => {
+    if (user?.id) {
+      localStorage.setItem(`user_addresses_${user.id}`, JSON.stringify(addresses));
+    }
+  }, [addresses, user]);
+
   const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
   const [addressFormData, setAddressFormData] = useState({ name: "", phone: "", addr: "", type: "HOME" });
@@ -53,11 +69,23 @@ const Profile = () => {
       alert("Please fill in all required fields");
       return;
     }
+
+    let newAddresses;
     if (editingAddressId) {
-      setAddresses(addresses.map(a => a.id === editingAddressId ? { ...addressFormData, id: editingAddressId } : a));
+      newAddresses = addresses.map(a => a.id === editingAddressId ? { ...addressFormData, id: editingAddressId } : a);
     } else {
-      setAddresses([...addresses, { ...addressFormData, id: Date.now() }]);
+      newAddresses = [...addresses, { ...addressFormData, id: Date.now() }];
     }
+    setAddresses(newAddresses);
+
+    // Automatically set the latest saved address as the active location in Navigation
+    // Use user-specific location key as well
+    const locationString = addressFormData.addr.substring(0, 30) + (addressFormData.addr.length > 30 ? "..." : "");
+    if (user?.id) {
+      localStorage.setItem(`user_location_${user.id}`, locationString);
+    }
+    window.dispatchEvent(new Event('location_updated'));
+
     setIsAddressFormOpen(false);
     setAddressFormData({ name: "", phone: "", addr: "", type: "HOME" });
     setEditingAddressId(null);
@@ -329,9 +357,9 @@ const Profile = () => {
               <div>
                 <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none mb-1">Hello,</p>
                 <div className="flex items-center gap-2">
-                 <h3 className="font-black text-gray-900 text-lg tracking-tight italic">{profileEdit.name || user?.name || 'User'}</h3>
-                 <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] font-bold">VERIFIED</Badge>
-               </div>
+                  <h3 className="font-black text-gray-900 text-lg tracking-tight italic">{profileEdit.name || user?.name || 'User'}</h3>
+                  <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] font-bold">VERIFIED</Badge>
+                </div>
               </div>
             </Card>
 

@@ -416,7 +416,7 @@ const CouponProvider = ({ children }) => {
 // Hero Section
 const HeroSection = ({ stats }) => {
   return (
-    <section className="relative min-h-[30vh] md:min-h-[45vh] flex items-center overflow-hidden bg-gradient-to-br from-slate-950 via-violet-950 to-slate-950">
+    <section className="relative min-h-[30vh] md:min-h-[70vh] flex items-center overflow-hidden bg-gradient-to-br from-slate-950 via-violet-950 to-slate-950">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         {/* Gradient Orbs */}
@@ -536,7 +536,7 @@ const HeroSection = ({ stats }) => {
                     </div>
                     <div>
                       <p className="font-bold text-gray-900 text-sm">Free Shipping</p>
-                      <p className="text-xs text-gray-500">Orders over ₹499</p>
+                      <p className="text-xs text-gray-500">Orders over ₹1499</p>
                     </div>
                   </div>
                 </div>
@@ -560,15 +560,15 @@ const HeroSection = ({ stats }) => {
 
         </div>
       </div>
-    </div>
 
-      {/* Bottom Wave Decoration */ }
-  <div className="absolute bottom-0 left-0 right-0">
-    <svg className="w-full h-16 lg:h-24" viewBox="0 0 1440 74" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-      <path d="M0 24L60 28C120 32 240 40 360 42.7C480 45.3 600 42.7 720 37.3C840 32 960 24 1080 22.7C1200 21.3 1320 26.7 1380 29.3L1440 32V74H1380C1320 74 1200 74 1080 74C960 74 840 74 720 74C600 74 480 74 360 74C240 74 120 74 60 74H0V24Z" fill="white" />
-    </svg>
-  </div>
-    </section >
+
+      {/* Bottom Wave Decoration */}
+      <div className="absolute bottom-0 left-0 right-0">
+        <svg className="w-full h-16 lg:h-24" viewBox="0 0 1440 74" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <path d="M0 24L60 28C120 32 240 40 360 42.7C480 45.3 600 42.7 720 37.3C840 32 960 24 1080 22.7C1200 21.3 1320 26.7 1380 29.3L1440 32V74H1380C1320 74 1200 74 1080 74C960 74 840 74 720 74C600 74 480 74 360 74C240 74 120 74 60 74H0V24Z" fill="white" />
+        </svg>
+      </div>
+    </section>
   );
 };
 
@@ -578,7 +578,7 @@ const FeaturesSection = () => {
     {
       icon: Truck,
       title: "Free Shipping",
-      description: "Free shipping on all orders over ₹999",
+      description: "Free shipping on all orders over ₹1499",
       color: "bg-blue-500",
     },
     {
@@ -919,9 +919,18 @@ const PromoBannerSection = () => {
         const response = await axios.get(`${API_BASE}/api/products`);
         const products = response.data;
         if (products.length > 0) {
-          // Find product with max discount that has an expiry date if possible, otherwise just max discount
-          const sorted = [...products].sort((a, b) => b.discount - a.discount);
-          setBestDeal(sorted[0]);
+          // Prioritize products with valid backend expiration times
+          const now = new Date();
+          const activeDeals = products.filter(p => p.offer_expires_at && new Date(p.offer_expires_at) > now);
+
+          if (activeDeals.length > 0) {
+            activeDeals.sort((a, b) => b.discount - a.discount);
+            setBestDeal(activeDeals[0]);
+          } else {
+            // Fallback: Max discount if no active timed deals found
+            const sorted = [...products].sort((a, b) => b.discount - a.discount);
+            setBestDeal(sorted[0]);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch deals", error);
@@ -960,61 +969,114 @@ const PromoBannerSection = () => {
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
 
-      <div className="max-w-7xl mx-auto px-4 relative z-10 py-3 lg:py-4">
-        <Link to={bestDeal ? `/product/${bestDeal.id}` : '/deals'} className="block group">
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl overflow-hidden p-3 lg:p-4 flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-8 transition-all hover:bg-white/15">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
-            {/* Product & Title */}
-            <div className="flex items-center gap-4 flex-1">
-              <div className="w-16 h-16 lg:w-20 lg:h-20 bg-white/10 rounded-xl flex-shrink-0 flex items-center justify-center p-2 relative">
+        {/* Mobile Layout (Different) */}
+        <div className="lg:hidden py-8">
+          <Link to={bestDeal ? `/product/${bestDeal.id}` : '/deals'} className="block">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-xl flex gap-4 items-center">
+              <div className="w-1/3 aspect-square bg-white/5 rounded-xl flex items-center justify-center p-2 relative overflow-hidden">
                 <img
-                  src={bestDeal?.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&h=200&fit=crop"}
+                  src={bestDeal?.image}
                   alt={bestDeal?.name}
-                  className="max-w-full max-h-full object-contain drop-shadow-lg"
+                  className="w-full h-full object-contain"
                 />
-                <div className="absolute -top-2 -left-2 bg-rose-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">
-                  -{bestDeal?.discount || '60'}%
+                <div className="absolute top-0 left-0 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-br-lg">
+                  -{bestDeal?.discount}%
                 </div>
               </div>
-              <div className="text-left">
-                <div className="inline-flex items-center gap-1.5 text-amber-400 text-[8px] font-black uppercase tracking-widest mb-0.5">
-                  <span className="w-1 h-1 bg-amber-400 rounded-full animate-pulse"></span>
-                  Elite Deal
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge className="bg-amber-400 text-black text-[8px] px-1.5 py-0">FLASH SALE</Badge>
+                  <p className="text-rose-300 text-[10px] font-bold animate-pulse">Ending Soon</p>
                 </div>
-                <h3 className="text-white font-bold text-sm lg:text-lg line-clamp-1 leading-tight">{bestDeal?.name || "Flash Sale"}</h3>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-white font-black text-lg">₹{bestDeal?.price}</span>
-                  <span className="text-white/30 line-through text-xs">₹{bestDeal?.originalPrice}</span>
+                <h3 className="text-white font-bold text-lg leading-tight truncate mb-1">{bestDeal?.name || "Premium Deal"}</h3>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-xl font-black text-white">₹{bestDeal?.price}</span>
+                  <span className="text-xs text-white/50 line-through">₹{bestDeal?.originalPrice}</span>
+                </div>
+                <div className="flex gap-1">
+                  {[
+                    { v: timeLeft.days, l: "D" },
+                    { v: timeLeft.hours, l: "H" },
+                    { v: timeLeft.mins, l: "M" },
+                    { v: timeLeft.secs, l: "S" }
+                  ].map((t, i) => (
+                    <div key={i} className="bg-black/30 rounded px-1.5 py-0.5 min-w-[24px] text-center">
+                      <span className="text-white font-bold text-xs block leading-none">{t.v}</span>
+                      <span className="text-[8px] text-white/50 block leading-none mt-0.5">{t.l}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
+          </Link>
+        </div>
 
-            {/* Countdown & CTA */}
-            <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-8">
-              <div className="flex gap-2 p-1.5 bg-black/20 rounded-xl border border-white/5">
+        {/* Desktop Layout (Original) */}
+        <div className="hidden lg:grid grid-cols-[3fr_2fr] gap-8 items-center">
+          <div className="space-y-4 text-left pt-16 pb-8">
+            <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-white text-[9px] font-black uppercase tracking-[0.2em]">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              Elite Deal Protocol
+            </div>
+
+            <h2 className="text-7xl font-black text-white leading-[0.9] tracking-tighter">
+              THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-rose-300 to-violet-300">ULTIMATE</span>
+              <span className="block mt-1">FLASH SALE.</span>
+            </h2>
+
+            <p className="text-white/60 text-base max-w-xl font-medium leading-relaxed">
+              Unlock exclusive elite-tier discounts across our entire synchronized inventory.
+            </p>
+
+            <div className="flex items-center justify-start gap-5">
+              <Link to="/deals">
+                <Button
+                  size="lg"
+                  className="bg-white text-indigo-900 hover:bg-white/90 px-8 h-12 rounded-xl font-black shadow-[0_0_40px_rgba(255,255,255,0.15)] transition-all hover:scale-105 active:scale-95 text-xs"
+                >
+                  ACCESS DEALS
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </Link>
+
+              <div className="flex gap-3 p-2.5 bg-black/20 backdrop-blur-2xl rounded-xl border border-white/10">
                 {[
-                  { v: timeLeft.days, l: "d" },
-                  { v: timeLeft.hours, l: "h" },
-                  { v: timeLeft.mins, l: "m" },
-                  { v: timeLeft.secs, l: "s" }
+                  { v: timeLeft.days, l: "DAYS" },
+                  { v: timeLeft.hours, l: "HOURS" },
+                  { v: timeLeft.mins, l: "MINS" },
+                  { v: timeLeft.secs, l: "SECS" }
                 ].map((t, i) => (
-                  <div key={i} className="text-center min-w-[32px]">
-                    <p className="text-sm font-black text-white leading-none">{t.v}</p>
-                    <p className="text-[7px] text-white/40 uppercase font-bold mt-0.5">{t.l}</p>
+                  <div key={i} className="text-center min-w-[40px]">
+                    <p className="text-xl font-black text-white leading-none tracking-tighter">{t.v}</p>
+                    <p className="text-[7px] text-white/40 uppercase font-bold mt-1 tracking-widest leading-none">{t.l}</p>
                   </div>
                 ))}
               </div>
-              <Button
-                size="sm"
-                className="bg-white text-indigo-900 hover:bg-violet-50 font-black text-[9px] px-6 h-9 rounded-lg uppercase tracking-widest border-0"
-              >
-                Claim Now
-                <ArrowRight className="ml-1.5 w-3 h-3" />
-              </Button>
             </div>
-
           </div>
-        </Link>
+
+          <div className="relative">
+            <div className="relative group p-4 transform scale-100">
+              <div className="absolute -inset-6 bg-gradient-to-tr from-rose-500/10 to-violet-600/10 rounded-full blur-[80px] opacity-50 group-hover:opacity-100 transition-opacity"></div>
+              <Link to={bestDeal ? `/product/${bestDeal.id}` : '#'} className="block">
+                <div className="relative bg-white/5 backdrop-blur-md rounded-[40px] p-6 border border-white/10 shadow-2xl overflow-hidden transform rotate-2 group-hover:rotate-0 transition-transform duration-1000 max-w-[400px] ml-auto cursor-pointer">
+                  <img
+                    src={bestDeal?.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=800&fit=crop"}
+                    alt={bestDeal?.name || "Premium Deal"}
+                    className="w-full object-contain rounded-[40px] brightness-90 group-hover:brightness-100 transition-all duration-700 mx-auto"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/80 via-transparent to-transparent"></div>
+                  <div className="absolute bottom-10 left-8 right-8 text-left">
+                    <p className="text-white font-black text-4xl leading-none tracking-tighter ml-6">{bestDeal?.discount || '60'}% OFF</p>
+                    <p className="text-white/60 text-[10px] font-bold uppercase mt-2 tracking-widest ml-6">Limited Batch Reveal</p>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -1045,26 +1107,26 @@ const CategoriesSection = () => {
   if (categories.length === 0) return null;
 
   return (
-    <section className="py-6 bg-gray-50/50">
+    <section className="py-16 bg-gray-50 border-y border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-12">
-          <div>
-            <Badge className="mb-4 bg-violet-100 text-violet-600 border-none px-4 py-1.5 font-black text-[10px] uppercase tracking-widest">
+          <div className="space-y-2">
+            <Badge className="bg-violet-100 text-violet-600 border-none px-4 py-1.5 font-bold text-[10px] uppercase tracking-widest">
               Collections
             </Badge>
-            <h2 className="text-3xl lg:text-4xl font-black text-gray-900 tracking-tighter">
-              SHOP BY <span className="text-violet-600">CATEGORY.</span>
+            <h2 className="text-4xl font-bold text-gray-900 tracking-tight">
+              Shop by <span className="text-violet-600">Category</span>
             </h2>
           </div>
           <Link to="/categories">
-            <Button variant="ghost" className="text-violet-600 hover:text-violet-700 font-black uppercase text-[10px] tracking-widest group">
+            <Button variant="ghost" className="text-violet-600 hover:text-violet-700 font-bold uppercase text-xs tracking-widest group">
               View All
-              <ChevronRight className="ml-1 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              <ChevronRight className="ml-1 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {categories
             .slice(0, 4)
             .map((cat, i) => {
@@ -1073,6 +1135,7 @@ const CategoriesSection = () => {
               const iconMap = {
                 'electronics': Laptop,
                 'fashion': Shirt,
+                'accessories': Watch,
                 'home & garden': HomeIcon,
                 'home': HomeIcon,
                 'sports': Dumbbell,
@@ -1085,23 +1148,23 @@ const CategoriesSection = () => {
                 <Link
                   key={i}
                   to={cat.link}
-                  className="group bg-white p-8 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-500 border border-gray-100 flex flex-col items-center text-center"
+                  className="group rounded-3xl border border-gray-200/60 p-10 flex flex-col items-center justify-center text-center hover:bg-white hover:shadow-2xl hover:border-violet-100 transition-all duration-500 min-h-[250px]"
                 >
-                  <div className="w-28 h-28 bg-transparent rounded-full flex items-center justify-center mb-5 group-hover:bg-transparent transition-colors relative overflow-hidden shadow-inner">
+                  <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm group-hover:shadow-xl group-hover:scale-110 transition-all duration-300 relative overflow-hidden">
                     {firstProduct?.image ? (
-                      <img src={firstProduct.image} alt={cat.name} className="w-full h-full object-cover p-3 group-hover:scale-110 transition-transform duration-700" />
+                      <img src={firstProduct.image} alt={cat.name} className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-700" />
                     ) : (
                       <IconComponent className="w-12 h-12 text-violet-600" />
                     )}
                   </div>
-                  <h3 className="text-lg font-black text-gray-900 group-hover:text-violet-600 transition-colors uppercase tracking-tight">
+                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-violet-600 transition-colors">
                     {cat.name}
                   </h3>
-                  <div className="mt-4 flex items-center gap-1.5 px-4 py-1.5 bg-violet-50 rounded-full group-hover:bg-violet-600 transition-all duration-300">
-                    <span className="text-[10px] font-black text-violet-600 group-hover:text-white uppercase tracking-widest">
+                  <div className="flex items-center gap-2 px-4 py-1.5 bg-gray-50 rounded-full group-hover:bg-violet-50 transition-colors">
+                    <span className="text-xs font-bold text-violet-600 uppercase tracking-widest">
                       Explore
                     </span>
-                    <ChevronRight className="w-3.5 h-3.5 text-violet-600 group-hover:text-white transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-violet-600 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </Link>
               );
@@ -1111,6 +1174,354 @@ const CategoriesSection = () => {
     </section>
   );
 };
+
+// Featured Categories Section
+const FeaturedCategoriesSection = () => {
+  const categories = [
+    { name: "Electronics", icon: Laptop, color: "bg-blue-500", link: "/shop?category=electronics" },
+    { name: "Fashion", icon: Shirt, color: "bg-pink-500", link: "/shop?category=fashion" },
+    { name: "Accessories", icon: Watch, color: "bg-amber-500", link: "/shop?category=accessories" },
+    { name: "Home & Decor", icon: HomeIcon, color: "bg-emerald-500", link: "/shop?category=home-decoration" },
+    { name: "Sports", icon: Dumbbell, color: "bg-violet-500", link: "/shop?category=sports" },
+    { name: "Books", icon: BookOpen, color: "bg-rose-500", link: "/shop?category=books" },
+  ];
+
+  return (
+    <section className="py-24 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between mb-16 gap-6">
+          <div className="space-y-4">
+            <Badge className="bg-violet-100 text-violet-600 border-none font-bold uppercase tracking-widest px-4 py-1">Explore</Badge>
+            <h2 className="text-4xl lg:text-5xl font-black text-gray-900 tracking-tight">Featured Categories</h2>
+            <p className="text-gray-500 max-w-2xl text-lg">Browse our wide range of categories and find exactly what you're looking for.</p>
+          </div>
+          <Link to="/categories">
+            <Button className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold px-8 h-12 shadow-lg shadow-violet-200">
+              View All Categories
+              <ChevronRight className="w-5 h-5 ml-2" />
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+          {categories.map((cat, i) => (
+            <Link key={i} to={cat.link} className="group">
+              <div className="flex flex-col items-center p-8 rounded-[2rem] bg-gray-50 border-2 border-transparent transition-all duration-500 group-hover:bg-white group-hover:border-violet-100 group-hover:shadow-2xl group-hover:-translate-y-2">
+                <div className={`w-20 h-20 ${cat.color} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:rotate-6 transition-transform duration-500`}>
+                  <cat.icon className="w-10 h-10 text-white" />
+                </div>
+                <h3 className="font-black text-gray-900 text-center group-hover:text-violet-600 transition-colors uppercase tracking-tighter">{cat.name}</h3>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// Flash Deals Section
+const FlashDealsSection = () => {
+  const { addToCart } = useCart();
+  const [deals, setDeals] = useState([]);
+  const [timeLeft, setTimeLeft] = useState({ h: 12, m: 45, s: 30 });
+
+  useEffect(() => {
+    const fetchDeals = async () => {
+      try {
+        const response = await axios.get('https://dummyjson.com/products?limit=4&skip=20');
+        setDeals(response.data.products.map(p => ({
+          ...p,
+          discountPrice: Math.round(p.price * 83),
+          originalPrice: Math.round(p.price * 83 * 1.5),
+          rating: p.rating,
+          reviews: Math.floor(Math.random() * 200) + 50
+        })));
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchDeals();
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev.s > 0) return { ...prev, s: prev.s - 1 };
+        if (prev.m > 0) return { h: prev.h, m: prev.m - 1, s: 59 };
+        if (prev.h > 0) return { h: prev.h - 1, m: 59, s: 59 };
+        return prev;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <section className="py-24 bg-gray-950 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-1/2 h-full bg-violet-600/10 skew-x-12 translate-x-1/2"></div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+        <div className="flex flex-col lg:flex-row items-center justify-between mb-16 gap-8">
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+              <Badge className="bg-red-500 text-white border-none font-black uppercase tracking-widest">Flash Sale Live</Badge>
+            </div>
+            <h2 className="text-4xl lg:text-6xl font-black text-white tracking-tighter">Don't Blink. <br /><span className="text-violet-400">Limited Offers.</span></h2>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {[
+              { val: timeLeft.h, label: 'HOURS' },
+              { val: timeLeft.m, label: 'MINS' },
+              { val: timeLeft.s, label: 'SECS' }
+            ].map((t, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <div className="w-20 h-24 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center mb-2">
+                  <span className="text-4xl font-black text-white">{t.val.toString().padStart(2, '0')}</span>
+                </div>
+                <span className="text-[10px] font-bold text-gray-500 tracking-widest uppercase">{t.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {deals.map(p => (
+            <div key={p.id} className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-[2.5rem] p-6 transition-all duration-500 hover:bg-white/10 hover:-translate-y-2 shadow-2xl">
+              <div className="relative aspect-square rounded-3xl overflow-hidden mb-6">
+                <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
+                <div className="absolute top-4 left-4">
+                  <Badge className="bg-violet-600 text-white border-none font-black">SAVE 40%</Badge>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 mb-2">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className={`w-3 h-3 ${i < Math.floor(p.rating) ? 'fill-amber-400 text-amber-400' : 'text-white/20'}`} />
+                ))}
+                <span className="text-[10px] text-gray-500 font-bold ml-1">({p.reviews})</span>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2 line-clamp-1">{p.title}</h3>
+              <div className="flex items-end gap-3 mb-6">
+                <span className="text-3xl font-black text-white tracking-tighter">₹{p.discountPrice}</span>
+                <span className="text-sm text-gray-400 line-through font-bold mb-1">₹{p.originalPrice}</span>
+              </div>
+              <Button
+                className="w-full bg-white text-gray-950 hover:bg-violet-400 hover:text-white rounded-2xl h-14 font-black uppercase tracking-widest transition-all shadow-xl"
+                onClick={() => addToCart({ ...p, price: p.discountPrice })}
+              >
+                Snap It Up
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// Testimonials Section
+const TestimonialsSection = () => {
+  const testimonials = [
+    {
+      name: "Sarah Johnson",
+      role: "Verified Buyer",
+      rating: 5,
+      text: "Absolutely love shopping here! The product quality is exceptional and the delivery was faster than expected. Will definitely be a returning customer!",
+      location: "New York, NY",
+      avatar: "SJ",
+    },
+    {
+      name: "Michael Chen",
+      role: "Premium Member",
+      rating: 5,
+      text: "The best online shopping experience I've ever had. Great prices, easy navigation, and the customer service team is incredibly helpful.",
+      location: "Los Angeles, CA",
+      avatar: "MC",
+    },
+    {
+      name: "Emily Davis",
+      role: "Verified Buyer",
+      rating: 5,
+      text: "I was skeptical at first, but after my first purchase, I'm completely sold. The quality exceeded my expectations and the returns process is hassle-free.",
+      location: "Chicago, IL",
+      avatar: "ED",
+    },
+  ];
+
+  return (
+    <section className="py-20 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <Badge className="mb-4 bg-violet-100 text-violet-600 border-violet-200">Testimonials</Badge>
+          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+            What Our Customers Say
+          </h2>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Join thousands of satisfied customers who love shopping with us
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          {testimonials.map((testimonial, index) => (
+            <Card
+              key={index}
+              className="border-0 shadow-lg hover:shadow-xl transition-shadow"
+              data-testid={`testimonial-${index}`}
+            >
+              <CardContent className="p-6">
+                <Quote className="w-10 h-10 text-violet-200 mb-4" />
+                <div className="flex gap-1 mb-4">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className="w-5 h-5 fill-amber-400 text-amber-400"
+                    />
+                  ))}
+                </div>
+                <p className="text-gray-700 mb-6 leading-relaxed">
+                  &ldquo;{testimonial.text}&rdquo;
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold">
+                    {testimonial.avatar}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {testimonial.name}
+                    </p>
+                    <p className="text-sm text-gray-500">{testimonial.role}</p>
+                    <p className="text-xs text-gray-400">
+                      {testimonial.location}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// Newsletter Section
+const NewsletterSection = () => {
+  return (
+    <section className="py-20 bg-gray-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-3xl p-8 lg:p-12 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+
+          <div className="relative text-center max-w-2xl mx-auto">
+            <Mail className="w-12 h-12 text-white/80 mx-auto mb-6" />
+            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
+              Stay in the Loop
+            </h2>
+            <p className="text-white/80 mb-8">
+              Subscribe to our newsletter and be the first to know about
+              exclusive deals, new arrivals, and special offers.
+            </p>
+            <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:bg-white/20"
+                data-testid="newsletter-email"
+              />
+              <Button
+                type="submit"
+                className="bg-white text-violet-700 hover:bg-white/90 px-8"
+                data-testid="newsletter-submit"
+              >
+                Subscribe
+              </Button>
+            </form>
+            <p className="text-white/60 text-sm mt-4">
+              No spam, unsubscribe at any time.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// Best Sellers Section
+const BestSellersSection = () => {
+  const { addToCart } = useCart();
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBestSellers = async () => {
+      try {
+        const response = await axios.get('https://dummyjson.com/products?limit=4&skip=50');
+        setProducts(response.data.products.map(p => ({
+          ...p,
+          price: Math.round(p.price * 83),
+          originalPrice: Math.round(p.price * 83 * 1.2),
+          rating: p.rating,
+          reviews: Math.floor(Math.random() * 500) + 100,
+          isBestSeller: true
+        })));
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchBestSellers();
+  }, []);
+
+  if (isLoading) return null;
+
+  return (
+    <section className="py-24 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between mb-16">
+          <div className="space-y-2">
+            <Badge className="bg-amber-100 text-amber-600 border-none font-black uppercase tracking-widest text-[10px]">Top Rated</Badge>
+            <h2 className="text-4xl lg:text-5xl font-black text-gray-900 tracking-tighter">Best Sellers</h2>
+          </div>
+          <Link to="/shop" className="text-violet-600 font-black uppercase tracking-widest text-xs flex items-center gap-2 group">
+            Explore All <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
+          {products.map(p => (
+            <div key={p.id} className="group relative">
+              <div className="relative aspect-[3/4] rounded-[2rem] overflow-hidden bg-gray-100 mb-6">
+                <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" loading="lazy" />
+                <div className="absolute top-6 left-6">
+                  <Badge className="bg-amber-400 text-black border-none font-black px-3 py-1 text-[10px] shadow-xl">BEST SELLER</Badge>
+                </div>
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                  <Button size="icon" className="bg-white text-gray-900 rounded-full hover:bg-violet-600 hover:text-white transition-all shadow-2xl" onClick={() => addToCart(p)}>
+                    <ShoppingCart className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 mb-2 px-2">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className={`w-3 h-3 ${i < Math.floor(p.rating) ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
+                ))}
+                <span className="text-[9px] font-black text-gray-400 ml-1">({p.reviews})</span>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-1 px-2 line-clamp-1">{p.title}</h3>
+              <p className="text-gray-500 text-sm px-2 mb-3 font-medium">{p.category}</p>
+              <div className="flex items-center gap-2 px-2">
+                <span className="text-2xl font-black text-violet-600 tracking-tighter">₹{p.price}</span>
+                <span className="text-sm text-gray-400 line-through font-bold">₹{p.originalPrice}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 
 // Mobile Category Strip (Amazon Style)
 const MobileCategoryStrip = () => {
@@ -1164,6 +1575,14 @@ const AmazonGridCard = ({ title, items, link }) => (
   </Card>
 );
 
+// Fallback items if nothing is viewed yet
+const fallbackViews = [
+  { name: "Smartphone", image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&q=80", link: "/shop" },
+  { name: "Headphones", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80", link: "/shop" },
+  { name: "Smartwatch", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80", link: "/shop" },
+  { name: "Camera", image: "https://images.unsplash.com/photo-1526170315870-ef6876f84d9d?w=400&q=80", link: "/shop" },
+];
+
 // Home Page Component
 const Home = () => {
   const [stats, setStats] = useState({
@@ -1175,13 +1594,6 @@ const Home = () => {
   const [reviews, setReviews] = useState([]);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
 
-  // Fallback items if nothing is viewed yet
-  const fallbackViews = [
-    { name: "Smartphone", image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&q=80", link: "/shop" },
-    { name: "Headphones", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80", link: "/shop" },
-    { name: "Smartwatch", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80", link: "/shop" },
-    { name: "Camera", image: "https://images.unsplash.com/photo-1526170315870-ef6876f84d9d?w=400&q=80", link: "/shop" },
-  ];
 
   const fetchStats = async () => {
     try {
@@ -1242,6 +1654,9 @@ const Home = () => {
           />
         </div>
 
+
+        <PromoBannerSection />
+
         <div className="bg-white px-4 py-6 mt-1">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900 uppercase tracking-tighter">Recommended For You</h2>
@@ -1253,21 +1668,17 @@ const Home = () => {
 
       {/* Desktop Layout - RESTORED OLD STYLE */}
       <div className="hidden lg:block">
-        <DesktopHeroSection stats={stats} />
-        <DesktopFeaturesSection />
-        <FeaturedCategoriesSection />
-        <FlashDealsSection />
-        <BestSellersSection />
+        <HeroSection stats={stats} />
+        <FeaturesSection />
+        <CategoriesSection />
+        <ModernBentoGrid />
+        <PromoBannerSection />
         <div className="bg-white">
           <FeaturedProductsSection />
         </div>
-        <DesktopModernBentoGrid />
-        <DesktopPromoBannerSection />
-        <TestimonialsSection />
-        <NewsletterSection />
         <Footer />
       </div>
-    </div>
+    </div >
   );
 };
 

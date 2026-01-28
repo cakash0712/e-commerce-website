@@ -41,7 +41,9 @@ const Shop = () => {
     category: searchParams.get("category") || "",
     subCategory: "",
     priceRange: [0, 100000],
-    rating: 0
+    rating: 0,
+    brands: [],
+    discount: 0
   });
 
   // Update searchQuery when URL changes
@@ -61,6 +63,7 @@ const Shop = () => {
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]); // Derived from products
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -90,6 +93,10 @@ const Shop = () => {
         const prodRes = await axios.get(`${API_BASE}/api/products`);
         setProducts(prodRes.data);
 
+        // Extract unique brands
+        const uniqueBrands = [...new Set(prodRes.data.map(p => p.brand).filter(Boolean))];
+        setBrands(uniqueBrands);
+
         // Fetch categories
         const catRes = await axios.get(`${API_BASE}/api/public/categories`);
         setCategories(catRes.data.map(cat => ({ name: cat.name, sub: [] })));
@@ -113,7 +120,11 @@ const Shop = () => {
         (filters.subCategory && normalize(product.category) === normalize(filters.subCategory));
       const matchesPrice = product.price >= filters.priceRange[0] && product.price <= filters.priceRange[1];
       const matchesRating = filters.rating === 0 || product.rating >= filters.rating;
-      return matchesSearch && matchesCategory && matchesPrice && matchesRating;
+
+      const matchesBrand = filters.brands.length === 0 || filters.brands.includes(product.brand);
+      const matchesDiscount = filters.discount === 0 || (product.discount && product.discount >= filters.discount);
+
+      return matchesSearch && matchesCategory && matchesPrice && matchesRating && matchesBrand && matchesDiscount;
     });
 
     switch (sortBy) {
@@ -129,7 +140,7 @@ const Shop = () => {
 
 
   const clearFilters = () => {
-    setFilters({ category: "", subCategory: "", priceRange: [0, 100000], rating: 0 });
+    setFilters({ category: "", subCategory: "", priceRange: [0, 100000], rating: 0, brands: [], discount: 0 });
     setSearchQuery("");
   };
 
@@ -137,7 +148,9 @@ const Shop = () => {
     filters.category,
     filters.subCategory,
     filters.rating > 0,
-    filters.priceRange[0] > 0 || filters.priceRange[1] < 100000
+    filters.priceRange[0] > 0 || filters.priceRange[1] < 100000,
+    filters.brands.length > 0,
+    filters.discount > 0
   ].filter(Boolean).length;
 
   return (
@@ -260,7 +273,7 @@ const Shop = () => {
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex gap-6">
           {/* Filters Sidebar */}
-          <aside className={`${showFilters ? 'block' : 'hidden'} lg:block w-64 flex-shrink-0`}>
+          <aside className={`${showFilters ? 'block' : 'hidden'} w-64 flex-shrink-0 animate-in slide-in-from-left duration-300`}>
             <div className="bg-white rounded-lg border border-gray-200 p-5 sticky top-36 space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-gray-900">Filters</h3>
@@ -376,6 +389,55 @@ const Shop = () => {
                   </div>
                 </>
               )}
+              {/* Brands */}
+              {brands.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-gray-900">Brands</h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {brands.map((brand) => (
+                      <label key={brand} className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={filters.brands.includes(brand)}
+                          onCheckedChange={(checked) => {
+                            setFilters(prev => ({
+                              ...prev,
+                              brands: checked
+                                ? [...prev.brands, brand]
+                                : prev.brands.filter(b => b !== brand)
+                            }));
+                          }}
+                          className="border-gray-300 data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600"
+                        />
+                        <span className="text-sm text-gray-600">{brand}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Discount */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-gray-900">Discount</h4>
+                <div className="space-y-2">
+                  {[50, 40, 30, 20, 10].map((discount) => (
+                    <label key={discount} className="flex items-center gap-2 cursor-pointer">
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${filters.discount === discount ? 'border-violet-600' : 'border-gray-300'}`}>
+                        {filters.discount === discount && <div className="w-2 h-2 bg-violet-600 rounded-full" />}
+                      </div>
+                      <input
+                        type="radio"
+                        name="discount"
+                        className="hidden"
+                        checked={filters.discount === discount}
+                        onChange={() => setFilters({ ...filters, discount: filters.discount === discount ? 0 : discount })}
+                      />
+                      <span className="text-sm text-gray-600">
+                        {discount}% or more
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
           </aside>
 
@@ -443,7 +505,7 @@ const Shop = () => {
               </div>
             ) : (
               <div className={viewMode === "grid"
-                ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
                 : "space-y-4"
               }>
                 {filteredProducts.map((product) => (
@@ -452,7 +514,7 @@ const Shop = () => {
                       /* List View */
                       <>
                         <Link to={`/product/${product.id}`} className="block w-48 flex-shrink-0">
-                          <div className="relative aspect-square bg-gray-50">
+                          <div className="relative aspect-square">
                             <img
                               src={getImageUrl(product.image)}
                               alt={product.name}
@@ -521,7 +583,7 @@ const Shop = () => {
                       /* Grid View */
                       <>
                         <Link to={`/product/${product.id}`} className="block">
-                          <div className="relative aspect-square bg-gray-50 overflow-hidden">
+                          <div className="relative aspect-[4/3] overflow-hidden">
                             <img
                               src={getImageUrl(product.image)}
                               alt={product.name}
@@ -600,10 +662,10 @@ const Shop = () => {
             )}
           </div>
         </div>
-      </main>
+      </main >
 
       <Footer />
-    </div>
+    </div >
   );
 };
 
