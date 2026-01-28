@@ -58,7 +58,8 @@ import {
   MapPin,
   Phone,
   Utensils,
-  Bike,
+  TrendingUp,
+  CreditCard,
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
@@ -415,49 +416,34 @@ const CouponProvider = ({ children }) => {
 // Hero Section
 const HeroSection = ({ stats }) => {
   return (
-    <section className="relative min-h-[50vh] md:min-h-[70vh] flex items-center overflow-hidden bg-gradient-to-br from-slate-950 via-violet-950 to-slate-950">
+    <section className="relative min-h-[30vh] md:min-h-[45vh] flex items-center overflow-hidden bg-gradient-to-br from-slate-950 via-violet-950 to-slate-950">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         {/* Gradient Orbs */}
-        <div className="absolute top-0 -left-40 w-[500px] h-[500px] bg-violet-600/30 rounded-full filter blur-[120px] animate-pulse"></div>
-        <div className="absolute bottom-0 -right-40 w-[600px] h-[600px] bg-indigo-600/20 rounded-full filter blur-[120px] animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-purple-600/10 rounded-full filter blur-[150px]"></div>
-
-        {/* Grid Pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(139,92,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.03)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
-
-        {/* Floating Particles */}
-        <div className="absolute top-20 left-[10%] w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDuration: '3s' }}></div>
-        <div className="absolute top-40 right-[15%] w-3 h-3 bg-amber-400 rounded-full animate-bounce" style={{ animationDuration: '4s', animationDelay: '0.5s' }}></div>
-        <div className="absolute bottom-32 left-[20%] w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDuration: '3.5s', animationDelay: '1s' }}></div>
-        <div className="absolute bottom-40 right-[25%] w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDuration: '2.5s', animationDelay: '0.2s' }}></div>
+        <div className="absolute top-0 -left-40 w-[400px] h-[400px] bg-violet-600/20 rounded-full filter blur-[100px] animate-pulse"></div>
+        <div className="absolute bottom-0 -right-40 w-[500px] h-[500px] bg-indigo-600/15 rounded-full filter blur-[100px] animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
 
       {/* Main Content Container */}
-      <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
-        <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+      <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        <div className="grid lg:grid-cols-12 gap-6 lg:gap-10 items-center">
 
           {/* Left Content - Text & CTA */}
-          <div className="lg:col-span-6 text-center lg:text-left space-y-8 order-2 lg:order-1">
+          <div className="lg:col-span-6 text-center lg:text-left space-y-6 order-2 lg:order-1 hidden lg:block">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mt-4">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
-              </span>
-              <span className="text-sm font-medium text-white/80">New Collection</span>
-              <ChevronRight className="w-4 h-4 text-white/60" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mt-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/80">New Season</span>
             </div>
 
             {/* Main Heading */}
-            <div className="space-y-4">
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.1] tracking-tight">
+            <div className="space-y-2">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight tracking-tighter">
                 <span className="text-white">Discover Your</span>
                 <br />
                 <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 bg-clip-text text-transparent">Perfect Style</span>
               </h1>
-              <p className="text-lg lg:text-xl text-white/60 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-                Explore premium products with exclusive deals, curated collections, and lightning-fast delivery to your doorstep.
+              <p className="text-base lg:text-lg text-white/60 max-w-md mx-auto lg:mx-0 leading-relaxed font-medium">
+                Premium products with elite deals and lightning-fast delivery.
               </p>
             </div>
 
@@ -465,104 +451,83 @@ const HeroSection = ({ stats }) => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link to="/shop">
                 <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 px-8 py-6 text-base font-semibold rounded-xl shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-all duration-300 group"
+                  size="default"
+                  className="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 px-6 py-5 text-sm font-black rounded-lg shadow-lg shadow-violet-500/20 transition-all duration-300 group uppercase tracking-widest"
                 >
-                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  <ShoppingCart className="w-4 h-4 mr-2" />
                   Shop Now
-                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-              <Link to="/categories">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto border-white/20 text-white hover:bg-white/10 hover:border-white/30 px-8 py-6 text-base font-semibold rounded-xl backdrop-blur-sm transition-all duration-300"
-                >
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Explore Collections
+                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             </div>
 
             {/* Trust Stats */}
-            <div className="flex items-center gap-6 lg:gap-8 justify-center lg:justify-start pt-6">
+            <div className="flex items-center gap-6 justify-center lg:justify-start pt-2">
               <div className="text-center lg:text-left">
-                <p className="text-3xl lg:text-4xl font-bold text-white">{stats.happy_customers?.toLocaleString() || '50K+'}</p>
-                <p className="text-sm text-white/50 font-medium mt-1">Happy Customers</p>
+                <p className="text-2xl font-black text-white leading-none">{stats.happy_customers?.toLocaleString() || '50K+'}</p>
+                <p className="text-[10px] text-white/50 uppercase font-bold mt-1 tracking-widest">Customers</p>
               </div>
-              <div className="w-px h-14 bg-white/10"></div>
+              <div className="w-px h-10 bg-white/10"></div>
               <div className="text-center lg:text-left">
-                <p className="text-3xl lg:text-4xl font-bold text-white">{stats.total_products?.toLocaleString() || '10K+'}</p>
-                <p className="text-sm text-white/50 font-medium mt-1">Products</p>
-              </div>
-              <div className="w-px h-14 bg-white/10"></div>
-              <div className="text-center lg:text-left">
-                <p className="text-3xl lg:text-4xl font-bold text-white">{stats.satisfaction_rate || '98%'}</p>
-                <p className="text-sm text-white/50 font-medium mt-1">Satisfaction</p>
+                <p className="text-2xl font-black text-white leading-none">{stats.total_products?.toLocaleString() || '10K+'}</p>
+                <p className="text-[10px] text-white/50 uppercase font-bold mt-1 tracking-widest">Products</p>
               </div>
             </div>
           </div>
 
-          {/* Right Content - Hero Visual */}
-          <div className="lg:col-span-6 order-1 lg:order-2">
+          {/* Right Content - Hero Visual (Full width on mobile) */}
+          <div className="lg:col-span-6 order-1 lg:order-2 w-full lg:w-auto">
             <div className="relative">
-              {/* Glow Effect Behind Cards */}
-              <div className="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-indigo-500/20 rounded-[3rem] blur-3xl scale-110"></div>
-
               {/* Main Image Card */}
-              <div className="relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-[2.5rem] p-2 border border-white/10 shadow-2xl">
-                <Carousel className="relative rounded-[2rem] overflow-hidden">
+              <div className="relative bg-transparent lg:bg-white/10 lg:backdrop-blur-xl rounded-none lg:rounded-[2.5rem] p-0 lg:p-2 border-0 lg:border lg:border-white/10 shadow-none lg:shadow-2xl">
+                <Carousel className="relative rounded-none lg:rounded-[2rem] overflow-hidden">
                   <CarouselContent>
                     <CarouselItem>
-                      <div className="relative h-[300px] sm:h-[350px] lg:h-[400px]">
+                      <div className="relative h-[220px] sm:h-[350px] lg:h-[400px]">
                         <img
                           src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop"
                           alt="Modern fashion collection"
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                        <div className="absolute bottom-6 left-6 right-6">
-                          <Badge className="bg-white/90 text-gray-900 border-0 px-3 py-1 text-xs font-bold mb-2">TRENDING</Badge>
-                          <p className="text-white text-lg font-semibold">Summer Collection 2026</p>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent lg:hidden"></div>
+                        <div className="absolute bottom-4 left-4 lg:hidden">
+                          <p className="text-white text-lg font-bold">New Fashion Arrivals</p>
                         </div>
                       </div>
                     </CarouselItem>
                     <CarouselItem>
-                      <div className="relative h-[300px] sm:h-[350px] lg:h-[400px]">
+                      <div className="relative h-[220px] sm:h-[350px] lg:h-[400px]">
                         <img
                           src="https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=800&h=600&fit=crop"
                           alt="Premium tech products"
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                        <div className="absolute bottom-6 left-6 right-6">
-                          <Badge className="bg-violet-500/90 text-white border-0 px-3 py-1 text-xs font-bold mb-2">NEW ARRIVALS</Badge>
-                          <p className="text-white text-lg font-semibold">Premium Electronics</p>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent lg:hidden"></div>
+                        <div className="absolute bottom-4 left-4 lg:hidden">
+                          <p className="text-white text-lg font-bold">Premium Electronics</p>
                         </div>
                       </div>
                     </CarouselItem>
                     <CarouselItem>
-                      <div className="relative h-[300px] sm:h-[350px] lg:h-[400px]">
+                      <div className="relative h-[220px] sm:h-[350px] lg:h-[400px]">
                         <img
                           src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=600&fit=crop"
                           alt="Luxury watches"
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                        <div className="absolute bottom-6 left-6 right-6">
-                          <Badge className="bg-amber-500/90 text-white border-0 px-3 py-1 text-xs font-bold mb-2">FEATURED</Badge>
-                          <p className="text-white text-lg font-semibold">Luxury Accessories</p>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent lg:hidden"></div>
+                        <div className="absolute bottom-4 left-4 lg:hidden">
+                          <p className="text-white text-lg font-bold">Luxury Collection</p>
                         </div>
                       </div>
                     </CarouselItem>
                   </CarouselContent>
-                  <CarouselPrevious className="left-4 bg-white/10 border-white/20 text-white hover:bg-white/20" />
-                  <CarouselNext className="right-4 bg-white/10 border-white/20 text-white hover:bg-white/20" />
+                  <CarouselPrevious className="left-4 bg-white/10 border-white/20 text-white hover:bg-white/20 hidden lg:flex" />
+                  <CarouselNext className="right-4 bg-white/10 border-white/20 text-white hover:bg-white/20 hidden lg:flex" />
                 </Carousel>
               </div>
 
-              {/* Floating Feature Cards */}
+              {/* Floating Feature Cards (Desktop Only) */}
               <div className="hidden lg:block absolute -left-16 top-1/4 transform -translate-y-1/2 z-20">
                 <div className="bg-white rounded-2xl p-4 shadow-2xl animate-[bounce_3s_ease-in-out_infinite] border border-gray-100">
                   <div className="flex items-center gap-3">
@@ -576,46 +541,34 @@ const HeroSection = ({ stats }) => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div className="hidden lg:block absolute -right-12 bottom-1/4 transform translate-y-1/2 z-20">
-                <div className="bg-white rounded-2xl p-4 shadow-2xl animate-[bounce_3.5s_ease-in-out_infinite] border border-gray-100" style={{ animationDelay: '0.5s' }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30">
-                      <Star className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900 text-sm">Best Sellers</p>
-                      <p className="text-xs text-gray-500">Top Rated Products</p>
-                    </div>
-                  </div>
+          <div className="hidden lg:block absolute -right-12 bottom-1/4 transform translate-y-1/2 z-20">
+            <div className="bg-white rounded-2xl p-4 shadow-2xl animate-[bounce_3.5s_ease-in-out_infinite] border border-gray-100" style={{ animationDelay: '0.5s' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30">
+                  <Star className="w-6 h-6 text-white" />
                 </div>
-              </div>
-
-              <div className="hidden lg:block absolute -left-8 bottom-10 z-20">
-                <div className="bg-white rounded-2xl p-4 shadow-2xl animate-[bounce_4s_ease-in-out_infinite] border border-gray-100" style={{ animationDelay: '1s' }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                      <Shield className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900 text-sm">Secure Payment</p>
-                      <p className="text-xs text-gray-500">100% Protected</p>
-                    </div>
-                  </div>
+                <div>
+                  <p className="font-bold text-gray-900 text-sm">Best Sellers</p>
+                  <p className="text-xs text-gray-500">Top Rated Products</p>
                 </div>
               </div>
             </div>
           </div>
+
         </div>
       </div>
+    </div>
 
-      {/* Bottom Wave Decoration */}
-      <div className="absolute bottom-0 left-0 right-0">
-        <svg className="w-full h-16 lg:h-24" viewBox="0 0 1440 74" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-          <path d="M0 24L60 28C120 32 240 40 360 42.7C480 45.3 600 42.7 720 37.3C840 32 960 24 1080 22.7C1200 21.3 1320 26.7 1380 29.3L1440 32V74H1380C1320 74 1200 74 1080 74C960 74 840 74 720 74C600 74 480 74 360 74C240 74 120 74 60 74H0V24Z" fill="white" />
-        </svg>
-      </div>
-    </section>
+      {/* Bottom Wave Decoration */ }
+  <div className="absolute bottom-0 left-0 right-0">
+    <svg className="w-full h-16 lg:h-24" viewBox="0 0 1440 74" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+      <path d="M0 24L60 28C120 32 240 40 360 42.7C480 45.3 600 42.7 720 37.3C840 32 960 24 1080 22.7C1200 21.3 1320 26.7 1380 29.3L1440 32V74H1380C1320 74 1200 74 1080 74C960 74 840 74 720 74C600 74 480 74 360 74C240 74 120 74 60 74H0V24Z" fill="white" />
+    </svg>
+  </div>
+    </section >
   );
 };
 
@@ -687,7 +640,7 @@ const ModernBentoGrid = () => {
       image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80",
       description: "Experience sound like never before with our studio-grade headphones.",
       width: "col-span-1 lg:col-span-2",
-      height: "h-[320px] lg:h-[400px]",
+      height: "h-[240px] lg:h-[300px]",
       link: "/shop?category=electronics"
     },
     {
@@ -696,7 +649,7 @@ const ModernBentoGrid = () => {
       image: "https://images.unsplash.com/photo-1493934558415-9d19f0b2b4d2?w=800&q=80",
       description: "Minimalist desk setups for maximum focus.",
       width: "col-span-1",
-      height: "h-[320px] lg:h-[400px]",
+      height: "h-[240px] lg:h-[300px]",
       link: "/shop?category=home-garden"
     },
     {
@@ -705,7 +658,7 @@ const ModernBentoGrid = () => {
       image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
       description: "Gear that moves with you.",
       width: "col-span-1",
-      height: "h-[320px] lg:h-[480px]",
+      height: "h-[240px] lg:h-[360px]",
       link: "/shop?category=sports"
     },
     {
@@ -714,13 +667,13 @@ const ModernBentoGrid = () => {
       image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&q=80",
       description: "Modern fashion for the urban explorer.",
       width: "col-span-1 lg:col-span-2",
-      height: "h-[320px] lg:h-[480px]",
+      height: "h-[240px] lg:h-[360px]",
       link: "/shop?category=fashion"
     }
   ];
 
   return (
-    <section className="py-24 bg-white overflow-hidden">
+    <section className="py-6 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
           <div>
@@ -833,7 +786,7 @@ const FeaturedProductsSection = () => {
   }
 
   return (
-    <section className="py-24 bg-gray-50/50 mb-[3px]">
+    <section className="py-6 bg-gray-50/50 mb-[2px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
           <div>
@@ -854,7 +807,7 @@ const FeaturedProductsSection = () => {
           </Link>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 md:gap-8">
           {products.map((product) => (
             <Card
               key={product.id}
@@ -1007,79 +960,65 @@ const PromoBannerSection = () => {
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
 
-      <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-20 relative z-10">
-        <div className="grid lg:grid-cols-[3fr_2fr] gap-8 items-center">
-          <div className="space-y-4 text-center lg:text-left pt-10 lg:pt-16 pb-5 lg:pb-8">
-            <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-white text-[9px] font-black uppercase tracking-[0.2em]">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              Elite Deal Protocol
+      <div className="max-w-7xl mx-auto px-4 relative z-10 py-3 lg:py-4">
+        <Link to={bestDeal ? `/product/${bestDeal.id}` : '/deals'} className="block group">
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl overflow-hidden p-3 lg:p-4 flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-8 transition-all hover:bg-white/15">
+
+            {/* Product & Title */}
+            <div className="flex items-center gap-4 flex-1">
+              <div className="w-16 h-16 lg:w-20 lg:h-20 bg-white/10 rounded-xl flex-shrink-0 flex items-center justify-center p-2 relative">
+                <img
+                  src={bestDeal?.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&h=200&fit=crop"}
+                  alt={bestDeal?.name}
+                  className="max-w-full max-h-full object-contain drop-shadow-lg"
+                />
+                <div className="absolute -top-2 -left-2 bg-rose-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">
+                  -{bestDeal?.discount || '60'}%
+                </div>
+              </div>
+              <div className="text-left">
+                <div className="inline-flex items-center gap-1.5 text-amber-400 text-[8px] font-black uppercase tracking-widest mb-0.5">
+                  <span className="w-1 h-1 bg-amber-400 rounded-full animate-pulse"></span>
+                  Elite Deal
+                </div>
+                <h3 className="text-white font-bold text-sm lg:text-lg line-clamp-1 leading-tight">{bestDeal?.name || "Flash Sale"}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-white font-black text-lg">₹{bestDeal?.price}</span>
+                  <span className="text-white/30 line-through text-xs">₹{bestDeal?.originalPrice}</span>
+                </div>
+              </div>
             </div>
 
-            <h2 className="text-3xl lg:text-7xl font-black text-white leading-[0.9] tracking-tighter">
-              THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-rose-300 to-violet-300">ULTIMATE</span>
-              <span className="block mt-1">FLASH SALE.</span>
-            </h2>
-
-            <p className="text-white/60 text-sm md:text-base max-w-xl mx-auto lg:mx-0 font-medium leading-relaxed">
-              Unlock exclusive elite-tier discounts across our entire synchronized inventory.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5">
-              <Link to="/deals">
-                <Button
-                  size="lg"
-                  className="bg-white text-indigo-900 hover:bg-white/90 px-8 h-12 rounded-xl font-black shadow-[0_0_40px_rgba(255,255,255,0.15)] transition-all hover:scale-105 active:scale-95 text-xs"
-                >
-                  ACCESS DEALS
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-              </Link>
-
-              <div className="flex gap-3 p-2.5 bg-black/20 backdrop-blur-2xl rounded-xl border border-white/10">
+            {/* Countdown & CTA */}
+            <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-8">
+              <div className="flex gap-2 p-1.5 bg-black/20 rounded-xl border border-white/5">
                 {[
-                  { v: timeLeft.days, l: "DAYS" },
-                  { v: timeLeft.hours, l: "HOURS" },
-                  { v: timeLeft.mins, l: "MINS" },
-                  { v: timeLeft.secs, l: "SECS" }
+                  { v: timeLeft.days, l: "d" },
+                  { v: timeLeft.hours, l: "h" },
+                  { v: timeLeft.mins, l: "m" },
+                  { v: timeLeft.secs, l: "s" }
                 ].map((t, i) => (
-                  <div key={i} className="text-center min-w-[40px]">
-                    <p className="text-xl font-black text-white leading-none tracking-tighter">{t.v}</p>
-                    <p className="text-[7px] text-white/40 uppercase font-bold mt-1 tracking-widest leading-none">{t.l}</p>
+                  <div key={i} className="text-center min-w-[32px]">
+                    <p className="text-sm font-black text-white leading-none">{t.v}</p>
+                    <p className="text-[7px] text-white/40 uppercase font-bold mt-0.5">{t.l}</p>
                   </div>
                 ))}
               </div>
+              <Button
+                size="sm"
+                className="bg-white text-indigo-900 hover:bg-violet-50 font-black text-[9px] px-6 h-9 rounded-lg uppercase tracking-widest border-0"
+              >
+                Claim Now
+                <ArrowRight className="ml-1.5 w-3 h-3" />
+              </Button>
             </div>
-          </div>
 
-          <div className="relative hidden lg:block">
-            <div className="relative group p-4 transform scale-100">
-              <div className="absolute -inset-6 bg-gradient-to-tr from-rose-500/10 to-violet-600/10 rounded-full blur-[80px] opacity-50 group-hover:opacity-100 transition-opacity"></div>
-              <Link to={bestDeal ? `/product/${bestDeal.id}` : '#'} className="block">
-                <div className="relative bg-white/5 backdrop-blur-md rounded-[40px] p-6 border border-white/10 shadow-2xl overflow-hidden transform rotate-2 group-hover:rotate-0 transition-transform duration-1000 max-w-[400px] ml-auto cursor-pointer">
-                  <img
-                    src={bestDeal?.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=800&fit=crop"}
-                    alt={bestDeal?.name || "Premium Deal"}
-                    className="w-full object-contain rounded-[40px] brightness-90 group-hover:brightness-100 transition-all duration-700 mx-auto"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/80 via-transparent to-transparent"></div>
-                  <div className="absolute bottom-10 left-8 right-8 text-center lg:text-left">
-                    <p className="text-white font-black text-4xl leading-none tracking-tighter ml-6">{bestDeal?.discount || '60'}% OFF</p>
-                    <p className="text-white/60 text-[10px] font-bold uppercase mt-2 tracking-widest ml-6">Limited Batch Reveal</p>
-                  </div>
-                </div>
-              </Link>
-            </div>
           </div>
-        </div>
+        </Link>
       </div>
     </section>
   );
 };
-
-
-
-
-
 
 // Categories Section
 const CategoriesSection = () => {
@@ -1106,7 +1045,7 @@ const CategoriesSection = () => {
   if (categories.length === 0) return null;
 
   return (
-    <section className="py-24 bg-gray-50/50">
+    <section className="py-6 bg-gray-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-12">
           <div>
@@ -1173,6 +1112,58 @@ const CategoriesSection = () => {
   );
 };
 
+// Mobile Category Strip (Amazon Style)
+const MobileCategoryStrip = () => {
+  const categories = [
+    { name: "Deals", icon: TrendingUp, color: "text-rose-500", link: "/deals" },
+    { name: "Mobiles", icon: Laptop, color: "text-blue-500", link: "/shop?category=mobiles" },
+    { name: "Fashion", icon: Shirt, color: "text-orange-500", link: "/shop?category=fashion" },
+    { name: "Home", icon: HomeIcon, color: "text-emerald-500", link: "/shop?category=home" },
+    { name: "Beauty", icon: Sparkles, color: "text-violet-500", link: "/shop?category=beauty" },
+  ];
+
+  return (
+    <div className="lg:hidden bg-white border-b border-gray-100 overflow-x-auto no-scrollbar py-2 px-2">
+      <div className="flex items-center justify-between w-full px-2">
+        {categories.map((cat, i) => (
+          <Link
+            key={i}
+            to={cat.link}
+            className="flex flex-col items-center gap-1.5 px-2"
+          >
+            <div className={`w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center shadow-sm border border-gray-100`}>
+              <cat.icon className={`w-5 h-5 ${cat.color}`} />
+            </div>
+            <span className="text-[10px] font-bold text-gray-600 uppercase tracking-tighter">
+              {cat.name}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Amazon Style 2x2 Grid Card for Mobile
+const AmazonGridCard = ({ title, items, link }) => (
+  <Card className="lg:hidden border-0 shadow-sm rounded-none bg-white p-3 mb-2">
+    <h3 className="text-sm font-bold text-gray-900 mb-2">{title}</h3>
+    <div className="grid grid-cols-2 gap-2">
+      {items.map((item, i) => (
+        <Link key={i} to={item.link} className="flex flex-col gap-1">
+          <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden border border-gray-50">
+            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+          </div>
+          <p className="text-[10px] font-medium text-gray-700 line-clamp-1">{item.name}</p>
+        </Link>
+      ))}
+    </div>
+    <Link to={link || "/shop"} className="inline-block mt-3 text-[10px] font-bold text-violet-600">
+      See more
+    </Link>
+  </Card>
+);
+
 // Home Page Component
 const Home = () => {
   const [stats, setStats] = useState({
@@ -1182,6 +1173,15 @@ const Home = () => {
     satisfaction_rate: "100%"
   });
   const [reviews, setReviews] = useState([]);
+  const [recentlyViewed, setRecentlyViewed] = useState([]);
+
+  // Fallback items if nothing is viewed yet
+  const fallbackViews = [
+    { name: "Smartphone", image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&q=80", link: "/shop" },
+    { name: "Headphones", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80", link: "/shop" },
+    { name: "Smartwatch", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80", link: "/shop" },
+    { name: "Camera", image: "https://images.unsplash.com/photo-1526170315870-ef6876f84d9d?w=400&q=80", link: "/shop" },
+  ];
 
   const fetchStats = async () => {
     try {
@@ -1204,19 +1204,69 @@ const Home = () => {
   useEffect(() => {
     fetchStats();
     fetchReviews();
+
+    // Load recently viewed
+    const saved = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
+    setRecentlyViewed(saved.length > 0 ? saved : fallbackViews);
   }, []);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50 lg:bg-white pb-20 lg:pb-0">
       <Navigation />
-      <HeroSection stats={stats} />
-      <FeaturesSection />
-      <CategoriesSection />
-      <ModernBentoGrid />
-      <PromoBannerSection />
-      <FeaturedProductsSection />
 
-      <Footer />
+      {/* Mobile Layout - User said it's okay */}
+      <div className="lg:hidden">
+        {/* Mobile-Only Strip */}
+        <div className="pt-[145px] mb-1">
+          <MobileCategoryStrip />
+        </div>
+
+        {/* Hero Section */}
+        <HeroSection stats={stats} />
+
+        {/* Mobile Grid Sections */}
+        <div className="space-y-2 mt-2">
+          <AmazonGridCard
+            title="Pick up where you left off"
+            items={recentlyViewed}
+          />
+          <AmazonGridCard
+            title="International Brands"
+            items={[
+              { name: "Electronics", image: "https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=400&q=80", link: "/shop?category=electronics" },
+              { name: "Luxury Fashion", image: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&q=80", link: "/shop?category=fashion" },
+              { name: "Smart Home", image: "https://images.unsplash.com/photo-1558002038-1055907df827?w=400&q=80", link: "/shop?category=home" },
+              { name: "Pro Fitness", image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&q=80", link: "/shop?category=sports" },
+            ]}
+            link="/categories"
+          />
+        </div>
+
+        <div className="bg-white px-4 py-6 mt-1">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-900 uppercase tracking-tighter">Recommended For You</h2>
+            <Link to="/shop" className="text-xs font-bold text-violet-600">View All</Link>
+          </div>
+          <FeaturedProductsSection />
+        </div>
+      </div>
+
+      {/* Desktop Layout - RESTORED OLD STYLE */}
+      <div className="hidden lg:block">
+        <DesktopHeroSection stats={stats} />
+        <DesktopFeaturesSection />
+        <FeaturedCategoriesSection />
+        <FlashDealsSection />
+        <BestSellersSection />
+        <div className="bg-white">
+          <FeaturedProductsSection />
+        </div>
+        <DesktopModernBentoGrid />
+        <DesktopPromoBannerSection />
+        <TestimonialsSection />
+        <NewsletterSection />
+        <Footer />
+      </div>
     </div>
   );
 };

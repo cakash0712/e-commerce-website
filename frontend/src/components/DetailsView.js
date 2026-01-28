@@ -154,6 +154,25 @@ const DetailsView = () => {
         window.scrollTo(0, 0);
     }, [id]);
 
+    // Tracking Recently Viewed
+    useEffect(() => {
+        if (product) {
+            const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
+            const newItem = {
+                id: product.id,
+                name: product.name,
+                image: product.images?.[0] || product.image,
+                link: `/product/${product.id}`
+            };
+
+            // Filter out existing entries with same ID
+            const filtered = recentlyViewed.filter(item => item.id !== product.id);
+            // Add to start and limit to 4
+            const updated = [newItem, ...filtered].slice(0, 4);
+            localStorage.setItem('recentlyViewed', JSON.stringify(updated));
+        }
+    }, [product]);
+
     if (loading) {
         return (
             <div className="min-h-screen bg-white flex flex-col pt-20">
