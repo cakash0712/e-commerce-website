@@ -42,6 +42,24 @@ const CartDrawer = ({ children }) => {
 
     const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+    // Helper function to get proxied image URL
+    const getImageUrl = (imageUrl) => {
+        if (!imageUrl || imageUrl === '' || imageUrl === 'undefined' || imageUrl === 'null') {
+            return '/assets/zlogo.png';
+        }
+        if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+            const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+            return `${API_BASE}/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+        }
+        if (!imageUrl.startsWith('/')) return '/' + imageUrl;
+        return imageUrl;
+    };
+
+    const getItemImage = (item) => {
+        const source = item.image || item.images?.[0] || item.thumbnail || null;
+        return getImageUrl(source);
+    };
+
     // Calculate discount
     let discount = 0;
     if (appliedCoupon) {
@@ -114,9 +132,10 @@ const CartDrawer = ({ children }) => {
                                     <div className="relative shrink-0">
                                         <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 group-hover:border-violet-200 transition-all duration-500">
                                             <img
-                                                src={item.image}
+                                                src={getItemImage(item)}
                                                 alt={item.name}
-                                                className="w-full h-full object-contain p-2 mix-blend-multiply group-hover:scale-110 transition-transform duration-700"
+                                                className="w-full h-full object-contain p-2 transition-transform duration-700 group-hover:scale-110"
+                                                onError={(e) => { e.target.src = '/assets/zlogo.png'; }}
                                             />
                                         </div>
                                     </div>

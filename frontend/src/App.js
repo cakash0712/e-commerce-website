@@ -303,7 +303,18 @@ const CartProvider = ({ children }) => {
 };
 
 const WishlistProvider = ({ children }) => {
-  const [wishlistItems, setWishlistItems] = useState([]);
+  const [wishlistItems, setWishlistItems] = useState(() => {
+    try {
+      const savedWishlist = localStorage.getItem('ZippyCart_wishlist');
+      return savedWishlist ? JSON.parse(savedWishlist) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ZippyCart_wishlist', JSON.stringify(wishlistItems));
+  }, [wishlistItems]);
 
   const addToWishlist = (product) => {
     setWishlistItems(prevItems => {

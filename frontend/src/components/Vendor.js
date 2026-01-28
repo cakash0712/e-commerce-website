@@ -19,7 +19,7 @@ import {
   Settings, Image, FileText, CheckCircle2, AlertCircle,
   XCircle, Search, Bell, MoreVertical, Globe, ShieldCheck,
   ChevronRight, ChevronDown, Tag, UserCheck, Store, Mail, MapPin, Phone,
-  RotateCcw, LifeBuoy, BookOpen, Headset, Send
+  RotateCcw, LifeBuoy, BookOpen, Headset, Send, Truck
 } from "lucide-react";
 import { useAuth } from "../App";
 import {
@@ -256,6 +256,20 @@ const Vendor = () => {
     }
   };
 
+  const handleSaveShippingRates = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      await axios.post(`${API_BASE}/api/vendor/shipping-rates`, shippingRates, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      alert("Logistical protocols synchronized successfully.");
+      await updateUser(user.id, { shipping_rates: shippingRates });
+    } catch (e) {
+      console.error("Logistical sync failure:", e);
+      alert("Failed to synchronize logistical protocols.");
+    }
+  };
+
   const handleSendTicket = async (e) => {
     e.preventDefault();
     if (!newTicket.subject || !newTicket.message) return;
@@ -439,11 +453,15 @@ const Vendor = () => {
     { id: 'finance', label: 'Earnings & Payouts', icon: DollarSign },
     { id: 'reviews', label: 'Reviews', icon: Star },
     { id: 'coupons', label: 'Marketing & Coupons', icon: Tag },
+    { id: 'logistics', label: 'Logistics & Shipping', icon: Truck },
     { id: 'profile', label: 'My Profile', icon: User },
     { id: 'support', label: 'Support', icon: MessageSquare },
   ];
 
   const [vendorCoupons, setVendorCoupons] = useState([]);
+  const [shippingRates, setShippingRates] = useState(user?.shipping_rates || [
+    { zone: 'Standard', cost: 99, min_order_free: 1000 }
+  ]);
   const [showCreateCoupon, setShowCreateCoupon] = useState(false);
   const [newCoupon, setNewCoupon] = useState({ code: '', discount: '', limit: '', expires: '' });
   const [storeSettings, setStoreSettings] = useState({
@@ -719,7 +737,8 @@ const Vendor = () => {
     name: '', category: user?.business_category || '', sub_category: '', price: '', stock: '', image: '', description: '',
     brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
     offer_expires_at: '',
-    images: '', highlights: '', specifications: '', warranty: '', box_contents: ''
+    images: '', highlights: '', specifications: '', warranty: '', box_contents: '',
+    delivery_type: 'free', delivery_charge: '', free_delivery_above: ''
   });
 
   const handleEditInitiate = (product) => {
@@ -744,7 +763,10 @@ const Vendor = () => {
       dimensions: product.dimensions || '',
       material: product.material || '',
       offers: product.offers || '',
-      offer_expires_at: product.offer_expires_at ? new Date(product.offer_expires_at).toISOString().slice(0, 16) : ''
+      offer_expires_at: product.offer_expires_at ? new Date(product.offer_expires_at).toISOString().slice(0, 16) : '',
+      delivery_type: product.delivery_type || 'free',
+      delivery_charge: (product.delivery_charge || '').toString(),
+      free_delivery_above: (product.free_delivery_above || '').toString()
     });
     setShowAddForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -813,7 +835,10 @@ const Vendor = () => {
         highlights: newProduct.highlights.split('\n').map(c => c.trim()).filter(c => c),
         specifications: specObj,
         offers: newProduct.offers,
-        offer_expires_at: newProduct.offer_expires_at ? new Date(newProduct.offer_expires_at).toISOString() : null
+        offer_expires_at: newProduct.offer_expires_at ? new Date(newProduct.offer_expires_at).toISOString() : null,
+        delivery_type: newProduct.delivery_type,
+        delivery_charge: newProduct.delivery_charge ? parseFloat(newProduct.delivery_charge) : 0,
+        free_delivery_above: newProduct.free_delivery_above ? parseFloat(newProduct.free_delivery_above) : 0
       };
 
       if (editingProduct) {
@@ -833,7 +858,8 @@ const Vendor = () => {
       setNewProduct({
         brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
         offer_expires_at: '',
-        images: '', highlights: '', specifications: '', warranty: '', box_contents: ''
+        images: '', highlights: '', specifications: '', warranty: '', box_contents: '',
+        delivery_type: 'free', delivery_charge: '', free_delivery_above: ''
       });
       fetchVendorProducts();
     } catch (e) {
@@ -1085,6 +1111,75 @@ const Vendor = () => {
                             className="h-14 rounded-2xl border-slate-100 font-bold"
                           />
                         </div>
+                      </div>
+
+                      {/* Delivery Charge Section */}
+                      <div className="border-t border-slate-100 pt-8">
+                        <h4 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                          <Truck className="w-4 h-4 text-violet-600" />
+                          Delivery Charges
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Delivery Type</Label>
+                            <select
+                              value={newProduct.delivery_type}
+                              onChange={(e) => setNewProduct({ ...newProduct, delivery_type: e.target.value })}
+                              className="w-full h-14 rounded-2xl border border-slate-200 bg-white px-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            >
+                              <option value="free">Free Delivery</option>
+                              <option value="fixed">Fixed Charge</option>
+                              <option value="weight">Based on Weight</option>
+                              <option value="distance">Based on Distance</option>
+                            </select>
+                          </div>
+
+                          {newProduct.delivery_type !== 'free' && (
+                            <div className="space-y-3">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">
+                                {newProduct.delivery_type === 'weight' ? 'Charge per Kg (₹)' :
+                                  newProduct.delivery_type === 'distance' ? 'Charge per Km (₹)' :
+                                    'Delivery Charge (₹)'}
+                              </Label>
+                              <div className="relative">
+                                <Input
+                                  type="number"
+                                  placeholder="0"
+                                  value={newProduct.delivery_charge}
+                                  onChange={(e) => setNewProduct({ ...newProduct, delivery_charge: e.target.value })}
+                                  className="h-14 rounded-2xl border-slate-100 font-black text-xl pl-10"
+                                />
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-black">₹</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {newProduct.delivery_type !== 'free' && (
+                            <div className="space-y-3">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Free Delivery Above (₹)</Label>
+                              <div className="relative">
+                                <Input
+                                  type="number"
+                                  placeholder="e.g. 499"
+                                  value={newProduct.free_delivery_above}
+                                  onChange={(e) => setNewProduct({ ...newProduct, free_delivery_above: e.target.value })}
+                                  className="h-14 rounded-2xl border-slate-100 font-bold pl-10"
+                                />
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-black">₹</span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 ml-2">Leave empty for no free delivery threshold</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {newProduct.delivery_type === 'free' && (
+                          <div className="mt-4 p-4 bg-green-50 rounded-2xl border border-green-100">
+                            <p className="text-sm text-green-700 font-medium flex items-center gap-2">
+                              <Truck className="w-4 h-4" />
+                              This product will have free delivery for all customers
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </TabsContent>
 
@@ -2411,6 +2506,116 @@ const Vendor = () => {
     </div>
   );
 
+  const renderLogistics = () => (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex justify-between items-center bg-white p-8 rounded-[2rem] shadow-sm">
+        <div>
+          <h3 className="text-3xl font-black italic">Logistics & <span className="text-violet-600">Shipping.</span></h3>
+          <p className="text-gray-500 font-medium">Configure your delivery charges and free shipping thresholds by zone.</p>
+        </div>
+        <Button
+          onClick={() => setShippingRates([...shippingRates, { zone: '', cost: 0, min_order_free: 0 }])}
+          className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl flex items-center gap-2 px-6"
+        >
+          <Plus className="w-4 h-4" /> Add New Zone
+        </Button>
+      </div>
+
+      <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden">
+        <div className="p-10 space-y-8">
+          <div className="space-y-6">
+            {shippingRates.map((rate, index) => (
+              <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end bg-slate-50 p-6 rounded-[2rem] border border-slate-100 relative group">
+                <button
+                  onClick={() => setShippingRates(shippingRates.filter((_, i) => i !== index))}
+                  className="absolute -top-2 -right-2 w-8 h-8 bg-white text-rose-500 rounded-full shadow-lg border border-rose-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Shipping Zone</Label>
+                  <Input
+                    placeholder="e.g. Domestic, International"
+                    value={rate.zone}
+                    onChange={(e) => {
+                      const newRates = [...shippingRates];
+                      newRates[index].zone = e.target.value;
+                      setShippingRates(newRates);
+                    }}
+                    className="bg-white rounded-xl border-slate-200"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Delivery Cost (₹)</Label>
+                  <Input
+                    type="number"
+                    value={rate.cost}
+                    onChange={(e) => {
+                      const newRates = [...shippingRates];
+                      newRates[index].cost = parseFloat(e.target.value);
+                      setShippingRates(newRates);
+                    }}
+                    className="bg-white rounded-xl border-slate-200"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Free Delivery Above (₹)</Label>
+                  <Input
+                    type="number"
+                    value={rate.min_order_free}
+                    onChange={(e) => {
+                      const newRates = [...shippingRates];
+                      newRates[index].min_order_free = parseFloat(e.target.value);
+                      setShippingRates(newRates);
+                    }}
+                    className="bg-white rounded-xl border-slate-200"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 h-10 px-4 bg-violet-50 text-violet-600 rounded-xl text-[10px] font-black uppercase tracking-widest">
+                  <Truck className="w-4 h-4" /> Configured
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-6 border-t border-slate-100 flex justify-end">
+            <Button
+              onClick={handleSaveShippingRates}
+              className="bg-gray-900 hover:bg-gray-800 text-white px-10 h-14 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl"
+            >
+              Synchronize Logistical Protocols
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="border-none shadow-sm rounded-[2rem] bg-indigo-50 p-6 flex gap-4 items-center">
+          <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="font-black text-indigo-900 uppercase tracking-tight text-sm">Zone-Based Protocol</p>
+            <p className="text-xs text-indigo-600 font-medium">Define costs for different regions to optimize operations.</p>
+          </div>
+        </Card>
+        <Card className="border-none shadow-sm rounded-[2rem] bg-emerald-50 p-6 flex gap-4 items-center">
+          <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600">
+            <Tag className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="font-black text-emerald-900 uppercase tracking-tight text-sm">Competitive Advantage</p>
+            <p className="text-xs text-emerald-600 font-medium">Use free shipping thresholds to increase Average Order Value.</p>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
     switch (activeMenu) {
       case 'dashboard': return renderDashboard();
@@ -2420,6 +2625,7 @@ const Vendor = () => {
       case 'finance': return renderFinance();
       case 'reviews': return renderReviews();
       case 'coupons': return renderCoupons();
+      case 'logistics': return renderLogistics();
       case 'profile': return renderProfile();
       case 'support': return renderSupport();
       default: return (

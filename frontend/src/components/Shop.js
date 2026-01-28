@@ -43,18 +43,23 @@ const Shop = () => {
     priceRange: [0, 100000],
     rating: 0,
     brands: [],
-    discount: 0
+    discount: 0,
+    vendor: searchParams.get("vendor") || ""
   });
 
   // Update searchQuery when URL changes
   useEffect(() => {
     const urlSearch = searchParams.get("search");
     const urlCategory = searchParams.get("category");
+    const urlVendor = searchParams.get("vendor");
     if (urlSearch) {
       setSearchQuery(urlSearch);
     }
     if (urlCategory) {
       setFilters(prev => ({ ...prev, category: urlCategory }));
+    }
+    if (urlVendor) {
+      setFilters(prev => ({ ...prev, vendor: urlVendor }));
     }
   }, [searchParams]);
 
@@ -124,7 +129,9 @@ const Shop = () => {
       const matchesBrand = filters.brands.length === 0 || filters.brands.includes(product.brand);
       const matchesDiscount = filters.discount === 0 || (product.discount && product.discount >= filters.discount);
 
-      return matchesSearch && matchesCategory && matchesPrice && matchesRating && matchesBrand && matchesDiscount;
+      const matchesVendor = !filters.vendor || product.vendor_id === filters.vendor;
+
+      return matchesSearch && matchesCategory && matchesPrice && matchesRating && matchesBrand && matchesDiscount && matchesVendor;
     });
 
     switch (sortBy) {
@@ -140,8 +147,9 @@ const Shop = () => {
 
 
   const clearFilters = () => {
-    setFilters({ category: "", subCategory: "", priceRange: [0, 100000], rating: 0, brands: [], discount: 0 });
+    setFilters({ category: "", subCategory: "", priceRange: [0, 100000], rating: 0, brands: [], discount: 0, vendor: "" });
     setSearchQuery("");
+    setSearchParams({});
   };
 
   const activeFilterCount = [
@@ -150,7 +158,8 @@ const Shop = () => {
     filters.rating > 0,
     filters.priceRange[0] > 0 || filters.priceRange[1] < 100000,
     filters.brands.length > 0,
-    filters.discount > 0
+    filters.discount > 0,
+    filters.vendor
   ].filter(Boolean).length;
 
   return (
@@ -179,7 +188,9 @@ const Shop = () => {
           </nav>
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">
-              {filters.subCategory ? (
+              {filters.vendor && filteredProducts.length > 0 ? (
+                <span>Products by {filteredProducts[0].vendor_name}</span>
+              ) : filters.subCategory ? (
                 <span className="capitalize">{filters.subCategory.replace(/-/g, ' ')}</span>
               ) : filters.category ? (
                 <span className="capitalize">{filters.category.replace(/-/g, ' ')}</span>
@@ -462,9 +473,7 @@ const Shop = () => {
                     <div className="w-24 h-24 bg-violet-50 rounded-full flex items-center justify-center mx-auto">
                       <Search className="w-12 h-12 text-violet-400" />
                     </div>
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                      <ShoppingBag className="w-4 h-4 text-amber-600" />
-                    </div>
+
                   </div>
 
                   <h3 className="text-2xl font-bold text-gray-900 mb-3">No products found</h3>
@@ -486,7 +495,7 @@ const Shop = () => {
                       Browse Categories
                     </Button>
                   </div>
-
+                  {/* 
                   <div className="border-t border-gray-100 pt-8">
                     <p className="text-sm text-gray-500 mb-4 text-center">Popular searches:</p>
                     <div className="flex flex-wrap gap-2 justify-center">
@@ -500,7 +509,7 @@ const Shop = () => {
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             ) : (
@@ -516,7 +525,7 @@ const Shop = () => {
                         <Link to={`/product/${product.id}`} className="block w-48 flex-shrink-0">
                           <div className="relative aspect-square">
                             <img
-                              src={getImageUrl(product.image)}
+                              src={getImageUrl(product.image || product.images?.[0])}
                               alt={product.name}
                               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                               loading="lazy"
@@ -585,7 +594,7 @@ const Shop = () => {
                         <Link to={`/product/${product.id}`} className="block">
                           <div className="relative aspect-[4/3] overflow-hidden">
                             <img
-                              src={getImageUrl(product.image)}
+                              src={getImageUrl(product.image || product.images?.[0])}
                               alt={product.name}
                               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                               loading="lazy"

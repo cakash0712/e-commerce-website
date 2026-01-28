@@ -34,7 +34,7 @@ const DetailsView = () => {
     const navigate = useNavigate();
     const { addToCart } = useCart();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
-    
+
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -56,11 +56,44 @@ const DetailsView = () => {
         return imageUrl;
     };
 
-    const handleReviewSubmit = () => {
-        alert("Thank you for your review! It will be published after verification.");
-        setShowReviewForm(false);
-        setUserComment('');
-        setUserRating(5);
+    const handleReviewSubmit = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert("Please login to submit a review.");
+                navigate('/login');
+                return;
+            }
+
+            const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+            await axios.post(`${API_BASE}/api/reviews`, {
+                product_id: id,
+                rating: userRating,
+                comment: userComment
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            alert("Thank you for your review! It will be published after verification.");
+            setShowReviewForm(false);
+            setUserComment('');
+            setUserRating(5);
+
+            // Refresh product details to show the new review (if it's instantly public)
+            // Or just manually fetch reviews again if possible.
+            // For now, let's just re-fetch the product.
+            const productRes = await axios.get(`${API_BASE}/api/products/${id}`);
+            const p = productRes.data;
+            const mappedProduct = {
+                ...product,
+                detailedReviews: p.reviews || []
+            };
+            setProduct(mappedProduct);
+
+        } catch (err) {
+            console.error("Error submitting review:", err);
+            alert("Failed to submit review. Please try again later.");
+        }
     };
 
     const getJsonLd = () => {
@@ -119,9 +152,10 @@ const DetailsView = () => {
                     features: p.highlights && p.highlights.length > 0 ? p.highlights : [],
                     reviews: p.reviews || [],
                     vendor: {
-                        name: p.vendor?.business_name ?? "Unknown Vendor",
-                        id: p.vendor?.business_id,
-                        rating: p.vendor?.business_rating ?? 0
+                        name: p.vendor?.business_name || p.vendor_name || "Unknown Vendor",
+                        id: p.vendor?.business_id || p.vendor_id,
+                        rating: p.vendor?.business_rating ?? 0,
+                        reviewsCount: p.vendor?.business_reviews_count || 0
                     },
                     detailedReviews: p.reviews || []
                 };
@@ -183,17 +217,89 @@ const DetailsView = () => {
 
     if (error || !product) {
         return (
-            <div className="min-h-screen bg-white flex flex-col pt-20">
+            <div className="min-h-screen bg-gray-50 flex flex-col pt-20">
                 <Navigation />
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                    <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
-                        <Info className="w-8 h-8" />
+                <div className="flex-1 flex flex-col items-center justify-center px-4 py-16">
+                    {/* Main Content Card */}
+                    <div className="max-w-2xl w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-8 md:p-12 text-center">
+                        {/* Illustration */}
+                        <div className="relative w-32 h-32 mx-auto mb-8">
+                            <div className="absolute inset-0 bg-gradient-to-br from-violet-100 to-indigo-100 rounded-full"></div>
+                            <div className="absolute inset-2 bg-white rounded-full flex items-center justify-center shadow-inner">
+                                <svg className="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25 2.25M12 13.875l2.25-2.25M12 13.875l-2.25 2.25M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        {/* Error Message */}
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                            Product Unavailable
+                        </h1>
+                        <p className="text-gray-500 text-base md:text-lg mb-2">
+                            The product you requested could not be found.
+                        </p>
+                        <p className="text-gray-400 text-sm mb-8">
+                            {error || "This item may have been removed, is out of stock, or the URL is incorrect."}
+                        </p>
+
+                        {/* Search Box */}
+                        <div className="max-w-md mx-auto mb-8">
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Search for products, brands and more"
+                                    className="w-full h-12 pl-12 pr-4 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all text-sm"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.target.value.trim()) {
+                                            navigate(`/shop?search=${encodeURIComponent(e.target.value.trim())}`);
+                                        }
+                                    }}
+                                />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
+                            <Button
+                                onClick={() => navigate('/shop')}
+                                className="bg-violet-600 hover:bg-violet-700 text-white h-11 px-8 rounded-lg font-medium shadow-sm"
+                            >
+                                Continue Shopping
+                            </Button>
+                            <Button
+                                onClick={() => navigate('/')}
+                                variant="outline"
+                                className="border-gray-200 text-gray-700 hover:bg-gray-50 h-11 px-8 rounded-lg font-medium"
+                            >
+                                Go to Homepage
+                            </Button>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="border-t border-gray-100 pt-8">
+                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4">
+                                Browse Popular Categories
+                            </p>
+                            <div className="flex flex-wrap justify-center gap-2">
+                                {['Electronics', 'Fashion', 'Home', 'Beauty', 'Grocery'].map((cat) => (
+                                    <Link
+                                        key={cat}
+                                        to={`/shop?category=${cat}`}
+                                        className="px-4 py-2 bg-gray-50 hover:bg-violet-50 text-gray-600 hover:text-violet-600 text-sm font-medium rounded-full border border-gray-100 hover:border-violet-200 transition-all"
+                                    >
+                                        {cat}
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Product Not Found</h2>
-                    <p className="text-gray-500 mb-8">{error || "The product you're looking for doesn't exist."}</p>
-                    <Button onClick={() => navigate('/shop')} className="bg-violet-600 hover:bg-violet-700 text-white">
-                        Back to Shop
-                    </Button>
+
+                    {/* Help Text */}
+                    <p className="mt-8 text-sm text-gray-400">
+                        Need help? <Link to="/contact" className="text-violet-600 hover:underline font-medium">Contact our support team</Link>
+                    </p>
                 </div>
                 <Footer />
             </div>
@@ -326,11 +432,17 @@ const DetailsView = () => {
                                     <Store className="w-5 h-5 text-violet-600" />
                                     <div className="flex-1">
                                         <p className="text-xs text-gray-500 mb-0.5">Sold by</p>
-                                        <p className="text-sm font-semibold text-gray-900">{product.vendor.name}</p>
+                                        <Link
+                                            to={`/shop?vendor=${product.vendor.id}`}
+                                            className="text-sm font-semibold text-gray-900 hover:text-violet-600 transition-colors cursor-pointer"
+                                        >
+                                            {product.vendor.name}
+                                        </Link>
                                     </div>
                                     <div className="flex items-center gap-1 text-sm">
                                         <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
                                         <span className="font-medium">{product.vendor.rating}</span>
+                                        <span className="text-gray-400 text-xs">({product.vendor.reviewsCount})</span>
                                     </div>
                                 </div>
 

@@ -58,12 +58,14 @@ const Admin = () => {
     totalPartners: 0, onlineNow: 0, onDelivery: 0, avgDeliveryTime: '0 min'
   });
 
+  const [pendingVendors, setPendingVendors] = useState([]);
   const [rejectionReasons, setRejectionReasons] = useState({});
   const [replyingTo, setReplyingTo] = useState(null);
   const [adminReply, setAdminReply] = useState('');
 
   useEffect(() => {
     if (activeSubMenu === 'product-approvals') fetchPendingProducts();
+    if (activeSubMenu === 'vendor-onboarding') fetchPendingVendors();
     if (activeSubMenu === 'all-products') fetchAllProducts();
     if (activeSubMenu === 'vendor-payouts') fetchPayoutRequests();
     if (activeSubMenu === 'tickets') fetchSupportTickets();
@@ -176,6 +178,42 @@ const Admin = () => {
       // Fallback if API not available
       setDeliveryPartnersSummary({ totalPartners: 0, onlineNow: 0, onDelivery: 0, avgDeliveryTime: '0 min' });
     }
+  };
+
+  const fetchPendingVendors = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/vendors/pending`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setPendingVendors(response.data);
+    } catch (e) {
+      console.error("Failed to fetch pending onboarding assets:", e);
+    }
+  };
+
+  const handleApproveVendor = async (id) => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      await axios.post(`${API_BASE}/api/admin/vendors/approve/${id}`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setPendingVendors(prev => prev.filter(v => v.id !== id));
+      alert("Vendor protocol authorized for live sync.");
+    } catch (e) { alert("Authorization protocol failure."); }
+  };
+
+  const handleRejectVendor = async (id) => {
+    const reason = prompt("Enter rejection reason (Non-compliance description):");
+    if (!reason) return;
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      await axios.post(`${API_BASE}/api/admin/vendors/reject/${id}`, { reason }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setPendingVendors(prev => prev.filter(v => v.id !== id));
+      alert("Vendor asset rejected.");
+    } catch (e) { alert("Rejection protocol failure."); }
   };
 
   const fetchPayoutRequests = async () => {
@@ -361,221 +399,67 @@ const Admin = () => {
       label: 'Dashboard',
       icon: LayoutDashboard,
       subItems: [
-        { id: 'overview', label: 'Control Center' },
-        { id: 'live-sales', label: 'Live Sales' },
-        { id: 'orders-funnel', label: 'Orders Funnel' },
-        { id: 'vendor-snapshot', label: 'Vendor Performance' },
-        { id: 'pending-approvals', label: 'Pending Approvals' },
-        { id: 'alerts', label: 'Alerts & Health' }
+        { id: 'overview', label: 'Overview' },
+        { id: 'analytics', label: 'Analytics' }
       ]
     },
     {
       id: 'users',
-      label: 'User Management',
+      label: 'Users',
       icon: Users,
       subItems: [
-        { id: 'customer-list', label: 'All Customers' },
-        { id: 'kyc', label: 'KYC Verification' },
-        { id: 'block-restrict', label: 'Block / Restrict' },
-        { id: 'order-history', label: 'Order History' },
-        { id: 'wallet-logs', label: 'Wallet Logs' },
-        { id: 'super-admin', label: 'Super Admin' },
-        { id: 'sub-admin', label: 'Sub Admin' },
-        { id: 'support-staff', label: 'Support Staff' },
-        { id: 'rbac', label: 'Access Control (RBAC)' }
+        { id: 'customer-list', label: 'Customers' },
+        { id: 'super-admin', label: 'Administrators' }
       ]
     },
     {
       id: 'vendors',
-      label: 'Vendor Management',
+      label: 'Vendors',
       icon: Store,
       subItems: [
         { id: 'vendor-onboarding', label: 'Onboarding' },
         { id: 'vendor-kyc', label: 'KYC Verification' },
-        { id: 'vendor-categories', label: 'Categories' },
-        { id: 'vendor-profiles', label: 'Profile Control' },
-        { id: 'vendor-products', label: 'Product Listing' },
-        { id: 'commission-settings', label: 'Commission Settings' },
-        { id: 'vendor-payouts', label: 'Payouts' },
-        { id: 'vendor-penalties', label: 'Penalty System' },
-        { id: 'vendor-block', label: 'Block / Suspend' },
-        { id: 'vendor-reviews', label: 'Review Moderation' }
+        { id: 'commission-settings', label: 'Commission' },
+        { id: 'vendor-payouts', label: 'Payouts' }
       ]
     },
     {
       id: 'catalog',
-      label: 'Catalog Management',
+      label: 'Products',
       icon: Package,
       subItems: [
         { id: 'all-products', label: 'All Products' },
-        { id: 'product-approvals', label: 'Approval Queue' },
-        { id: 'product-edit', label: 'Edit / Disable' },
-        { id: 'duplicate-detection', label: 'Duplicate Detection' },
-        { id: 'variants', label: 'Variant Management' },
-        { id: 'seo-control', label: 'SEO Control' },
-        { id: 'vendor-products-view', label: 'Vendor Products' },
+        { id: 'product-approvals', label: 'Approvals' },
         { id: 'categories', label: 'Categories' },
-        { id: 'attributes', label: 'Attribute Mapping' },
-        { id: 'brands', label: 'Brand Management' }
+        { id: 'brands', label: 'Brands' }
       ]
     },
     {
       id: 'orders',
-      label: 'Order Management',
+      label: 'Orders',
       icon: ShoppingCart,
       subItems: [
-        { id: 'order-dashboard', label: 'Order Dashboard' },
-        { id: 'split-orders', label: 'Split Orders' },
-        { id: 'order-status', label: 'Status Override' },
-        { id: 'shipping-labels', label: 'Shipping Labels' },
-        { id: 'delivery-sla', label: 'Delivery SLA' },
-        { id: 'auto-cancel', label: 'Auto Cancel Rules' },
-        { id: 'cod-verification', label: 'COD Verification' },
-        { id: 'rto', label: 'Return to Origin' }
-      ]
-    },
-    {
-      id: 'returns',
-      label: 'Returns & Refunds',
-      icon: RotateCcw,
-      subItems: [
-        { id: 'return-requests', label: 'Return Requests' },
-        { id: 'refund-approval', label: 'Refund Approval' },
-        { id: 'disputes', label: 'Dispute Management' },
-        { id: 'evidence-upload', label: 'Evidence Upload' },
-        { id: 'auto-refund', label: 'Auto Refund Rules' },
-        { id: 'chargeback', label: 'Chargeback Handling' }
+        { id: 'order-dashboard', label: 'All Orders' },
+        { id: 'return-requests', label: 'Returns & Refunds' }
       ]
     },
     {
       id: 'inventory',
-      label: 'Inventory Control',
+      label: 'Inventory',
       icon: Box,
       subItems: [
-        { id: 'real-time-inventory', label: 'Real-time Inventory' },
-        { id: 'stock-sync', label: 'Vendor Stock Sync' },
-        { id: 'low-stock-alerts', label: 'Low Stock Alerts' },
-        { id: 'stock-lock', label: 'Stock Lock' },
-        { id: 'damaged-stock', label: 'Damaged Stock Logs' }
+        { id: 'stock-management', label: 'Stock Management' },
+        { id: 'low-stock-alerts', label: 'Low Stock Alerts' }
       ]
     },
     {
       id: 'payments',
-      label: 'Payments & Settlements',
+      label: 'Payments',
       icon: CreditCard,
       subItems: [
-        { id: 'platform-earnings', label: 'Platform Earnings' },
-        { id: 'commission-breakdown', label: 'Commission Breakdown' },
-        { id: 'tax-collection', label: 'Tax Collection' },
-        { id: 'gst-reports', label: 'GST/VAT Reports' },
-        { id: 'payout-cycle', label: 'Payout Cycle' },
-        { id: 'vendor-wallet', label: 'Vendor Wallet' },
-        { id: 'pending-settlements', label: 'Pending Settlements' },
-        { id: 'manual-adjustments', label: 'Manual Adjustments' },
-        { id: 'failed-payouts', label: 'Failed Payouts' }
-      ]
-    },
-    {
-      id: 'marketing',
-      label: 'Marketing',
-      icon: Megaphone,
-      subItems: [
-        { id: 'coupons', label: 'Coupons' },
-        { id: 'campaigns', label: 'Campaigns' },
-        { id: 'flash-sales', label: 'Flash Sales' },
-        { id: 'sponsored-products', label: 'Sponsored Products' },
-        { id: 'referral', label: 'Referral Program' },
-        { id: 'email-campaigns', label: 'Email / SMS / Push' },
-        { id: 'abandoned-cart', label: 'Cart Recovery' }
-      ]
-    },
-    {
-      id: 'reviews',
-      label: 'Reviews & Trust',
-      icon: Star,
-      subItems: [
-        { id: 'review-moderation', label: 'Review Moderation' },
-        { id: 'fake-review-detection', label: 'Fake Review Detection' },
-        { id: 'vendor-rating', label: 'Vendor Rating' },
-        { id: 'abuse-reports', label: 'Abuse Reports' },
-        { id: 'qa-flags', label: 'QA Flags' }
-      ]
-    },
-    {
-      id: 'support',
-      label: 'Support Center',
-      icon: MessageSquare,
-      subItems: [
-        { id: 'tickets', label: 'Support Tickets' },
-        { id: 'vendor-support', label: 'Vendor Support' },
-        { id: 'customer-support', label: 'Customer Support' },
-        { id: 'chat-logs', label: 'Chat Logs' },
-        { id: 'escalation', label: 'Escalation Matrix' },
-        { id: 'sla-tracking', label: 'SLA Tracking' }
-      ]
-    },
-    {
-      id: 'cms',
-      label: 'Content & SEO',
-      icon: FileText,
-      subItems: [
-        { id: 'static-pages', label: 'Static Pages' },
-        { id: 'homepage-builder', label: 'Homepage Builder' },
-        { id: 'banners', label: 'Banners & Sliders' },
-        { id: 'blog-articles', label: 'Blog Articles' },
-        { id: 'seo-meta', label: 'SEO Meta Rules' },
-        { id: 'url-management', label: 'URL Management' }
-      ]
-    },
-    {
-      id: 'reports',
-      label: 'Reports & Analytics',
-      icon: BarChart3,
-      subItems: [
-        { id: 'sales-analytics', label: 'Sales Analytics' },
-        { id: 'vendor-performance-reports', label: 'Vendor Performance' },
-        { id: 'customer-ltv', label: 'Customer LTV' },
-        { id: 'conversion-funnel', label: 'Conversion Funnel' },
-        { id: 'category-growth', label: 'Category Growth' },
-        { id: 'profit-loss', label: 'Profit & Loss' }
-      ]
-    },
-    {
-      id: 'automation',
-      label: 'Automation & Rules',
-      icon: Zap,
-      subItems: [
-        { id: 'order-auto-assign', label: 'Auto Order Assign' },
-        { id: 'auto-penalization', label: 'Auto Penalization' },
-        { id: 'auto-refund-rules', label: 'Auto Refund Rules' },
-        { id: 'auto-settlement', label: 'Auto Settlement' },
-        { id: 'fraud-detection', label: 'Fraud Detection' }
-      ]
-    },
-    {
-      id: 'system',
-      label: 'System Settings',
-      icon: Settings,
-      subItems: [
-        { id: 'payment-gateway', label: 'Payment Gateway' },
-        { id: 'shipping-partners', label: 'Shipping Partners' },
-        { id: 'tax-rules', label: 'Tax Rules' },
-        { id: 'commission-rules', label: 'Commission Rules' },
-        { id: 'currency-locale', label: 'Currency / Locale' },
-        { id: 'feature-toggles', label: 'Feature Toggles' }
-      ]
-    },
-    {
-      id: 'security',
-      label: 'Security & Compliance',
-      icon: ShieldCheck,
-      subItems: [
-        { id: 'activity-logs', label: 'Activity Logs' },
-        { id: 'ip-whitelisting', label: 'IP Whitelisting' },
-        { id: 'rate-limiting', label: 'Rate Limiting' },
-        { id: 'fraud-detection-sec', label: 'Fraud Detection' },
-        { id: 'gdpr', label: 'GDPR Compliance' },
-        { id: 'backup-restore', label: 'Backup & Restore' }
+        { id: 'platform-earnings', label: 'Earnings' },
+        { id: 'pending-settlements', label: 'Settlements' },
+        { id: 'gst-reports', label: 'Tax Reports' }
       ]
     },
     {
@@ -584,8 +468,7 @@ const Admin = () => {
       icon: Utensils,
       subItems: [
         { id: 'food-dashboard', label: 'Dashboard' },
-        { id: 'food-analytics', label: 'Order Analytics' },
-        { id: 'delivery-metrics', label: 'Delivery Metrics' }
+        { id: 'live-food-orders', label: 'Live Orders' }
       ]
     },
     {
@@ -594,23 +477,7 @@ const Admin = () => {
       icon: ChefHat,
       subItems: [
         { id: 'all-restaurants', label: 'All Restaurants' },
-        { id: 'restaurant-approvals', label: 'Approval Queue' },
-        { id: 'restaurant-categories', label: 'Categories' },
-        { id: 'restaurant-ratings', label: 'Ratings & Reviews' },
-        { id: 'restaurant-verification', label: 'FSSAI Verification' },
-        { id: 'restaurant-suspend', label: 'Suspend / Block' }
-      ]
-    },
-    {
-      id: 'food-orders',
-      label: 'Food Orders',
-      icon: ShoppingCart,
-      subItems: [
-        { id: 'live-food-orders', label: 'Live Orders' },
-        { id: 'food-order-history', label: 'Order History' },
-        { id: 'food-refunds', label: 'Refunds & Cancellations' },
-        { id: 'food-complaints', label: 'Complaints' },
-        { id: 'food-sla', label: 'Delivery SLA' }
+        { id: 'restaurant-approvals', label: 'Approvals' }
       ]
     },
     {
@@ -619,23 +486,26 @@ const Admin = () => {
       icon: Bike,
       subItems: [
         { id: 'all-delivery-partners', label: 'All Partners' },
-        { id: 'partner-onboarding', label: 'Onboarding' },
-        { id: 'partner-verification', label: 'KYC Verification' },
-        { id: 'partner-payouts', label: 'Payouts' },
-        { id: 'partner-performance', label: 'Performance' },
-        { id: 'partner-zones', label: 'Delivery Zones' }
+        { id: 'partner-payouts', label: 'Payouts' }
       ]
     },
     {
-      id: 'food-menu',
-      label: 'Menu Management',
-      icon: Tag,
+      id: 'marketing',
+      label: 'Marketing',
+      icon: Megaphone,
       subItems: [
-        { id: 'cuisines', label: 'Cuisines' },
-        { id: 'food-categories', label: 'Categories' },
-        { id: 'menu-items', label: 'Menu Items' },
-        { id: 'pricing-rules', label: 'Pricing Rules' },
-        { id: 'offers-food', label: 'Offers & Discounts' }
+        { id: 'coupons', label: 'Coupons' },
+        { id: 'banners', label: 'Banners' }
+      ]
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: Settings,
+      subItems: [
+        { id: 'payment-gateway', label: 'Payment Gateway' },
+        { id: 'shipping-partners', label: 'Shipping' },
+        { id: 'tax-rules', label: 'Tax Rules' }
       ]
     }
   ];
@@ -2212,56 +2082,120 @@ const Admin = () => {
     if (activeSubMenu === 'auto-settlement') return renderPlaceholder('Auto Settlement Rules', 'Automatic settlement rules.', CreditCard);
     if (activeSubMenu === 'fraud-detection') return renderPlaceholder('Fraud Detection Rules', 'Fraud detection rules.', ShieldCheck);
 
-    // System Configuration
-    if (activeSubMenu === 'payment-gateway') return renderPlaceholder('Payment Gateway Setup', 'Payment gateway configuration.', CreditCard);
-    if (activeSubMenu === 'shipping-partners') return renderPlaceholder('Shipping Partner Setup', 'Shipping partner setup.', Truck);
-    if (activeSubMenu === 'tax-rules') return renderPlaceholder('Tax Rules', 'Tax rules configuration.', CreditCard);
-    if (activeSubMenu === 'commission-rules') return renderPlaceholder('Commission Rules', 'Commission rules.', CreditCard);
-    if (activeSubMenu === 'currency-locale') return renderPlaceholder('Currency / Locale', 'Currency and locale settings.', Globe);
-    if (activeSubMenu === 'feature-toggles') return renderPlaceholder('Feature Toggles', 'Feature toggles.', Settings);
+    // Vendor Management
+    if (activeSubMenu === 'vendor-onboarding') return renderVendorOnboarding();
+    if (activeSubMenu === 'vendor-kyc') return renderPlaceholder('KYC Verification', 'Review vendor identity documents.', ShieldCheck);
+    if (activeSubMenu === 'vendor-profiles') return renderPlaceholder('Profile Control', 'Manage vendor public profiles.', Store);
+    if (activeSubMenu === 'vendor-products') return renderPlaceholder('Product Control', 'Global product catalog management.', Package);
+    if (activeSubMenu === 'commission-settings') return renderPlaceholder('Commission Control', 'Global commission parameters.', Tag);
+    if (activeSubMenu === 'vendor-payouts') return renderPayouts();
+    if (activeSubMenu === 'vendor-penalties') return renderPlaceholder('Penalty System', 'Compliance penalty management.', AlertCircle);
 
-    // Security & Compliance
-    if (activeSubMenu === 'activity-logs') return renderPlaceholder('Login & Activity Logs', 'Activity logs.', History);
-    if (activeSubMenu === 'ip-whitelisting') return renderPlaceholder('IP Whitelisting', 'IP whitelisting.', ShieldCheck);
-    if (activeSubMenu === 'rate-limiting') return renderPlaceholder('Rate Limiting', 'Rate limiting.', ShieldCheck);
-    if (activeSubMenu === 'fraud-detection-sec') return renderPlaceholder('Fraud Detection', 'Fraud detection.', ShieldCheck);
-    if (activeSubMenu === 'gdpr') return renderPlaceholder('GDPR / Data Control', 'GDPR compliance.', ShieldCheck);
-    if (activeSubMenu === 'backup-restore') return renderPlaceholder('Backup & Restore', 'Backup and restore.', Settings);
-
-    // Settings
-    if (activeMenu === 'settings') return renderPlaceholder('System Configuration', 'Global system settings and preferences.', Settings);
-
-    // Food Delivery Section
-    if (activeSubMenu === 'food-dashboard') return renderFoodDashboard();
-    if (activeSubMenu === 'food-analytics') return renderPlaceholder('Food Analytics', 'Detailed analytics for food delivery performance.', BarChart3);
-    if (activeSubMenu === 'delivery-metrics') return renderPlaceholder('Delivery Metrics', 'Key performance indicators for delivery operations.', Bike);
-
-    // Restaurant Management
-    if (activeSubMenu === 'all-restaurants') return renderRestaurants();
-    if (activeSubMenu === 'restaurant-approvals') return renderPlaceholder('Restaurant Approvals', 'Queue for approving new restaurant partners.', UserCheck);
-    if (activeSubMenu === 'restaurant-categories') return renderPlaceholder('Restaurant Categories', 'Manage categories like Fine Dining, Fast Food, etc.', Utensils);
-    if (activeSubMenu === 'restaurant-ratings') return renderPlaceholder('Ratings & Reviews', 'Moderate customer feedback for restaurants.', Star);
-    if (activeSubMenu === 'restaurant-verification') return renderPlaceholder('FSSAI Verification', 'Verify legal documents and food safety certifications.', ShieldCheck);
-
-    // Food Order Management
-    if (activeSubMenu === 'live-food-orders') return renderLiveFoodOrders();
-    if (activeSubMenu === 'food-order-history') return renderPlaceholder('Food Order History', 'Archived records of all past food deliveries.', History);
-    if (activeSubMenu === 'food-refunds') return renderPlaceholder('Food Refunds', 'Handle refund requests for canceled food orders.', CreditCard);
-
-    // Delivery Partners
-    if (activeSubMenu === 'all-delivery-partners') return renderDeliveryPartners();
-    if (activeSubMenu === 'partner-onboarding') return renderPlaceholder('Partner Onboarding', 'Registration portal for new delivery executives.', UserCheck);
-    if (activeSubMenu === 'partner-verification') return renderPlaceholder('KYC Verification', 'Identity and vehicle verification for partners.', ShieldCheck);
-    if (activeSubMenu === 'partner-zones') return renderPlaceholder('Delivery Zones', 'Configure operational geographic boundaries.', MapPin);
-
-    // Food Menu & Cuisine
-    if (activeSubMenu === 'cuisines') return renderPlaceholder('Cuisine Management', 'Manage types of food offered (Italian, Indian, etc.).', ChefHat);
-    if (activeSubMenu === 'food-categories') return renderPlaceholder('Food Categories', 'Appetizers, Main Course, Desserts, etc.', Tag);
-    if (activeSubMenu === 'menu-items') return renderPlaceholder('Global Menu Control', 'Direct management of restaurant menu items.', Package);
+    // Business & Orders
+    if (activeSubMenu === 'live-sales') return renderPlaceholder('Live Sales Analytics', 'Real-time sales velocity visualization.', BarChart3);
+    if (activeSubMenu === 'orders-funnel') return renderPlaceholder('Conversion Funnel', 'Deep dive into user conversion paths.', Filter);
+    if (activeSubMenu === 'vendor-snapshot') return renderPlaceholder('Vendor Performance', 'Aggregated vendor health metrics.', BarChart3);
+    if (activeSubMenu === 'alerts') return renderPlaceholder('System Security Alerts', 'Real-time infrastructure and security alerts.', AlertCircle);
+    if (activeSubMenu === 'all-orders') return renderPlaceholder('Order Nexus', 'Master control for all transaction records.', ShoppingCart);
+    if (activeSubMenu === 'returns-nexus') return renderPlaceholder('Return / RMA Nexus', 'Management of return authorizations.', RotateCcw);
+    if (activeSubMenu === 'logistics-hub') return renderPlaceholder('Logistics Network', 'Real-time tracking of global shipments.', Truck);
 
     // Default
     return renderPlaceholder('Module Incoming', `We are currently synchronizing the ${activeSubMenu || activeMenu} module with the Master Node.`);
   };
+
+  const renderVendorOnboarding = () => (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex justify-between items-center bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
+        <div>
+          <h3 className="text-4xl font-black italic tracking-tighter">Vendor <span className="text-violet-600">Onboarding.</span></h3>
+          <p className="text-slate-500 font-medium mt-2">Authorize new vendor protocols for the live network.</p>
+        </div>
+        <div className="flex gap-4">
+          <div className="bg-violet-50 px-8 py-5 rounded-[2rem] border border-violet-100 text-right">
+            <p className="text-[9px] font-black text-violet-400 uppercase tracking-widest">Pending Sync</p>
+            <p className="text-2xl font-black text-violet-600 italic">{pendingVendors.length}</p>
+          </div>
+        </div>
+      </div>
+
+      <Card className="border-none shadow-xl rounded-[3rem] bg-white overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-900 text-white">
+                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest">Business Identity</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Ownership</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Credentials</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Status</th>
+                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-right">Authorization</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {pendingVendors.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-10 py-20 text-center">
+                    <div className="flex flex-col items-center gap-4 opacity-20">
+                      <Store className="w-16 h-16 text-slate-400" />
+                      <p className="text-sm font-black uppercase tracking-widest italic text-slate-400">No pending vendor protocols detected.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                pendingVendors.map(v => (
+                  <tr key={v.id} className="hover:bg-slate-50/50 transition-all group">
+                    <td className="px-10 py-8">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-violet-100 rounded-2xl flex items-center justify-center font-black text-violet-600">
+                          {v.business_name ? v.business_name[0] : 'V'}
+                        </div>
+                        <div>
+                          <p className="font-black text-slate-900 uppercase tracking-tight italic">{v.business_name}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{v.business_category}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-8">
+                      <p className="font-bold text-slate-700">{v.owner_name}</p>
+                      <p className="text-[10px] text-slate-400 font-medium">{v.phone}</p>
+                    </td>
+                    <td className="px-8 py-8">
+                      <p className="font-medium text-slate-600 text-xs">{v.email}</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">ID: #{v.id.slice(0, 8)}</p>
+                    </td>
+                    <td className="px-8 py-8">
+                      <Badge className="bg-amber-50 text-amber-600 rounded-full px-4 py-1 font-black text-[9px] uppercase tracking-widest border-none">
+                        Pending Admin
+                      </Badge>
+                    </td>
+                    <td className="px-10 py-8 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          onClick={() => handleApproveVendor(v.id)}
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4 font-bold text-[10px] uppercase shadow-lg shadow-emerald-100"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Approve
+                        </Button>
+                        <Button
+                          onClick={() => handleRejectVendor(v.id)}
+                          size="sm"
+                          variant="outline"
+                          className="border-rose-200 text-rose-500 hover:bg-rose-50 rounded-xl px-4 font-bold text-[10px] uppercase"
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1.5" /> Reject
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-white flex flex-col relative">
@@ -2279,14 +2213,14 @@ const Admin = () => {
       <div className="flex flex-1 pt-20 overflow-hidden relative">
         {/* Sidebar */}
         <aside className={`bg-gray-900 text-gray-300 flex flex-col border-r border-gray-800 shrink-0 transition-all duration-300 ease-in-out ${isSidebarVisible ? 'w-72 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-full overflow-hidden'}`}>
-          <div className="p-6 border-b border-gray-800 whitespace-nowrap overflow-hidden flex items-center justify-between">
+          <div className="p-4 border-b border-gray-800 whitespace-nowrap overflow-hidden flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center text-white shrink-0">
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div className="transition-opacity">
-                <h2 className="font-bold text-white tracking-tight italic uppercase text-sm">Admin<span className="text-violet-400">Core.</span></h2>
-                <span className="text-[10px] uppercase font-black text-gray-500">Master Level 9</span>
+                <h2 className="font-semibold text-white text-base">Admin Panel</h2>
+                <span className="text-xs text-gray-400">Management Console</span>
               </div>
             </div>
             {/* Close sidebar button inside header */}
@@ -2298,26 +2232,26 @@ const Admin = () => {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto py-4 whitespace-nowrap">
+          <div className="flex-1 py-1">
             {menuItems.map((menu) => (
-              <div key={menu.id} className="mb-1">
+              <div key={menu.id}>
                 <button
                   onClick={() => handleMenuClick(menu.id)}
-                  className={`w-full flex items-center justify-between px-6 py-4 transition-all ${activeMenu === menu.id ? 'bg-violet-600 text-white' : 'hover:bg-gray-800'}`}
+                  className={`w-full flex items-center justify-between px-4 py-2 transition-all ${activeMenu === menu.id ? 'bg-violet-600 text-white' : 'hover:bg-gray-800'}`}
                 >
                   <div className="flex items-center gap-3">
-                    <menu.icon className={`w-5 h-5 shrink-0 ${activeMenu === menu.id ? 'text-white' : 'text-gray-500'}`} />
-                    <span className="text-xs font-black uppercase tracking-widest italic">{menu.label}</span>
+                    <menu.icon className={`w-4 h-4 shrink-0 ${activeMenu === menu.id ? 'text-white' : 'text-gray-400'}`} />
+                    <span className="text-sm font-medium">{menu.label}</span>
                   </div>
                   {menu.subItems && <ChevronDown className={`w-4 h-4 transition-transform shrink-0 ${expandedMenus.includes(menu.id) ? 'rotate-180' : ''}`} />}
                 </button>
                 {menu.subItems && expandedMenus.includes(menu.id) && (
-                  <div className="bg-black/20 py-2">
+                  <div className="bg-gray-800/50 py-1">
                     {menu.subItems.map((sub) => (
                       <button
                         key={sub.id}
                         onClick={() => setActiveSubMenu(sub.id)}
-                        className={`w-full text-left px-14 py-2.5 text-[10px] font-black uppercase tracking-widest ${activeSubMenu === sub.id ? 'text-violet-400' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`w-full text-left pl-10 pr-4 py-1.5 text-sm transition-colors ${activeSubMenu === sub.id ? 'text-violet-400 font-medium bg-gray-800/30' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/20'}`}
                       >
                         {sub.label}
                       </button>
@@ -2328,13 +2262,13 @@ const Admin = () => {
             ))}
           </div>
 
-          <div className="p-6 border-t border-gray-800 mt-auto whitespace-nowrap overflow-hidden">
+          <div className="p-4 border-t border-gray-800 mt-auto whitespace-nowrap overflow-hidden">
             <button
               onClick={logout}
               className="flex items-center gap-3 text-red-400 hover:text-red-300 transition-colors w-full"
             >
               <LogIn className="w-5 h-5 rotate-180" />
-              <span className="text-[10px] font-black uppercase tracking-widest italic">Terminate Session</span>
+              <span className="text-sm font-medium">Sign Out</span>
             </button>
           </div>
         </aside>
@@ -2344,18 +2278,18 @@ const Admin = () => {
           <div className="max-w-7xl mx-auto min-h-screen">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-gray-200 pb-10">
               <div>
-                <Badge className="bg-violet-50 text-violet-600 border-none px-3 py-1 text-[10px] font-black uppercase italic mb-4">Internal Node Access</Badge>
-                <h1 className="text-5xl font-black text-gray-900 tracking-tighter italic">
+                <p className="text-sm text-gray-500 mb-1">Admin Dashboard</p>
+                <h1 className="text-3xl font-bold text-gray-900">
                   {activeSubMenu ? (
-                    <>Master <span className="text-violet-600">{activeSubMenu.replace('-', ' ')}.</span></>
+                    <>{activeSubMenu.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</>
                   ) : (
-                    <>System <span className="text-violet-600">Overview.</span></>
+                    <>Overview</>
                   )}
                 </h1>
               </div>
-              <div className="flex gap-4">
-                <Button variant="outline" className="h-14 rounded-2xl bg-white font-black text-[10px] uppercase px-8">extraction pdf</Button>
-                <Button className="h-14 rounded-2xl bg-gray-900 text-white font-black text-[10px] uppercase px-10">new operation</Button>
+              <div className="flex gap-3">
+                <Button variant="outline" className="h-11 rounded-lg bg-white font-medium text-sm px-5">Export PDF</Button>
+                <Button className="h-11 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-medium text-sm px-6">New Action</Button>
               </div>
             </div>
             {renderContent()}

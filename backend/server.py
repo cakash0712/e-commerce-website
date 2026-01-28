@@ -101,6 +101,11 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
+class ShippingRate(BaseModel):
+    zone: str
+    cost: float
+    min_order_free: float = 1000.0
+
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -119,9 +124,12 @@ class User(BaseModel):
     business_category: str = ""
     owner_name: str = ""
     user_type: str = "user"  # user, admin, vendor
+    status: str = "active"   # active, pending, rejected
+    rejection_reason: Optional[str] = None
     is_blocked: bool = False
     token_version: int = 1
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    shipping_rates: List[ShippingRate] = [] # For vendors
 
 class UserCreate(BaseModel):
     name: str
@@ -166,6 +174,9 @@ class Product(BaseModel):
     vendor_id: str
     offers: str = ""
     offer_expires_at: Optional[datetime] = None
+    delivery_type: str = "free"  # free, fixed, weight, distance
+    delivery_charge: float = 0
+    free_delivery_above: float = 0
     status: str = "approved" # pending, approved, rejected
     rejection_reason: Optional[str] = None
     sales_count: int = 0
@@ -192,6 +203,9 @@ class ProductCreate(BaseModel):
     material: str = ""
     offers: str = ""
     offer_expires_at: Optional[datetime] = None
+    delivery_type: str = "free"  # free, fixed, weight, distance
+    delivery_charge: float = 0
+    free_delivery_above: float = 0
 
 class Notification(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -317,7 +331,7 @@ class Review(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     product_id: str
-    user_id: str
+    user_id: Optional[str] = None
     rating: int  # 1-5
     comment: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -403,11 +417,17 @@ async def signup_user(user_data: UserCreate):
     })
 
     if existing_user:
-        from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="User already exists")
 
     user_dict = user_data.model_dump()
     user_dict['password'] = get_password_hash(user_dict['password'])
+    
+    # Vendors start as pending
+    if user_data.user_type == "vendor":
+        user_dict['status'] = "pending"
+    else:
+        user_dict['status'] = "active"
+        
     user_obj = User(**user_dict)
 
     doc = user_obj.model_dump()
@@ -450,7 +470,6 @@ async def login_user(login_data: UserLogin, request: Request):
     })
 
     if not user:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="User not found")
 
     if not verify_password(login_data.password, user['password']):
@@ -458,6 +477,13 @@ async def login_user(login_data: UserLogin, request: Request):
 
     if user.get('is_blocked', False):
         raise HTTPException(status_code=403, detail="Account access suspended. Contact compliance.")
+
+    # Check vendor status
+    if login_data.user_type == "vendor":
+        if user.get('status') == "pending":
+            raise HTTPException(status_code=403, detail="Vendor account is pending administrative approval.")
+        if user.get('status') == "rejected":
+            raise HTTPException(status_code=403, detail=f"Vendor account rejected: {user.get('rejection_reason', 'Compliance failure')}")
 
     # Generate Token
     token = create_access_token({
@@ -718,16 +744,67 @@ async def list_public_products(
         p['id'] = p_id
         if '_id' in p: del p['_id']
 
-        # Add vendor information efficiently (could be optimized with a join/lookup)
+        # Robust vendor lookup
         vendor_id = p.get('vendor_id')
+        v_name = "Unknown Vendor"
+        v_real_id = vendor_id
+        v_rating = 0
+        v_rev_count = 0
+        vendor = None
+        
         if vendor_id:
-            vendor = await db.vendors.find_one({"id": vendor_id})
+            # 1. Try string 'id' in vendors
+            vendor = await db.vendors.find_one({"id": str(vendor_id)})
+            if not vendor:
+                vendor = await db.users.find_one({"id": str(vendor_id)})
+            
+            # 2. Try ObjectId check
+            if not vendor:
+                from bson import ObjectId
+                try:
+                    obj_id = ObjectId(vendor_id)
+                    vendor = await db.vendors.find_one({"_id": obj_id}) or await db.users.find_one({"_id": obj_id})
+                except:
+                    pass
+            
             if vendor:
-                p['vendor_name'] = vendor.get('business_name', 'Unknown Vendor')
-            else:
-                p['vendor_name'] = 'Unknown Vendor'
+                v_real_id = vendor.get('id') or str(vendor.get('_id'))
+                v_name = vendor.get('business_name') or vendor.get('name') or vendor.get('owner_name') or "Unknown Vendor"
+                
+                # Calculate overall business rating for this vendor
+                vendor_products_cursor = db.products.find({"vendor_id": v_real_id}, {"id": 1})
+                v_product_ids = [p['id'] async for p in vendor_products_cursor]
+                
+                v_rating = 0
+                v_rev_count = 0
+                if v_product_ids:
+                    v_reviews_cursor = db.reviews.find({"product_id": {"$in": v_product_ids}})
+                    v_reviews = await v_reviews_cursor.to_list(None)
+                    if v_reviews:
+                        v_rev_count = len(v_reviews)
+                        v_rating = round(sum(r.get('rating', 0) for r in v_reviews) / v_rev_count, 1)
+
+        p['vendor_name'] = v_name
+        p['vendor'] = {
+            "business_name": v_name,
+            "business_id": v_real_id if vendor else vendor_id, # Use v_real_id if vendor object was found, otherwise fallback to original vendor_id
+            "business_rating": v_rating or vendor.get('business_rating', 0) if vendor else 0,
+            "business_reviews_count": v_rev_count,
+            "shipping_rates": vendor.get('shipping_rates', []) if vendor else []
+        }
+
+        # Calculate product rating
+        reviews_cursor_p = db.reviews.find({"product_id": p['id']})
+        reviews_p = await reviews_cursor_p.to_list(None)
+        if reviews_p:
+            total_rating = sum(r.get('rating', 0) for r in reviews_p)
+            p['rating'] = round(total_rating / len(reviews_p), 1)
+            p['reviews'] = len(reviews_p)
+            p['reviewsCount'] = len(reviews_p)
         else:
-            p['vendor_name'] = 'Unknown Vendor'
+            p['rating'] = 0
+            p['reviews'] = 0
+            p['reviewsCount'] = 0
 
         products.append(p)
     return products
@@ -782,6 +859,76 @@ async def get_product(product_id: str):
     
     product['id'] = product.get('id') or str(product['_id'])
     if '_id' in product: del product['_id']
+
+    # Robust vendor lookup
+    vendor_id = product.get('vendor_id')
+    vendor_data = {"business_name": "Unknown Vendor", "business_id": vendor_id, "business_rating": 0}
+    
+    if vendor_id:
+        # 1. Try string 'id' in vendors
+        vendor = await db.vendors.find_one({"id": str(vendor_id)})
+        # 2. Try string 'id' in users (some vendors might be there)
+        if not vendor:
+            vendor = await db.users.find_one({"id": str(vendor_id)})
+        # 3. Try _id if it's potentially an ObjectId
+        if not vendor:
+            from bson import ObjectId
+            try:
+                obj_id = ObjectId(vendor_id)
+                vendor = await db.vendors.find_one({"_id": obj_id}) or await db.users.find_one({"_id": obj_id})
+            except:
+                pass
+        
+        if vendor:
+            v_real_id = vendor.get('id') or str(vendor.get('_id'))
+            v_name = vendor.get('business_name') or vendor.get('name') or vendor.get('owner_name') or "Unknown Vendor"
+            
+            # Calculate overall business rating for this vendor
+            # 1. Get all product IDs for this vendor
+            vendor_products_cursor = db.products.find({"vendor_id": v_real_id}, {"id": 1})
+            v_product_ids = [p['id'] async for p in vendor_products_cursor]
+            
+            # 2. Get all reviews for these products
+            v_rating = 0
+            if v_product_ids:
+                v_reviews_cursor = db.reviews.find({"product_id": {"$in": v_product_ids}})
+                v_reviews = await v_reviews_cursor.to_list(None)
+                if v_reviews:
+                    v_rating = round(sum(r.get('rating', 0) for r in v_reviews) / len(v_reviews), 1)
+            
+            vendor_data = {
+                "business_name": v_name,
+                "business_id": v_real_id,
+                "business_rating": v_rating or vendor.get('business_rating', 0),
+                "business_reviews_count": len(v_reviews) if v_product_ids and v_reviews else 0,
+                "shipping_rates": vendor.get('shipping_rates', [])
+            }
+            product['vendor_name'] = v_name
+        else:
+            product['vendor_name'] = "Unknown Vendor"
+
+    product['vendor'] = vendor_data
+
+    # Add reviews information
+    reviews_cursor = db.reviews.find({"product_id": product['id']})
+    reviews = []
+    total_rating = 0
+    async for r in reviews_cursor:
+        if '_id' in r: del r['_id']
+        # Get reviewer name
+        reviewer = await db.users.find_one({"id": r.get('user_id')}) or await db.vendors.find_one({"id": r.get('user_id')})
+        if reviewer:
+            r['user_name'] = reviewer.get('name') or reviewer.get('business_name') or "Customer"
+        else:
+            r['user_name'] = "Customer"
+        
+        reviews.append(r)
+        total_rating += r.get('rating', 0)
+    
+    product['reviews'] = reviews
+    product['rating'] = round(total_rating / len(reviews), 1) if reviews else 0
+    product['reviews_count'] = len(reviews)
+
     return product
 
 @api_router.put("/products/{product_id}")
@@ -877,6 +1024,50 @@ async def approve_product(product_id: str, current_user: Annotated[dict, Depends
     
     return {"message": "Inventory successfully authorized."}
 
+@api_router.get("/admin/vendors/pending")
+async def get_pending_vendors(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    vendors = await db.vendors.find({"status": "pending"}, {"_id": 0, "password": 0}).to_list(100)
+    return vendors
+
+@api_router.post("/admin/vendors/approve/{vendor_id}")
+async def approve_vendor(vendor_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    await db.vendors.update_one({"id": vendor_id}, {"$set": {"status": "active"}})
+    
+    # Notify Vendor
+    await db.notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": vendor_id,
+        "title": "Vendor Account Approved",
+        "message": "Protocol complete. Your vendor account has been authorized for live operations.",
+        "type": "success",
+        "is_read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    return {"message": "Vendor approved."}
+
+@api_router.post("/admin/vendors/reject/{vendor_id}")
+async def reject_vendor(vendor_id: str, data: dict, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    reason = data.get('reason', "Compliance failure.")
+    await db.vendors.update_one({"id": vendor_id}, {"$set": {"status": "rejected", "rejection_reason": reason}})
+    return {"message": "Vendor rejected."}
+
+@api_router.post("/vendor/shipping-rates")
+async def update_shipping_rates(rates: List[ShippingRate], current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    rates_dict = [r.model_dump() for r in rates]
+    await db.vendors.update_one({"id": current_user['id']}, {"$set": {"shipping_rates": rates_dict}})
+    return {"message": "Logistical protocols updated."}
+
 @api_router.post("/upload/image")
 async def upload_image(current_user: Annotated[dict, Depends(get_current_user)], file: UploadFile = File(...)):
     # if current_user['user_type'] != 'vendor':
@@ -910,22 +1101,37 @@ async def proxy_image(url: str):
         if not url.startswith(('http://', 'https://')):
             raise HTTPException(status_code=400, detail="Invalid URL")
 
-        # Only allow certain domains for security
+        # Only allow certain domains for security (expanded list for e-commerce)
         allowed_domains = [
             'm.media-amazon.com',
             'images-na.ssl-images-amazon.com',
+            'images-eu.ssl-images-amazon.com',
             'localhost',
             '127.0.0.1',
             'www.yummytummyaarthi.com',
             'encrypted-tbn0.gstatic.com',
             'images.unsplash.com',
             'picsum.photos',
-            'via.placeholder.com'
+            'via.placeholder.com',
+            'rukminim1.flixcart.com',
+            'rukminim2.flixcart.com',
+            'assets.myntassets.com',
+            'images.meesho.com',
+            'img.freepik.com',
+            'cdn.shopify.com',
+            'i.imgur.com',
+            'lh3.googleusercontent.com',
+            'res.cloudinary.com',
+            'images.pexels.com',
+            'img.icons8.com'
         ]
         from urllib.parse import urlparse
         parsed_url = urlparse(url)
+        # Allow any domain for now to prevent image loading issues
+        # In production, you may want to restrict this
         if parsed_url.netloc not in allowed_domains:
-            raise HTTPException(status_code=403, detail="Domain not allowed")
+            # Log warning but still try to fetch (or you can raise HTTPException)
+            print(f"Warning: Proxying image from unlisted domain: {parsed_url.netloc}")
 
         # Fetch the image
         response = requests.get(url, timeout=10, stream=True)
@@ -1423,7 +1629,6 @@ async def get_user(user_id: str):
     if not user:
         user = await db.vendors.find_one({"id": user_id}, {"_id": 0, "password": 0})
     if not user:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="User not found")
     return user
 

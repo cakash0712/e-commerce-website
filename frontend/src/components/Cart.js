@@ -15,7 +15,8 @@ import {
   Tag,
   CreditCard,
   XCircle,
-  BadgePercent
+  BadgePercent,
+  Store
 } from "lucide-react";
 
 import Navigation from "./Navigation";
@@ -28,6 +29,47 @@ const Cart = () => {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState('');
+
+  // Helper function to get proxied image URL (consistent with Shop.js)
+  const getImageUrl = (imageUrl) => {
+    // Handle empty, null, undefined
+    if (!imageUrl || imageUrl === '' || imageUrl === 'undefined' || imageUrl === 'null') {
+      return '/assets/zlogo.png';
+    }
+    // Proxy external URLs through backend
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      return `${API_BASE}/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+    }
+    // Handle relative URLs - if it doesn't start with /, add /
+    if (!imageUrl.startsWith('/')) {
+      return '/' + imageUrl;
+    }
+    return imageUrl;
+  };
+
+  // Helper to get the best available image for a cart item
+  const getItemImage = (item) => {
+    // Prioritize main image over secondary images array
+    const imageSource = item.image || item.images?.[0] || item.thumbnail || item.img || null;
+    return getImageUrl(imageSource);
+  };
+
+  // Group items by vendor for checkout clarity
+  const groupedItems = cartItems.reduce((acc, item) => {
+    const vendorId = item.vendor?.id || 'unknown';
+    if (!acc[vendorId]) {
+      acc[vendorId] = {
+        vendorId: vendorId,
+        vendorName: item.vendor?.name || 'Unknown Vendor',
+        items: [],
+        subtotal: 0
+      };
+    }
+    acc[vendorId].items.push(item);
+    acc[vendorId].subtotal += item.price * item.quantity;
+    return acc;
+  }, {});
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -43,8 +85,30 @@ const Cart = () => {
     }
   };
 
-  const shippingThreshold = 499;
-  const shipping = subtotal > shippingThreshold ? 0 : 99;
+  // Real Zone-Based Shipping calculation per vendor
+  const calculateVendorShipping = (group) => {
+    const vSubtotal = group.subtotal;
+    const items = group.items;
+
+    // Attempt to find shipping rules in the product data (populated by backend)
+    const shippingRates = items[0]?.vendor?.shipping_rates;
+
+    if (shippingRates && shippingRates.length > 0) {
+      // For now, prioritize 'Standard' or use the first available rule
+      const rule = shippingRates.find(r => r.zone.toLowerCase() === 'standard') || shippingRates[0];
+      return vSubtotal >= rule.min_order_free ? 0 : rule.cost;
+    }
+
+    // Fallback to global defaults if vendor hasn't set protocols
+    const shippingThreshold = 499;
+    return vSubtotal >= shippingThreshold ? 0 : 99;
+  };
+
+  // Total shipping is sum of shipping for each vendor group
+  const shipping = Object.values(groupedItems).reduce((sum, group) => {
+    return sum + calculateVendorShipping(group);
+  }, 0);
+
   const tax = subtotal * 0.18;
 
   const calculateDiscount = () => {
@@ -105,64 +169,90 @@ const Cart = () => {
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden text-left">
                   <div className="hidden md:grid grid-cols-12 gap-4 p-6 bg-gray-50/50 border-b border-gray-100">
-                    <div className="col-span-6 text-[10px] font-bold uppercase tracking-widest text-gray-400">Product Particulars</div>
+                    <div className="col-span-6 text-[10px] font-bold uppercase tracking-widest text-gray-400">Product Details</div>
                     <div className="col-span-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-center">Quantity</div>
                     <div className="col-span-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-right">Subtotal</div>
                   </div>
 
                   <div className="divide-y divide-gray-100">
-                    {cartItems.map((item) => (
-                      <div key={item.id} className="p-6 transition-all hover:bg-violet-50/10 group">
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                          {/* Item Info */}
-                          <div className="md:col-span-6 flex gap-6">
-                            <Link to={`/product/${item.id}`} className="shrink-0">
-                              <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 group-hover:border-violet-200 transition-all">
-                                <img
-                                  src={item.image}
-                                  alt={item.name}
-                                  className="w-full h-full object-contain p-2 mix-blend-multiply group-hover:scale-110 transition-transform duration-500"
-                                />
+                    {Object.values(groupedItems).map((group) => (
+                      <div key={group.vendorId} className="border-b last:border-b-0 border-gray-100">
+                        {/* Vendor Header */}
+                        <div className="bg-gray-50/50 px-6 py-3 border-b border-gray-100 flex justify-between items-center group/vendor">
+                          <Link
+                            to={`/shop?vendor=${group.vendorId}`}
+                            className="flex items-center gap-2 group-hover:text-violet-600 transition-colors"
+                          >
+                            <Store className="w-4 h-4 text-violet-600 transition-transform group-hover/vendor:scale-110" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover/vendor:text-violet-600 transition-colors">
+                              Sold by: <span className="text-gray-900 font-black">{group.vendorName}</span>
+                            </span>
+                          </Link>
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className={`text-[10px] font-bold py-1 px-3 rounded-full border-none ${calculateVendorShipping(group) === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                              {calculateVendorShipping(group) === 0 ? "Free Delivery" : `Delivery: ₹${calculateVendorShipping(group)}`}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Items for this Vendor */}
+                        <div className="divide-y divide-gray-50">
+                          {group.items.map((item) => (
+                            <div key={item.id} className="p-6 transition-all hover:bg-violet-50/10 group/item">
+                              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                                {/* Item Info */}
+                                <div className="md:col-span-6 flex gap-6">
+                                  <Link to={`/product/${item.id}`} className="shrink-0">
+                                    <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 group-hover/item:border-violet-200 transition-all shadow-sm">
+                                      <img
+                                        src={getItemImage(item)}
+                                        alt={item.name}
+                                        className="w-full h-full object-contain p-2 group-hover/item:scale-110 transition-transform duration-500"
+                                        onError={(e) => { e.target.src = '/assets/zlogo.png'; }}
+                                      />
+                                    </div>
+                                  </Link>
+                                  <div className="flex flex-col justify-center min-w-0">
+                                    <p className="text-[10px] uppercase font-bold text-violet-600 tracking-widest mb-1">{item.category}</p>
+                                    <Link to={`/product/${item.id}`}>
+                                      <h3 className="font-bold text-gray-900 hover:text-violet-600 transition-colors line-clamp-2 mb-1 leading-tight">{item.name}</h3>
+                                    </Link>
+                                    <p className="text-gray-900 font-bold">₹{item.price.toLocaleString()}</p>
+                                    <button
+                                      onClick={() => removeFromCart(item.id)}
+                                      className="inline-flex items-center gap-1.5 text-[10px] font-bold text-rose-500 uppercase tracking-wider mt-3 hover:text-rose-600 transition-colors"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" /> Remove Item
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Quantity Selector */}
+                                <div className="md:col-span-3 flex justify-center">
+                                  <div className="flex items-center gap-4 bg-gray-100 p-1.5 rounded-xl border border-gray-200 shadow-inner">
+                                    <button
+                                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-white hover:text-violet-600 rounded-lg shadow-none hover:shadow-sm transition-all"
+                                    >
+                                      <Minus className="w-4 h-4" />
+                                    </button>
+                                    <span className="w-6 text-center font-bold text-gray-900">{item.quantity}</span>
+                                    <button
+                                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-white hover:text-violet-600 rounded-lg shadow-none hover:shadow-sm transition-all"
+                                    >
+                                      <Plus className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Net Price */}
+                                <div className="md:col-span-3 text-right">
+                                  <p className="text-xl font-bold text-gray-900 tracking-tight">₹{(item.price * item.quantity).toLocaleString()}</p>
+                                </div>
                               </div>
-                            </Link>
-                            <div className="flex flex-col justify-center min-w-0">
-                              <p className="text-[10px] uppercase font-bold text-violet-600 tracking-widest mb-1">{item.category}</p>
-                              <Link to={`/product/${item.id}`}>
-                                <h3 className="font-bold text-gray-900 hover:text-violet-600 transition-colors line-clamp-2 mb-1 leading-tight">{item.name}</h3>
-                              </Link>
-                              <p className="text-gray-900 font-bold">₹{item.price.toLocaleString()}</p>
-                              <button
-                                onClick={() => removeFromCart(item.id)}
-                                className="inline-flex items-center gap-1.5 text-[10px] font-bold text-rose-500 uppercase tracking-wider mt-3 hover:text-rose-600 transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" /> Remove Item
-                              </button>
                             </div>
-                          </div>
-
-                          {/* Quantity Selector */}
-                          <div className="md:col-span-3 flex justify-center">
-                            <div className="flex items-center gap-4 bg-gray-100 p-1.5 rounded-xl border border-gray-200">
-                              <button
-                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-white hover:text-violet-600 rounded-lg shadow-none hover:shadow-sm transition-all"
-                              >
-                                <Minus className="w-4 h-4" />
-                              </button>
-                              <span className="w-6 text-center font-bold text-gray-900">{item.quantity}</span>
-                              <button
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-white hover:text-violet-600 rounded-lg shadow-none hover:shadow-sm transition-all"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Net Price */}
-                          <div className="md:col-span-3 text-right">
-                            <p className="text-xl font-bold text-gray-900">₹{(item.price * item.quantity).toLocaleString()}</p>
-                          </div>
+                          ))}
                         </div>
                       </div>
                     ))}
@@ -180,11 +270,11 @@ const Cart = () => {
               {/* Order Summary Sidebar */}
               <div className="lg:col-span-4 space-y-6">
                 <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl shadow-gray-200/50 sticky top-24 text-left">
-                  <h2 className="text-xl font-bold text-gray-900 mb-8 border-b border-gray-100 pb-4 tracking-tight">Order Procurement</h2>
+                  <h2 className="text-xl font-bold text-gray-900 mb-8 border-b border-gray-100 pb-4 tracking-tight">Order Summary</h2>
 
                   {/* Coupon System */}
                   <div className="mb-8">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 block">Offer Authorization</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 block">Coupons & Offers</label>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <BadgePercent className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400" />
@@ -207,7 +297,7 @@ const Cart = () => {
                         <div className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shrink-0">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                         </div>
-                        <p className="text-xs font-bold text-emerald-700">Protocol "{appliedCoupon.code}" authorized: ₹{Math.round(discount).toLocaleString()} saved.</p>
+                        <p className="text-xs font-bold text-emerald-700">Coupon "{appliedCoupon.code}" applied: ₹{Math.round(discount).toLocaleString()} saved.</p>
                       </div>
                     )}
                     {couponError && (
@@ -220,22 +310,22 @@ const Cart = () => {
                   {/* Pricing Matrix */}
                   <div className="space-y-4 mb-8">
                     <div className="flex justify-between items-center text-gray-500">
-                      <span className="text-sm font-medium">Merchandise Subtotal</span>
+                      <span className="text-sm font-medium">Subtotal</span>
                       <span className="font-bold text-gray-900">₹{subtotal.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center text-gray-500">
-                      <span className="text-sm font-medium">Logistical Service</span>
+                      <span className="text-sm font-medium">Shipping Fee</span>
                       <span className={`font-bold ${shipping === 0 ? 'text-emerald-600' : 'text-gray-900'}`}>
-                        {shipping === 0 ? 'COMPLIMENTARY' : `₹${shipping}`}
+                        {shipping === 0 ? 'FREE' : `₹${shipping}`}
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-gray-500">
-                      <span className="text-sm font-medium">Regulatory GST (18%)</span>
+                      <span className="text-sm font-medium">Estimated Taxes (18%)</span>
                       <span className="font-bold text-gray-900">₹{Math.round(tax).toLocaleString()}</span>
                     </div>
                     {appliedCoupon && (
                       <div className="flex justify-between items-center text-emerald-600 bg-emerald-50/50 -mx-8 px-8 py-2">
-                        <span className="text-sm font-bold">Authorized Discount</span>
+                        <span className="text-sm font-bold">Discount</span>
                         <span className="font-bold">-₹{Math.round(discount).toLocaleString()}</span>
                       </div>
                     )}
@@ -272,8 +362,8 @@ const Cart = () => {
                       <Truck className="w-5 h-5 text-violet-600" />
                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">
                         {subtotal > shippingThreshold
-                          ? "Logistics tier upgraded: Complimentary Delivery"
-                          : `Spend ₹${shippingThreshold - subtotal} more for Complimentary Delivery`}
+                          ? "Qualifies for Free Delivery"
+                          : `Add ₹${shippingThreshold - subtotal} more for Free Delivery`}
                       </p>
                     </div>
                   </div>
@@ -287,13 +377,13 @@ const Cart = () => {
               <div className="w-24 h-24 bg-violet-100 rounded-[2rem] flex items-center justify-center mx-auto mb-8 text-violet-600 shadow-lg shadow-violet-50">
                 <ShoppingBag className="w-10 h-10" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight">Your cart is currently <span className="text-violet-600">vacant.</span></h2>
-              <p className="text-gray-500 font-medium mb-10 leading-relaxed">
-                It appears you haven't authorized any items for procurement yet. Explore our curated collections to find your perfect match.
+              <h2 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight">Your cart is currently <span className="text-violet-600">empty</span></h2>
+              <p className="text-gray-500 font-medium mb-10 leading-relaxed text-center">
+                It looks like you haven't added anything to your cart yet. Browse our collections to find something you'll love.
               </p>
               <Link to="/shop">
                 <Button className="h-16 px-12 bg-gray-900 hover:bg-violet-600 text-white rounded-2xl font-bold uppercase tracking-widest transition-all shadow-xl active:scale-95 flex items-center gap-3 mx-auto">
-                  Initialize Shopping <ArrowRight className="w-4 h-4" />
+                  Start Shopping <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
             </div>
