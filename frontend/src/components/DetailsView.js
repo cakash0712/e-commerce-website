@@ -157,7 +157,10 @@ const DetailsView = () => {
                         rating: p.vendor?.business_rating ?? 0,
                         reviewsCount: p.vendor?.business_reviews_count || 0
                     },
-                    detailedReviews: p.reviews || []
+                    detailedReviews: p.reviews || [],
+                    delivery_type: p.delivery_type || "free",
+                    delivery_charge: p.delivery_charge || 0,
+                    free_delivery_above: p.free_delivery_above || 0
                 };
 
                 setProduct(mappedProduct);
@@ -328,21 +331,77 @@ const DetailsView = () => {
 
                 {/* Product Section */}
                 <div className="bg-white">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-0 lg:py-8">
+                        {/* Mobile Header (Brand, Title, Rating) - Only visible on Mobile */}
+                        <div className="lg:hidden pt-4 pb-2 space-y-1">
+                            <div className="flex justify-between items-start">
+                                <Link
+                                    to={`/shop?vendor=${product.vendor.id}`}
+                                    className="text-[13px] font-medium text-violet-600 hover:underline"
+                                >
+                                    Visit the {product.vendor.name} Store
+                                </Link>
+                                <div className="flex gap-2">
+                                    <button
+                                        className="p-1 text-gray-500 hover:text-violet-600 transition-colors"
+                                        onClick={() => {
+                                            if (navigator.share) {
+                                                navigator.share({
+                                                    title: product.name,
+                                                    text: product.description,
+                                                    url: window.location.href
+                                                });
+                                            } else {
+                                                navigator.clipboard.writeText(window.location.href);
+                                                alert("Link copied to clipboard!");
+                                            }
+                                        }}
+                                    >
+                                        <Share2 className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        className={`p-1 transition-colors ${isInWishlist(product.id) ? 'text-rose-500' : 'text-gray-500'}`}
+                                        onClick={() => isInWishlist(product.id) ? removeFromWishlist(product.id) : addToWishlist(product)}
+                                    >
+                                        <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+                                    </button>
+                                </div>
+                            </div>
+                            <h1 className="text-[17px] font-normal text-gray-900 leading-snug">
+                                {product.name}
+                            </h1>
+                            <div className="flex items-center gap-1 mt-1">
+                                <div className="flex items-center">
+                                    {[...Array(5)].map((_, i) => (
+                                        <Star key={i} className={`w-3.5 h-3.5 ${i < Math.floor(product.rating) ? 'fill-violet-600 text-violet-600' : 'text-gray-200'}`} />
+                                    ))}
+                                </div>
+                                <span className="text-[13px] text-violet-600 font-medium">{product.rating}</span>
+                                <span className="text-[13px] text-gray-500">({product.reviewsCount})</span>
+                            </div>
+                        </div>
+
                         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
                             {/* Image Gallery */}
                             <div className="space-y-4">
-                                <div className="relative aspect-square bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
+                                <div className="relative aspect-square bg-white rounded-lg overflow-hidden lg:border lg:border-gray-100 flex items-center justify-center p-4">
                                     <img
                                         src={product.images && product.images.length > 0 ? getImageUrl(product.images[activeImage]) : getImageUrl(product.image)}
                                         alt={product.name}
-                                        className="w-full h-full object-contain"
+                                        className="max-w-full max-h-full object-contain mix-blend-multiply"
                                         onError={(e) => {
                                             e.target.src = '/assets/zlogo.png'; // Fallback image
                                         }}
                                     />
+                                    {/* Mobile Floating Badge */}
                                     {product.discount > 10 && (
-                                        <Badge className="absolute top-4 left-4 bg-rose-500 text-white border-none font-bold">
+                                        <div className="absolute top-0 left-0 bg-rose-600 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-br-2xl shadow-lg lg:hidden">
+                                            {product.discount}% OFF
+                                        </div>
+                                    )}
+                                    {/* Desktop Badge */}
+                                    {product.discount > 10 && (
+                                        <Badge className="absolute top-4 left-4 bg-rose-500 text-white border-none font-bold hidden lg:flex">
                                             -{product.discount}% OFF
                                         </Badge>
                                     )}
@@ -352,29 +411,29 @@ const DetailsView = () => {
                                             <Button
                                                 size="icon"
                                                 variant="secondary"
-                                                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-md"
+                                                className="absolute left-2 lg:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-md w-8 h-8 lg:w-10 lg:h-10"
                                                 onClick={() => setActiveImage(prev => (prev === 0 ? product.images.length - 1 : prev - 1))}
                                             >
-                                                <ChevronLeft className="w-5 h-5" />
+                                                <ChevronLeft className="w-4 h-4 lg:w-5 lg:h-5" />
                                             </Button>
                                             <Button
                                                 size="icon"
                                                 variant="secondary"
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-md"
+                                                className="absolute right-2 lg:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-md w-8 h-8 lg:w-10 lg:h-10"
                                                 onClick={() => setActiveImage(prev => (prev === product.images.length - 1 ? 0 : prev + 1))}
                                             >
-                                                <ChevronRight className="w-5 h-5" />
+                                                <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5" />
                                             </Button>
                                         </>
                                     )}
                                 </div>
                                 {/* Thumbnails */}
-                                <div className="flex gap-3 overflow-x-auto pb-2">
+                                <div className="flex gap-2 lg:gap-3 overflow-x-auto pb-2 scrollbar-none">
                                     {product.images.map((img, idx) => (
                                         <button
                                             key={idx}
                                             onClick={() => setActiveImage(idx)}
-                                            className={`relative shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${activeImage === idx ? 'border-violet-600' : 'border-gray-200 hover:border-violet-300'}`}
+                                            className={`relative shrink-0 w-16 h-16 lg:w-20 lg:h-20 rounded-lg overflow-hidden border-2 transition-all ${activeImage === idx ? 'border-violet-600' : 'border-gray-100 hover:border-violet-300'}`}
                                         >
                                             <img src={getImageUrl(img)} alt={`View ${idx + 1}`} className="w-full h-full object-contain bg-gray-50" onError={(e) => { e.target.src = '/assets/zlogo.png'; }} />
                                         </button>
@@ -384,12 +443,11 @@ const DetailsView = () => {
 
                             {/* Product Info */}
                             <div className="space-y-6">
-                                <div>
-                                    <Badge className="bg-violet-100 text-violet-700 border-none mb-3 capitalize">{product.category}</Badge>
-                                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-3">{product.name}</h1>
-
-                                    {/* Rating */}
-                                    <div className="flex items-center gap-3 mb-4">
+                                {/* Desktop Title/Category */}
+                                <div className="hidden lg:block space-y-4">
+                                    <Badge className="bg-violet-100 text-violet-700 border-none capitalize">{product.category}</Badge>
+                                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">{product.name}</h1>
+                                    <div className="flex items-center gap-3">
                                         <div className="flex items-center gap-1">
                                             {[...Array(5)].map((_, i) => (
                                                 <Star key={i} className={`w-4 h-4 ${i < Math.floor(product.rating) ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
@@ -401,9 +459,7 @@ const DetailsView = () => {
                                             {product.stock > 10 ? 'In Stock' : `Only ${product.stock} left`}
                                         </span>
                                     </div>
-
-                                    {/* Price */}
-                                    <div className="flex items-baseline gap-3 mb-4">
+                                    <div className="flex items-baseline gap-3">
                                         <span className="text-3xl font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
                                         {product.discount > 0 && (
                                             <>
@@ -414,9 +470,74 @@ const DetailsView = () => {
                                             </>
                                         )}
                                     </div>
+                                    <p className="text-gray-600 leading-relaxed text-sm lg:text-base">{product.description}</p>
+                                </div>
 
+                                {/* Mobile Specific View Elements */}
+                                <div className="lg:hidden space-y-6">
+                                    {/* Mobile Pricing */}
+                                    <div className="border-t border-gray-100 pt-4 flex flex-col gap-1">
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-[28px] font-light text-gray-900">₹{product.price.toLocaleString()}</span>
+                                            {product.discount > 0 && (
+                                                <span className="text-2xl text-rose-600 font-light">-{product.discount}%</span>
+                                            )}
+                                        </div>
+                                        {product.discount > 0 && (
+                                            <p className="text-[13px] text-gray-500">
+                                                M.R.P.: <span className="line-through">₹{product.originalPrice.toLocaleString()}</span>
+                                            </p>
+                                        )}
+                                        <p className="text-[13px] text-gray-900 mt-1">Inclusive of all taxes</p>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <div className="flex items-center gap-1 text-[13px] font-bold text-emerald-700">
+                                                <Check className="w-4 h-4" /> In Stock
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Mobile About This Item */}
+                                    {product.features.length > 0 && (
+                                        <div className="pt-2 border-t border-gray-100">
+                                            <h4 className="text-[15px] font-bold text-gray-900 mb-2">About this item</h4>
+                                            <ul className="space-y-2 lg:space-y-1.5 pl-4 list-disc marker:text-gray-300">
+                                                {product.features.slice(0, 4).map((f, i) => (
+                                                    <li key={i} className="text-[13px] text-gray-700 leading-normal">{f}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    {/* Mobile Delivery & Return Policy */}
+                                    <div className="border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100 bg-white shadow-sm">
+                                        <div className="p-3.5 flex items-start gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
+                                                <Truck className="w-5 h-5 text-gray-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[14px] font-bold text-gray-900">
+                                                    {product.delivery_type === 'free' ? 'FREE delivery' : `Delivery: ₹${product.delivery_charge}`}
+                                                </p>
+                                                <p className="text-[13px] text-gray-500">
+                                                    {product.delivery_type === 'free' && product.free_delivery_above > 0
+                                                        ? `on orders over ₹${product.free_delivery_above}`
+                                                        : 'Handled by ZippyCart Logistics'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="p-3.5 flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
+                                                <RotateCcw className="w-5 h-5 text-gray-600" />
+                                            </div>
+                                            <p className="text-[14px] text-gray-900 font-medium">10 days Replacement</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Common Sections (Vendor & Actions) */}
+                                <div className="space-y-4 pt-2 lg:pt-0">
                                     {product.offers && (
-                                        <div className="mb-6 p-4 bg-violet-50 rounded-xl border border-violet-100">
+                                        <div className="p-4 bg-violet-50 rounded-xl border border-violet-100 shadow-sm">
                                             <h4 className="flex items-center gap-2 text-sm font-bold text-violet-700 mb-2 uppercase tracking-wide">
                                                 <Zap className="w-4 h-4 fill-violet-700" /> Available Offers
                                             </h4>
@@ -424,107 +545,86 @@ const DetailsView = () => {
                                         </div>
                                     )}
 
-                                    <p className="text-gray-600 leading-relaxed mb-6">{product.description}</p>
-                                </div>
-
-                                {/* Vendor Info */}
-                                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                    <Store className="w-5 h-5 text-violet-600" />
-                                    <div className="flex-1">
-                                        <p className="text-xs text-gray-500 mb-0.5">Sold by</p>
-                                        <Link
-                                            to={`/shop?vendor=${product.vendor.id}`}
-                                            className="text-sm font-semibold text-gray-900 hover:text-violet-600 transition-colors cursor-pointer"
-                                        >
-                                            {product.vendor.name}
-                                        </Link>
-                                    </div>
-                                    <div className="flex items-center gap-1 text-sm">
-                                        <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                                        <span className="font-medium">{product.vendor.rating}</span>
-                                        <span className="text-gray-400 text-xs">({product.vendor.reviewsCount})</span>
-                                    </div>
-                                </div>
-
-                                {/* Quantity & Actions */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-4">
-                                        <Label className="text-sm font-medium text-gray-700">Quantity:</Label>
-                                        <div className="flex items-center border border-gray-300 rounded-lg">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-10 w-10 hover:bg-gray-100"
-                                                onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                                    {/* Vendor Info Section */}
+                                    <div className="flex items-center gap-3 p-4 bg-gray-50/50 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
+                                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-gray-200">
+                                            <Store className="w-5 h-5 text-violet-600" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-[11px] text-gray-500 mb-0.5 leading-none uppercase font-bold tracking-wider">Sold by</p>
+                                            <Link
+                                                to={`/shop?vendor=${product.vendor.id}`}
+                                                className="text-sm font-bold text-gray-900 hover:text-violet-600 transition-colors"
                                             >
-                                                <Minus className="w-4 h-4" />
-                                            </Button>
-                                            <span className="w-12 text-center font-semibold">{quantity}</span>
+                                                {product.vendor.name}
+                                            </Link>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-lg border border-gray-100 shadow-sm">
+                                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                            <span className="font-bold text-[13px]">{product.vendor.rating}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Actions Section */}
+                                    <div className="space-y-4 pt-4 lg:pt-2">
+                                        <div className="flex items-center justify-between lg:justify-start lg:gap-6">
+                                            <Label className="text-sm lg:text-base font-bold text-gray-900">Quantity</Label>
+                                            <div className="flex items-center bg-gray-100/80 rounded-[12px] p-1 border border-gray-200">
+                                                <button
+                                                    className="w-10 h-10 lg:w-9 lg:h-9 flex items-center justify-center text-gray-500 hover:text-black active:scale-90 transition-all"
+                                                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                                                >
+                                                    <Minus className="w-4 h-4" />
+                                                </button>
+                                                <span className="w-10 text-center text-[15px] font-black text-gray-900">{quantity}</span>
+                                                <button
+                                                    className="w-10 h-10 lg:w-9 lg:h-9 flex items-center justify-center text-gray-500 hover:text-black active:scale-90 transition-all"
+                                                    onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col gap-3 lg:gap-4">
                                             <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-10 w-10 hover:bg-gray-100"
-                                                onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
+                                                onClick={() => addToCart({ ...product, quantity })}
+                                                className="w-full h-14 bg-violet-600 hover:bg-violet-700 text-white font-bold text-[15px] rounded-2xl shadow-xl shadow-violet-100 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
                                             >
-                                                <Plus className="w-4 h-4" />
+                                                <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                                Add to Cart
+                                            </Button>
+                                            <Button
+                                                onClick={() => { addToCart({ ...product, quantity }); navigate('/payment'); }}
+                                                className="w-full h-14 bg-[#131921] hover:bg-black text-white font-bold text-[15px] rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <Zap className="w-5 h-5 text-amber-400 fill-amber-400" />
+                                                Buy Now
                                             </Button>
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col sm:flex-row gap-3">
-                                        <Button
-                                            onClick={() => addToCart({ ...product, quantity })}
-                                            className="flex-1 h-12 bg-violet-600 hover:bg-violet-700 text-white font-semibold"
-                                        >
-                                            <ShoppingCart className="w-5 h-5 mr-2" />
-                                            Add to Cart
-                                        </Button>
-                                        <Button
-                                            onClick={() => { addToCart({ ...product, quantity }); navigate('/payment'); }}
-                                            className="flex-1 h-12 bg-gray-900 hover:bg-gray-800 text-white font-semibold"
-                                        >
-                                            <Zap className="w-5 h-5 mr-2" />
-                                            Buy Now
-                                        </Button>
-                                        <Button
-                                            size="icon"
-                                            variant="outline"
-                                            onClick={() => isInWishlist(product.id) ? removeFromWishlist(product.id) : addToWishlist(product)}
-                                            className={`h-12 w-12 border-2 ${isInWishlist(product.id) ? 'border-rose-300 bg-rose-50 text-rose-500' : 'border-gray-300 hover:border-violet-300 hover:text-violet-600'}`}
-                                        >
-                                            <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                {/* Trust Features */}
-                                <div className="grid grid-cols-2 gap-3 pt-4">
-                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <Truck className="w-5 h-5 text-violet-600" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">Free Delivery</p>
-                                            <p className="text-xs text-gray-500">On orders over ₹500</p>
+                                    {/* Desktop Only Trust Indicators */}
+                                    <div className="hidden lg:grid grid-cols-2 gap-3 pt-6">
+                                        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                            <Truck className="w-6 h-6 text-violet-600" />
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-900">
+                                                    {product.delivery_type === 'free' ? 'Free Delivery' : `Delivery: ₹${product.delivery_charge}`}
+                                                </p>
+                                                <p className="text-xs text-gray-500">
+                                                    {product.delivery_type === 'free' && product.free_delivery_above > 0
+                                                        ? `On orders over ₹${product.free_delivery_above}`
+                                                        : "Standard shipping applied"}
+                                                </p>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <RotateCcw className="w-5 h-5 text-violet-600" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">Easy Returns</p>
-                                            <p className="text-xs text-gray-500">10-day return policy</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <ShieldCheck className="w-5 h-5 text-violet-600" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">Secure Payment</p>
-                                            <p className="text-xs text-gray-500">100% secure checkout</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <Award className="w-5 h-5 text-violet-600" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">Genuine Product</p>
-                                            <p className="text-xs text-gray-500">Brand authorized</p>
+                                        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                            <RotateCcw className="w-6 h-6 text-violet-600" />
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-900">Easy Returns</p>
+                                                <p className="text-xs text-gray-500">10-day replacement policy</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -532,7 +632,6 @@ const DetailsView = () => {
                         </div>
                     </div>
                 </div>
-
                 {/* Tabs Section */}
                 <div className="bg-white border-t border-gray-200 mt-6">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart, useWishlist, useAuth } from "../App";
@@ -39,6 +39,7 @@ import { Label } from "@/components/ui/label";
 
 const Navigation = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -705,17 +706,19 @@ const Navigation = () => {
             )}
           </div>
 
-          {/* Location / Welcome Bar */}
-          <div
-            className="flex items-center gap-2 py-0.5 px-1 overflow-hidden cursor-pointer hover:bg-gray-50 rounded transition-colors active:scale-95 transform"
-            onClick={handleLocationClick}
-          >
-            <MapPin className="w-3.5 h-3.5 text-violet-600 shrink-0" />
-            <p className="text-[11px] font-medium text-gray-600 truncate">
-              Deliver to {user?.name?.split(' ')[0] || "Guest"} - {selectedLocation}
-            </p>
-            <ChevronDown className="w-3 h-3 text-gray-400" />
-          </div>
+          {/* Location / Welcome Bar - Only show on Home Page for Mobile */}
+          {location.pathname === '/' && (
+            <div
+              className="flex items-center gap-2 py-0.5 px-1 overflow-hidden cursor-pointer hover:bg-gray-50 rounded transition-colors active:scale-95 transform"
+              onClick={handleLocationClick}
+            >
+              <MapPin className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+              <p className="text-[11px] font-medium text-gray-600 truncate">
+                Deliver to {user?.name?.split(' ')[0] || "Guest"} - {selectedLocation}
+              </p>
+              <ChevronDown className="w-3 h-3 text-gray-400" />
+            </div>
+          )}
         </div>
       </div>
 

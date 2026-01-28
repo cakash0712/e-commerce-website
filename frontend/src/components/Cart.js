@@ -29,6 +29,7 @@ const Cart = () => {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState('');
+  const shippingThreshold = 499; // Global fallback threshold
 
   // Helper function to get proxied image URL (consistent with Shop.js)
   const getImageUrl = (imageUrl) => {
@@ -90,6 +91,26 @@ const Cart = () => {
     const vSubtotal = group.subtotal;
     const items = group.items;
 
+    // Check for product-level specific delivery charges first
+    let productDeliveryCharge = 0;
+    let anyFixedDelivery = false;
+
+    items.forEach(item => {
+      if (item.delivery_type === 'fixed') {
+        productDeliveryCharge += (item.delivery_charge || 0);
+        anyFixedDelivery = true;
+      }
+    });
+
+    if (anyFixedDelivery) {
+      // If there's a free delivery threshold for the price total
+      const freeThreshold = items[0]?.free_delivery_above || 0;
+      if (freeThreshold > 0 && vSubtotal >= freeThreshold) {
+        return 0;
+      }
+      return productDeliveryCharge;
+    }
+
     // Attempt to find shipping rules in the product data (populated by backend)
     const shippingRates = items[0]?.vendor?.shipping_rates;
 
@@ -100,7 +121,6 @@ const Cart = () => {
     }
 
     // Fallback to global defaults if vendor hasn't set protocols
-    const shippingThreshold = 499;
     return vSubtotal >= shippingThreshold ? 0 : 99;
   };
 
