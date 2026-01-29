@@ -1,4 +1,4 @@
-import { useEffect, useState, createContext, useContext } from "react";
+import { useEffect, useState, createContext, useContext, useRef } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -238,11 +238,15 @@ export const useCoupons = () => {
 const CartProvider = ({ children }) => {
   const { user } = useAuth();
   const [cartItems, setCartItems] = useState([]);
+  const cartLoaded = useRef(false);
   const userKey = user?.id ? `ZippyCart_cart_${user.id}` : 'ZippyCart_cart_guest';
 
   // Load cart when user changes
   useEffect(() => {
     const fetchCart = async () => {
+      cartLoaded.current = false;
+      const guestItems = JSON.parse(localStorage.getItem('ZippyCart_cart_guest') || '[]');
+
       if (user?.id) {
         try {
           const token = localStorage.getItem('token');
@@ -250,7 +254,19 @@ const CartProvider = ({ children }) => {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (response.data && response.data.cart) {
-            setCartItems(response.data.cart);
+            // Merge guest cart with user cart if guest cart has items
+            let updatedCart = response.data.cart;
+            if (guestItems.length > 0) {
+              const userCartIds = new Set(updatedCart.map(i => i.id));
+              const uniqueGuestItems = guestItems.filter(i => !userCartIds.has(i.id));
+              if (uniqueGuestItems.length > 0) {
+                updatedCart = [...updatedCart, ...uniqueGuestItems];
+                // Clean up guest cart after merging
+                localStorage.removeItem('ZippyCart_cart_guest');
+              }
+            }
+            setCartItems(updatedCart);
+            cartLoaded.current = true;
             return;
           }
         } catch (e) {
@@ -265,10 +281,11 @@ const CartProvider = ({ children }) => {
       } catch (e) {
         setCartItems([]);
       }
+      cartLoaded.current = true;
     };
 
     fetchCart();
-  }, [userKey]);
+  }, [user?.id, userKey]);
 
   // Save cart when items change
   useEffect(() => {
@@ -277,7 +294,7 @@ const CartProvider = ({ children }) => {
         localStorage.setItem(userKey, JSON.stringify(cartItems));
       }
 
-      if (user?.id) {
+      if (user?.id && cartLoaded.current) {
         try {
           const token = localStorage.getItem('token');
           await axios.put(`${API}/users/cart`, cartItems, {
@@ -291,7 +308,7 @@ const CartProvider = ({ children }) => {
 
     const timeoutId = setTimeout(syncCart, 1000); // Debounce sync
     return () => clearTimeout(timeoutId);
-  }, [cartItems, userKey]);
+  }, [cartItems, userKey, user?.id, cartLoaded]);
 
   const addToCart = (product) => {
     setCartItems(prevItems => {
@@ -360,11 +377,15 @@ const CartProvider = ({ children }) => {
 const WishlistProvider = ({ children }) => {
   const { user } = useAuth();
   const [wishlistItems, setWishlistItems] = useState([]);
+  const wishlistLoaded = useRef(false);
   const userKey = user?.id ? `ZippyCart_wishlist_${user.id}` : 'ZippyCart_wishlist_guest';
 
   // Load wishlist when user changes
   useEffect(() => {
     const fetchWishlist = async () => {
+      wishlistLoaded.current = false;
+      const guestItems = JSON.parse(localStorage.getItem('ZippyCart_wishlist_guest') || '[]');
+
       if (user?.id) {
         try {
           const token = localStorage.getItem('token');
@@ -372,7 +393,18 @@ const WishlistProvider = ({ children }) => {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (response.data && response.data.wishlist) {
-            setWishlistItems(response.data.wishlist);
+            // Merge guest wishlist
+            let updatedWishlist = response.data.wishlist;
+            if (guestItems.length > 0) {
+              const userWishIds = new Set(updatedWishlist.map(i => i.id));
+              const uniqueGuestItems = guestItems.filter(i => !userWishIds.has(i.id));
+              if (uniqueGuestItems.length > 0) {
+                updatedWishlist = [...updatedWishlist, ...uniqueGuestItems];
+                localStorage.removeItem('ZippyCart_wishlist_guest');
+              }
+            }
+            setWishlistItems(updatedWishlist);
+            wishlistLoaded.current = true;
             return;
           }
         } catch (e) {
@@ -386,10 +418,11 @@ const WishlistProvider = ({ children }) => {
       } catch (e) {
         setWishlistItems([]);
       }
+      wishlistLoaded.current = true;
     };
 
     fetchWishlist();
-  }, [userKey]);
+  }, [user?.id, userKey]);
 
   // Save wishlist when items change
   useEffect(() => {
@@ -398,7 +431,7 @@ const WishlistProvider = ({ children }) => {
         localStorage.setItem(userKey, JSON.stringify(wishlistItems));
       }
 
-      if (user?.id) {
+      if (user?.id && wishlistLoaded.current) {
         try {
           const token = localStorage.getItem('token');
           await axios.put(`${API}/users/wishlist`, wishlistItems, {
@@ -412,7 +445,7 @@ const WishlistProvider = ({ children }) => {
 
     const timeoutId = setTimeout(syncWishlist, 1000); // Debounce sync
     return () => clearTimeout(timeoutId);
-  }, [wishlistItems, userKey]);
+  }, [wishlistItems, userKey, user?.id, wishlistLoaded]);
 
   const addToWishlist = (product) => {
     setWishlistItems(prevItems => {

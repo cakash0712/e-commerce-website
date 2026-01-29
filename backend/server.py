@@ -131,6 +131,24 @@ class ShippingRate(BaseModel):
     cost: float
     min_order_free: float = 1000.0
 
+class PaymentCard(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    brand: str
+    last4: str
+    exp: str
+    type: str = "Credit"
+
+class UPI(BaseModel):
+    id: str
+    bank: str = "Hook Bank"
+    verified: bool = True
+
+class GiftCard(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    code: str
+    balance: float
+    expiry: str
+
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -157,6 +175,9 @@ class User(BaseModel):
     addresses: List[Address] = []
     cart: List[CartItem] = []
     wishlist: List[WishlistItem] = []
+    saved_cards: List[PaymentCard] = []
+    saved_upis: List[UPI] = []
+    active_gift_cards: List[GiftCard] = []
     shipping_rates: List[ShippingRate] = [] # For vendors
 
 class UserCreate(BaseModel):
@@ -176,6 +197,26 @@ class UserLogin(BaseModel):
     identifier: str  # phone or email
     password: str
     user_type: str = "user"
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    gender: Optional[str] = None
+    dob: Optional[str] = None
+    address: Optional[str] = None
+    avatar: Optional[str] = None
+    banner: Optional[str] = None
+    business_name: Optional[str] = None
+    business_category: Optional[str] = None
+    owner_name: Optional[str] = None
+    logo: Optional[str] = None
+    addresses: Optional[List[Address]] = None
+    cart: Optional[List[CartItem]] = None
+    wishlist: Optional[List[WishlistItem]] = None
+    saved_cards: Optional[List[PaymentCard]] = None
+    saved_upis: Optional[List[UPI]] = None
+    active_gift_cards: Optional[List[GiftCard]] = None
 
 class Product(BaseModel):
     model_config = ConfigDict(extra="ignore")

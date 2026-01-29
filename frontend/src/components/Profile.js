@@ -21,13 +21,17 @@ const Profile = () => {
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
 
-  // Address State
+  // State Management
   const [addresses, setAddresses] = useState([]);
-  const addressesLoaded = useRef(false);
+  const [savedCards, setSavedCards] = useState([]);
+  const [savedUPIs, setSavedUPIs] = useState([]);
+  const [activeGiftCards, setActiveGiftCards] = useState([]);
 
-  // Load addresses specific to the logged-in user
+  const profileLoaded = useRef(false);
+
+  // Load all user data from backend specific to the logged-in user
   useEffect(() => {
-    const fetchBackendAddresses = async () => {
+    const fetchUserData = async () => {
       if (user?.id) {
         try {
           const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
@@ -36,62 +40,77 @@ const Profile = () => {
             headers: { Authorization: `Bearer ${token}` }
           });
 
-          if (response.data && response.data.addresses) {
-            setAddresses(response.data.addresses);
-            addressesLoaded.current = true;
+          if (response.data) {
+            if (response.data.addresses) setAddresses(response.data.addresses);
+            if (response.data.saved_cards) setSavedCards(response.data.saved_cards);
+            if (response.data.saved_upis) setSavedUPIs(response.data.saved_upis);
+            if (response.data.active_gift_cards) setActiveGiftCards(response.data.active_gift_cards);
+            profileLoaded.current = true;
             return;
           }
         } catch (e) {
-          console.error("Failed to fetch addresses from backend", e);
+          console.error("Failed to fetch profile data from backend", e);
         }
 
-        // Fallback to localStorage if backend fails or has no addresses
-        const key = `user_addresses_${user.id}`;
-        const saved = localStorage.getItem(key);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          setAddresses(parsed);
-          addressesLoaded.current = true;
-        } else {
-          const defaultAddr = [
-            { id: 1, type: "HOME", name: user.name, addr: "404 Sky Heights, Sector 72, Bangalore, KA 560102", phone: user.phone || "+91 98765 43210" },
-          ];
-          setAddresses(defaultAddr);
-          addressesLoaded.current = true;
-        }
+        // Fallback to localStorage
+        const userId = user.id;
+        const savedAddr = localStorage.getItem(`user_addresses_${userId}`);
+        const savedCardsLocal = localStorage.getItem(`user_cards_${userId}`);
+        const savedUPIsLocal = localStorage.getItem(`user_upis_${userId}`);
+        const savedGiftLocal = localStorage.getItem(`user_giftcards_${userId}`);
 
-        // Default location logic
-        if (!localStorage.getItem(`user_location_${user.id}`)) {
-          window.dispatchEvent(new Event('location_updated'));
-        }
-      } else {
-        setAddresses([]);
-        addressesLoaded.current = false;
+        if (savedAddr) setAddresses(JSON.parse(savedAddr));
+        else setAddresses([{ id: 1, type: "HOME", name: user.name, addr: "404 Sky Heights, Sector 72, Bangalore, KA 560102", phone: user.phone || "+91 98765 43210" }]);
+
+        if (savedCardsLocal) setSavedCards(JSON.parse(savedCardsLocal));
+        else setSavedCards([
+          { id: '1', brand: "QUANTUM", last4: "8892", exp: "12/26", type: "Credit" },
+          { id: '2', brand: "NEBULA", last4: "4421", exp: "05/29", type: "Debit" }
+        ]);
+
+        if (savedUPIsLocal) setSavedUPIs(JSON.parse(savedUPIsLocal));
+        else setSavedUPIs([
+          { id: 'akash@oksbi', bank: 'State Bank of India', verified: true },
+          { id: 'akash@paytm', bank: 'Paytm Payments Bank', verified: true }
+        ]);
+
+        if (savedGiftLocal) setActiveGiftCards(JSON.parse(savedGiftLocal));
+        else setActiveGiftCards([]);
+
+        profileLoaded.current = true;
       }
     };
 
-    fetchBackendAddresses();
-  }, [user?.id]);
+    fetchUserData();
+  }, [user?.id, user?.name, user?.phone]);
 
-  // Save addresses to user-specific key and backend
+  // Save sync with debounce
   useEffect(() => {
-    const syncAddresses = async () => {
-      if (user?.id && addressesLoaded.current) {
-        // Sync to LocalStorage
+    const syncData = async () => {
+      if (user?.id && profileLoaded.current) {
+        // Local persistence
         localStorage.setItem(`user_addresses_${user.id}`, JSON.stringify(addresses));
+        localStorage.setItem(`user_cards_${user.id}`, JSON.stringify(savedCards));
+        localStorage.setItem(`user_upis_${user.id}`, JSON.stringify(savedUPIs));
+        localStorage.setItem(`user_giftcards_${user.id}`, JSON.stringify(activeGiftCards));
 
-        // Sync to Backend
+        // Backend persistence
         try {
-          await updateUser(user.id, { addresses });
+          await updateUser(user.id, {
+            addresses,
+            saved_cards: savedCards,
+            saved_upis: savedUPIs,
+            active_gift_cards: activeGiftCards
+          });
         } catch (e) {
-          console.error("Failed to sync addresses to backend", e);
+          console.error("Failed to sync profile data to backend", e);
         }
       }
     };
 
-    const timeoutId = setTimeout(syncAddresses, 1500); // 1.5s debounce
+    const timeoutId = setTimeout(syncData, 1000);
     return () => clearTimeout(timeoutId);
-  }, [addresses, user?.id]);
+  }, [addresses, savedCards, savedUPIs, activeGiftCards, user?.id, updateUser]);
 
   const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
@@ -141,18 +160,6 @@ const Profile = () => {
   };
 
   // Payment & Wallet State
-  const [savedCards, setSavedCards] = useState(() => {
-    const saved = localStorage.getItem('user_cards');
-    return saved ? JSON.parse(saved) : [
-      { id: 1, brand: "QUANTUM", last4: "8892", exp: "12/26", type: "Credit" },
-      { id: 2, brand: "NEBULA", last4: "4421", exp: "05/29", type: "Debit" }
-    ];
-  });
-
-  useEffect(() => {
-    localStorage.setItem('user_cards', JSON.stringify(savedCards));
-  }, [savedCards]);
-
   const [isAddCardOpen, setIsAddCardOpen] = useState(false);
   const [newCard, setNewCard] = useState({ brand: "", number: "", exp: "", type: "Credit" });
 
@@ -177,17 +184,7 @@ const Profile = () => {
   };
 
 
-  const [savedUPIs, setSavedUPIs] = useState(() => {
-    const saved = localStorage.getItem('user_upis');
-    return saved ? JSON.parse(saved) : [
-      { id: 'akash@oksbi', bank: 'State Bank of India', verified: true },
-      { id: 'akash@paytm', bank: 'Paytm Payments Bank', verified: true }
-    ];
-  });
 
-  useEffect(() => {
-    localStorage.setItem('user_upis', JSON.stringify(savedUPIs));
-  }, [savedUPIs]);
 
   const [isAddUPIOpen, setIsAddUPIOpen] = useState(false);
   const [newUPI, setNewUPI] = useState("");
@@ -213,14 +210,7 @@ const Profile = () => {
 
   // Form states
   const [giftCardData, setGiftCardData] = useState({ voucher: "", pin: "" });
-  const [activeGiftCards, setActiveGiftCards] = useState(() => {
-    const saved = localStorage.getItem('user_giftcards');
-    return saved ? JSON.parse(saved) : [];
-  });
 
-  useEffect(() => {
-    localStorage.setItem('user_giftcards', JSON.stringify(activeGiftCards));
-  }, [activeGiftCards]);
 
   const handleAddGiftCard = () => {
     if (giftCardData.voucher.length !== 16) {
