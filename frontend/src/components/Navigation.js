@@ -114,14 +114,15 @@ const Navigation = () => {
     }
   };
 
-  // Fetch products for suggestions
+  // Fetch products for live suggestions from local backend
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await axios.get("https://dummyjson.com/products?limit=100");
-        setProducts(response.data.products);
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const response = await axios.get(`${API_BASE}/api/products`);
+        setProducts(response.data);
       } catch (err) {
-        console.error("Failed to fetch products for suggestions");
+        console.error("Failed to fetch local products for suggestions");
       }
     };
     fetchProducts();
@@ -164,22 +165,22 @@ const Navigation = () => {
     };
   }, [isMobileMenuOpen]);
 
-  // Update suggestions based on query
+  // Update suggestions based on query using local product data
   useEffect(() => {
     if (searchQuery.trim().length >= 2) {
       const query = searchQuery.toLowerCase();
       const matchingProducts = products
         .filter(p =>
-          p.title.toLowerCase().includes(query) ||
-          p.category.toLowerCase().includes(query) ||
+          p.name?.toLowerCase().includes(query) ||
+          p.category?.toLowerCase().includes(query) ||
           (p.brand && p.brand.toLowerCase().includes(query))
         )
         .slice(0, 8)
         .map(p => ({
           id: p.id,
-          name: p.title,
+          name: p.name,
           category: p.category,
-          image: p.thumbnail
+          image: p.image || p.thumbnail
         }));
       setSuggestions(matchingProducts);
     } else {
@@ -223,17 +224,66 @@ const Navigation = () => {
     setRecentSearches(prev => prev.filter(s => s !== searchToRemove));
   };
 
-  const trendingSearches = ['iPhone', 'Laptop', 'Headphones', 'Watch', 'Shoes', 'Perfume'];
+
   // Initialize location based on user
   const [selectedLocation, setSelectedLocation] = useState("Select a location");
   // Update location when user changes
   useEffect(() => {
-    if (user?.id) {
-      const saved = localStorage.getItem(`user_location_${user.id}`);
-      setSelectedLocation(saved || "Select a location");
-    } else {
-      setSelectedLocation("Select a location");
-    }
+    const updateHeaderLocation = async () => {
+      if (user?.id) {
+        const savedLoc = localStorage.getItem(`user_location_${user.id}`);
+        if (savedLoc) {
+          setSelectedLocation(savedLoc);
+          return;
+        }
+
+        let savedAddr = localStorage.getItem(`user_addresses_${user.id}`);
+
+        // If no local addresses, try the backend sync
+        if (!savedAddr) {
+          try {
+            const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${API_BASE}/api/users/sync`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data && response.data.addresses?.length > 0) {
+              savedAddr = JSON.stringify(response.data.addresses);
+              // Save locally for other components
+              localStorage.setItem(`user_addresses_${user.id}`, savedAddr);
+            }
+          } catch (e) {
+            console.error("Navigation: Fail to fetch backend addresses", e);
+          }
+        }
+
+        if (savedAddr) {
+          try {
+            const addresses = JSON.parse(savedAddr);
+            if (addresses.length > 0) {
+              const firstAddr = addresses[0].addr;
+              const displayLoc = firstAddr.substring(0, 30) + (firstAddr.length > 30 ? "..." : "");
+              setSelectedLocation(displayLoc);
+              localStorage.setItem(`user_location_${user.id}`, displayLoc);
+            } else {
+              setSelectedLocation("Select a location");
+            }
+          } catch (e) {
+            setSelectedLocation("Select a location");
+          }
+        } else {
+          setSelectedLocation("Select a location");
+        }
+      } else {
+        setSelectedLocation("Select a location");
+      }
+    };
+
+    updateHeaderLocation();
+
+    // Listen for updates from other components (like Profile)
+    window.addEventListener('location_updated', updateHeaderLocation);
+    return () => window.removeEventListener('location_updated', updateHeaderLocation);
   }, [user]);
 
   // Location Dialog State
@@ -449,25 +499,7 @@ const Navigation = () => {
                   </div>
                 )}
 
-                {/* Trending Searches */}
-                {!searchQuery && (
-                  <div className="p-3">
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5 mb-2">
-                      <TrendingUp className="w-3.5 h-3.5" /> Trending
-                    </span>
-                    <div className="flex flex-wrap gap-2">
-                      {trendingSearches.map((term, i) => (
-                        <button
-                          key={i}
-                          onClick={() => handleSuggestionClick(term)}
-                          className="px-3 py-1.5 bg-gray-100 hover:bg-violet-100 text-gray-700 hover:text-violet-700 rounded-full text-sm font-medium transition-colors"
-                        >
-                          {term}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
 
                 {/* Product Suggestions */}
                 {searchQuery && suggestions.length > 0 && (
@@ -668,39 +700,19 @@ const Navigation = () => {
             {/* Mobile Search Suggestions */}
             {showSuggestions && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[70] max-h-[60vh] overflow-y-auto">
-                {searchQuery && suggestions.length > 0 ? (
+                {searchQuery && suggestions.length > 0 && (
                   <div className="py-2">
                     {suggestions.map((product) => (
                       <div
                         key={product.id}
                         onClick={() => handleSuggestionClick(product.name)}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 cursor-pointer border-b border-gray-50 last:border-0"
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-0"
                       >
                         <Search className="w-4 h-4 text-gray-300 shrink-0" />
                         <span className="text-sm text-gray-700 truncate">{product.name}</span>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  !searchQuery && (
-                    <div className="p-3">
-                      <div className="flex items-center gap-2 mb-3">
-                        <TrendingUp className="w-3.5 h-3.5 text-violet-600" />
-                        <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Trending Searches</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {trendingSearches.map((term, i) => (
-                          <button
-                            key={i}
-                            onClick={() => handleSuggestionClick(term)}
-                            className="px-3 py-1.5 bg-gray-100 rounded-full text-xs font-medium text-gray-700"
-                          >
-                            {term}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )
                 )}
               </div>
             )}
@@ -753,10 +765,6 @@ const Navigation = () => {
                 <div className="grid grid-cols-1 gap-2">
                   <Link to="/shop" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors border border-gray-50">
                     <span className="font-medium">All Products</span>
-                    <ChevronDown className="w-4 h-4 -rotate-90 text-gray-400" />
-                  </Link>
-                  <Link to="/categories" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors border border-gray-50">
-                    <span className="font-medium">Categories</span>
                     <ChevronDown className="w-4 h-4 -rotate-90 text-gray-400" />
                   </Link>
                   <Link to="/deals" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors border border-gray-50">

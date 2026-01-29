@@ -107,7 +107,7 @@ const Auth = () => {
         return;
       }
       // Show specific error message from backend
-      const errorMessage = userType === "admin" ? "Invalid admin credentials" : (userType === "vendor" ? "Invalid vendor credentials" : (err.response?.data?.detail || err.message || "Login failed. Please check your credentials or sign up first."));
+      const errorMessage = err.response?.data?.detail || err.message || "Login failed. Please check your credentials or sign up first.";
       setError(errorMessage);
     }
   };
@@ -245,8 +245,14 @@ const Auth = () => {
 
           <CardContent className="p-6">
             {error && (
-              <div className="bg-red-50 text-red-600 text-sm p-4 rounded-xl border border-red-100 mb-6 flex items-center gap-3 animate-in slide-in-from-top-2 duration-300">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              <div className={`text-sm p-4 rounded-xl border mb-6 flex items-center gap-3 animate-in slide-in-from-top-2 duration-300 ${error.includes("successfully") || error.includes("pending administrative approval")
+                  ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                  : "bg-red-50 text-red-600 border-red-100"
+                }`}>
+                <div className={`w-2 h-2 rounded-full animate-pulse ${error.includes("successfully") || error.includes("pending administrative approval")
+                    ? "bg-emerald-500"
+                    : "bg-red-500"
+                  }`} />
                 {error}
               </div>
             )}
@@ -355,7 +361,7 @@ const Auth = () => {
                           await login(email, password, "vendor");
                           navigate("/vendor");
                         } catch (err) {
-                          setError("Invalid vendor credentials");
+                          setError(err.response?.data?.detail || "Invalid vendor credentials");
                         }
                       }
                     } else {
@@ -377,11 +383,32 @@ const Auth = () => {
                           owner_name: signupData.owner_name,
                           user_type: "vendor"
                         };
-                        await register(userData);
+                        const registeredUser = await register(userData);
+
+                        // Check if vendor is pending approval
+                        if (registeredUser.status === "pending") {
+                          setError("Vendor account created successfully! Your account is pending administrative approval. You will be notified once approved.");
+                          // Reset form after showing success message
+                          setTimeout(() => {
+                            resetAuth();
+                            setAuthMode("login");
+                          }, 3000);
+                          return;
+                        }
+
                         await login(email, password, "vendor");
                         navigate("/vendor");
                       } catch (err) {
-                        setError("Vendor signup failed. Please try again.");
+                        if (err.response?.data?.status === "pending") {
+                          setError("Vendor account created successfully! Your account is pending administrative approval. You will be notified once approved.");
+                          setTimeout(() => {
+                            resetAuth();
+                            setAuthMode("login");
+                          }, 3000);
+                          return;
+                        }
+                        const errorMsg = err.response?.data?.detail || err.message || "Vendor signup failed. Please try again.";
+                        setError(errorMsg);
                       }
                     }
                   }}

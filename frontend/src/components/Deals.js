@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
-import { useCart, useWishlist } from "../App";
+import { useAuth, useCart, useWishlist } from "../App";
 import {
   ShoppingBag,
   Star,
@@ -62,8 +62,17 @@ const Deals = () => {
     setDisplayedDeals(deals.slice(0, displayedDeals.length + 24));
   };
 
+  const { user } = useAuth();
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+
+  const handleWishlistAction = (deal) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    isInWishlist(deal.id) ? removeFromWishlist(deal.id) : addToWishlist(deal);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -178,7 +187,7 @@ const Deals = () => {
                       <button
                         onClick={(e) => {
                           e.preventDefault();
-                          isInWishlist(deal.id) ? removeFromWishlist(deal.id) : addToWishlist(deal);
+                          handleWishlistAction(deal);
                         }}
                         className={`w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center transition-all hover:scale-110 ${isInWishlist(deal.id) ? 'text-rose-500' : 'text-gray-600 hover:text-rose-500'}`}
                       >

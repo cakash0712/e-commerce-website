@@ -23,17 +23,27 @@ import {
     Store,
     Package,
     Clock,
-    Award
+    Award,
+    ArrowRight
 } from "lucide-react";
-import { useCart, useWishlist } from "../App";
+import { useAuth, useCart, useWishlist } from "../App";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
 
 const DetailsView = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const { addToCart } = useCart();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+
+    const handleWishlistAction = () => {
+        if (!user) {
+            navigate('/login');
+            return;
+        }
+        isInWishlist(product.id) ? removeFromWishlist(product.id) : addToWishlist(product);
+    };
 
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -361,7 +371,7 @@ const DetailsView = () => {
                                     </button>
                                     <button
                                         className={`p-1 transition-colors ${isInWishlist(product.id) ? 'text-rose-500' : 'text-gray-500'}`}
-                                        onClick={() => isInWishlist(product.id) ? removeFromWishlist(product.id) : addToWishlist(product)}
+                                        onClick={handleWishlistAction}
                                     >
                                         <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
                                     </button>
@@ -791,13 +801,16 @@ const DetailsView = () => {
                 {relatedProducts.length > 0 && (
                     <div className="bg-gray-50 py-12">
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-gray-900">You May Also Like</h2>
-                                <Link to={`/shop?category=${product.category}`} className="text-sm text-violet-600 hover:underline font-medium">
-                                    View All
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="space-y-1">
+                                    <Badge className="bg-violet-100 text-violet-600 border-none px-3 py-1 text-[10px] font-black uppercase tracking-widest">More From</Badge>
+                                    <h2 className="text-3xl font-black text-gray-900 tracking-tighter uppercase">{product.category}</h2>
+                                </div>
+                                <Link to={`/shop?category=${product.category}`} className="text-violet-600 font-black uppercase tracking-widest text-xs flex items-center gap-2 group bg-white px-6 py-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                                    View All <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                 </Link>
                             </div>
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                                 {relatedProducts.map((p) => (
                                     <Link key={p.id} to={`/product/${p.id}`} className="group bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg hover:border-violet-200 transition-all">
                                         <div className="aspect-square bg-gray-50 overflow-hidden">

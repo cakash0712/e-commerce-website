@@ -236,18 +236,62 @@ export const useCoupons = () => {
 };
 
 const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState(() => {
-    try {
-      const savedCart = localStorage.getItem('ZippyCart_cart');
-      return savedCart ? JSON.parse(savedCart) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  const { user } = useAuth();
+  const [cartItems, setCartItems] = useState([]);
+  const userKey = user?.id ? `ZippyCart_cart_${user.id}` : 'ZippyCart_cart_guest';
 
+  // Load cart when user changes
   useEffect(() => {
-    localStorage.setItem('ZippyCart_cart', JSON.stringify(cartItems));
-  }, [cartItems]);
+    const fetchCart = async () => {
+      if (user?.id) {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${API}/users/sync`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (response.data && response.data.cart) {
+            setCartItems(response.data.cart);
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to sync cart from backend", e);
+        }
+      }
+
+      // Fallback or Guest mode
+      try {
+        const savedCart = localStorage.getItem(userKey);
+        setCartItems(savedCart ? JSON.parse(savedCart) : []);
+      } catch (e) {
+        setCartItems([]);
+      }
+    };
+
+    fetchCart();
+  }, [userKey]);
+
+  // Save cart when items change
+  useEffect(() => {
+    const syncCart = async () => {
+      if (cartItems.length > 0 || localStorage.getItem(userKey)) {
+        localStorage.setItem(userKey, JSON.stringify(cartItems));
+      }
+
+      if (user?.id) {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.put(`${API}/users/cart`, cartItems, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (e) {
+          console.error("Failed to sync cart to backend", e);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(syncCart, 1000); // Debounce sync
+    return () => clearTimeout(timeoutId);
+  }, [cartItems, userKey]);
 
   const addToCart = (product) => {
     setCartItems(prevItems => {
@@ -259,13 +303,21 @@ const CartProvider = ({ children }) => {
             : item
         );
       } else {
-        return [...prevItems, { ...product, quantity: product.quantity || 1 }];
+        return [...prevItems, { ...product, quantity: product.quantity || 1, selected: true }];
       }
     });
   };
 
   const removeFromCart = (id) => {
     setCartItems(prevItems => prevItems.filter(item => item.id !== id));
+  };
+
+  const toggleSelected = (id) => {
+    setCartItems(prevItems =>
+      prevItems.map(item =>
+        item.id === id ? { ...item, selected: !item.selected } : item
+      )
+    );
   };
 
   const updateQuantity = (id, quantity) => {
@@ -281,7 +333,9 @@ const CartProvider = ({ children }) => {
   };
 
   const getCartTotal = () => {
-    return cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+    return cartItems
+      .filter(item => item.selected)
+      .reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
   const getCartCount = () => {
@@ -293,6 +347,7 @@ const CartProvider = ({ children }) => {
       cartItems,
       addToCart,
       removeFromCart,
+      toggleSelected,
       updateQuantity,
       getCartTotal,
       getCartCount
@@ -303,18 +358,61 @@ const CartProvider = ({ children }) => {
 };
 
 const WishlistProvider = ({ children }) => {
-  const [wishlistItems, setWishlistItems] = useState(() => {
-    try {
-      const savedWishlist = localStorage.getItem('ZippyCart_wishlist');
-      return savedWishlist ? JSON.parse(savedWishlist) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  const { user } = useAuth();
+  const [wishlistItems, setWishlistItems] = useState([]);
+  const userKey = user?.id ? `ZippyCart_wishlist_${user.id}` : 'ZippyCart_wishlist_guest';
 
+  // Load wishlist when user changes
   useEffect(() => {
-    localStorage.setItem('ZippyCart_wishlist', JSON.stringify(wishlistItems));
-  }, [wishlistItems]);
+    const fetchWishlist = async () => {
+      if (user?.id) {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${API}/users/sync`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (response.data && response.data.wishlist) {
+            setWishlistItems(response.data.wishlist);
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to sync wishlist from backend", e);
+        }
+      }
+
+      try {
+        const savedWishlist = localStorage.getItem(userKey);
+        setWishlistItems(savedWishlist ? JSON.parse(savedWishlist) : []);
+      } catch (e) {
+        setWishlistItems([]);
+      }
+    };
+
+    fetchWishlist();
+  }, [userKey]);
+
+  // Save wishlist when items change
+  useEffect(() => {
+    const syncWishlist = async () => {
+      if (wishlistItems.length > 0 || localStorage.getItem(userKey)) {
+        localStorage.setItem(userKey, JSON.stringify(wishlistItems));
+      }
+
+      if (user?.id) {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.put(`${API}/users/wishlist`, wishlistItems, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (e) {
+          console.error("Failed to sync wishlist to backend", e);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(syncWishlist, 1000); // Debounce sync
+    return () => clearTimeout(timeoutId);
+  }, [wishlistItems, userKey]);
 
   const addToWishlist = (product) => {
     setWishlistItems(prevItems => {
@@ -1106,8 +1204,21 @@ const CategoriesSection = () => {
           axios.get(`${API_BASE}/api/public/categories`),
           axios.get(`${API_BASE}/api/products`)
         ]);
-        setCategories(catRes.data);
-        setProducts(prodRes.data);
+
+        const products = prodRes.data;
+        setProducts(products);
+
+        // Derive categories from actual products (same logic as Categories.js)
+        const uniqueProductCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
+        const activeCategories = uniqueProductCategories.map(catName => {
+          const metadata = catRes.data.find(bc => bc.name?.toLowerCase() === catName.toLowerCase());
+          return {
+            name: catName,
+            link: metadata?.link || `/categories/${catName.toLowerCase().replace(/\s+/g, '-')}`
+          };
+        });
+
+        setCategories(activeCategories);
       } catch (error) {
         console.error("Failed to fetch discovery data", error);
       }
@@ -1188,14 +1299,57 @@ const CategoriesSection = () => {
 
 // Featured Categories Section
 const FeaturedCategoriesSection = () => {
-  const categories = [
-    { name: "Electronics", icon: Laptop, color: "bg-blue-500", link: "/shop?category=electronics" },
-    { name: "Fashion", icon: Shirt, color: "bg-pink-500", link: "/shop?category=fashion" },
-    { name: "Accessories", icon: Watch, color: "bg-amber-500", link: "/shop?category=accessories" },
-    { name: "Home & Decor", icon: HomeIcon, color: "bg-emerald-500", link: "/shop?category=home-decoration" },
-    { name: "Sports", icon: Dumbbell, color: "bg-violet-500", link: "/shop?category=sports" },
-    { name: "Books", icon: BookOpen, color: "bg-rose-500", link: "/shop?category=books" },
-  ];
+  const [categories, setCategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchActiveCategories = async () => {
+      try {
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const [catRes, prodRes] = await Promise.all([
+          axios.get(`${API_BASE}/api/public/categories`),
+          axios.get(`${API_BASE}/api/products`)
+        ]);
+
+        const products = prodRes.data;
+        const uniqueProductCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
+
+        const colorMap = {
+          0: "bg-blue-500", 1: "bg-pink-500", 2: "bg-amber-500",
+          3: "bg-emerald-500", 4: "bg-violet-500", 5: "bg-rose-500",
+          6: "bg-indigo-500", 7: "bg-orange-500"
+        };
+
+        const iconMap = {
+          'electronics': Laptop,
+          'fashion': Shirt,
+          'accessories': Watch,
+          'home': HomeIcon,
+          'sports': Dumbbell,
+          'books': BookOpen
+        };
+
+        const activeCategories = uniqueProductCategories.slice(0, 6).map((catName, index) => {
+          const metadata = catRes.data.find(bc => bc.name?.toLowerCase() === catName.toLowerCase());
+          return {
+            name: catName,
+            icon: iconMap[catName.toLowerCase()] || Sparkles,
+            color: colorMap[index % 8],
+            link: metadata?.link || `/shop?category=${encodeURIComponent(catName.toLowerCase())}`
+          };
+        });
+
+        setCategories(activeCategories);
+      } catch (err) {
+        console.error("Failed to fetch featured categories", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchActiveCategories();
+  }, []);
+
+  if (isLoading || categories.length === 0) return null;
 
   return (
     <section className="py-24 bg-white">
@@ -1204,7 +1358,7 @@ const FeaturedCategoriesSection = () => {
           <div className="space-y-4">
             <Badge className="bg-violet-100 text-violet-600 border-none font-bold uppercase tracking-widest px-4 py-1">Explore</Badge>
             <h2 className="text-4xl lg:text-5xl font-black text-gray-900 tracking-tight">Featured Categories</h2>
-            <p className="text-gray-500 max-w-2xl text-lg">Browse our wide range of categories and find exactly what you're looking for.</p>
+            <p className="text-gray-500 max-w-2xl text-lg">Browse our wide range of active categories and find exactly what you're looking for.</p>
           </div>
           <Link to="/categories">
             <Button className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold px-8 h-12 shadow-lg shadow-violet-200">
@@ -1457,6 +1611,78 @@ const NewsletterSection = () => {
   );
 };
 
+// Category Shelf Component
+const CategoryProductShelf = ({ category, title }) => {
+  const { addToCart } = useCart();
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const response = await axios.get(`${API_BASE}/api/products?category=${category}&limit=4`);
+        setProducts(response.data);
+      } catch (err) {
+        console.error(`Failed to fetch ${category} products`, err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProducts();
+  }, [category]);
+
+  if (isLoading || products.length === 0) return null;
+
+  return (
+    <section className="py-24 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between mb-16">
+          <div className="space-y-2">
+            <Badge className="bg-violet-100 text-violet-600 border-none font-black uppercase tracking-widest text-[10px]">Featured Collection</Badge>
+            <h2 className="text-4xl lg:text-5xl font-black text-gray-900 tracking-tighter uppercase">{title}</h2>
+          </div>
+          <Link to={`/shop?category=${encodeURIComponent(category)}`} className="text-violet-600 font-black uppercase tracking-widest text-xs flex items-center gap-2 group bg-white px-6 py-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+            View All <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
+          {products.map(p => (
+            <div key={p.id} className="group relative">
+              <div className="relative aspect-[3/4] rounded-[2rem] overflow-hidden bg-gray-100 mb-6 border border-gray-50 flex items-center justify-center p-4">
+                <img src={p.image} alt={p.name} className="max-w-full max-h-full object-contain transition-transform duration-1000 group-hover:scale-110" loading="lazy" />
+                <div className="absolute top-6 left-6 flex flex-col gap-2">
+                  {p.discount > 0 && <Badge className="bg-rose-500 text-white border-none font-black px-3 py-1 text-[10px] shadow-xl">-{p.discount}% OFF</Badge>}
+                </div>
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                  <Button size="icon" className="bg-white text-gray-900 rounded-full hover:bg-violet-600 hover:text-white transition-all shadow-2xl" onClick={() => addToCart(p)}>
+                    <ShoppingCart className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 mb-2 px-2">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className={`w-3 h-3 ${i < Math.floor(p.rating || 0) ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
+                ))}
+                <span className="text-[9px] font-black text-gray-400 ml-1">({p.reviews?.length || 0})</span>
+              </div>
+              <Link to={`/product/${p.id}`}>
+                <h3 className="text-xl font-bold text-gray-900 mb-1 px-2 line-clamp-1 hover:text-violet-600 transition-colors">{p.name}</h3>
+              </Link>
+              <p className="text-gray-500 text-sm px-2 mb-3 font-medium capitalize">{p.category}</p>
+              <div className="flex items-center gap-2 px-2">
+                <span className="text-2xl font-black text-violet-600 tracking-tighter">₹{p.price.toLocaleString()}</span>
+                {p.discount > 0 && <span className="text-sm text-gray-400 line-through font-bold">₹{Math.round(p.price / (1 - p.discount / 100)).toLocaleString()}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 // Best Sellers Section
 const BestSellersSection = () => {
   const { addToCart } = useCart();
@@ -1536,27 +1762,77 @@ const BestSellersSection = () => {
 
 // Mobile Category Strip (Amazon Style)
 const MobileCategoryStrip = () => {
-  const categories = [
-    { name: "Deals", icon: TrendingUp, color: "text-rose-500", link: "/deals" },
-    { name: "Mobiles", icon: Laptop, color: "text-blue-500", link: "/shop?category=mobiles" },
-    { name: "Fashion", icon: Shirt, color: "text-orange-500", link: "/shop?category=fashion" },
-    { name: "Home", icon: HomeIcon, color: "text-emerald-500", link: "/shop?category=home" },
-    { name: "Beauty", icon: Sparkles, color: "text-violet-500", link: "/shop?category=beauty" },
-  ];
+  const [categories, setCategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchActiveCategories = async () => {
+      try {
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const [catRes, prodRes] = await Promise.all([
+          axios.get(`${API_BASE}/api/public/categories`),
+          axios.get(`${API_BASE}/api/products`)
+        ]);
+
+        const products = prodRes.data;
+        const uniqueProductCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
+
+        const iconMap = {
+          'electronics': Laptop,
+          'fashion': Shirt,
+          'accessories': Watch,
+          'home': HomeIcon,
+          'sports': Dumbbell,
+          'books': BookOpen
+        };
+
+        const activeCategories = uniqueProductCategories.map((catName) => {
+          const metadata = catRes.data.find(bc => bc.name?.toLowerCase() === catName.toLowerCase());
+          const firstProduct = products.find(p => p.category?.toLowerCase() === catName.toLowerCase());
+
+          return {
+            name: catName,
+            icon: iconMap[catName.toLowerCase()] || Sparkles,
+            image: firstProduct?.image,
+            link: metadata?.link || `/shop?category=${encodeURIComponent(catName.toLowerCase())}`
+          };
+        });
+
+        // Add 'Flash Deals' at the start
+        const allCats = [
+          { name: "Deals", icon: TrendingUp, color: "text-rose-500", link: "/deals" },
+          ...activeCategories.map(c => ({ ...c, color: "text-violet-600" }))
+        ];
+
+        setCategories(allCats);
+      } catch (err) {
+        console.error("Failed to fetch mobile categories", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchActiveCategories();
+  }, []);
+
+  if (isLoading || categories.length === 0) return null;
 
   return (
-    <div className="lg:hidden bg-white border-b border-gray-100 overflow-x-auto no-scrollbar py-2 px-2">
-      <div className="flex items-center justify-between w-full px-2">
+    <div className="lg:hidden bg-white border-b border-gray-100 overflow-x-auto no-scrollbar py-3 px-1">
+      <div className="flex items-center gap-4 px-3 w-max">
         {categories.map((cat, i) => (
           <Link
             key={i}
             to={cat.link}
-            className="flex flex-col items-center gap-1.5 px-2"
+            className="flex flex-col items-center gap-2 flex-shrink-0"
           >
-            <div className={`w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center shadow-sm border border-gray-100`}>
-              <cat.icon className={`w-5 h-5 ${cat.color}`} />
+            <div className={`w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center shadow-sm border border-gray-100 active:scale-95 transition-transform overflow-hidden p-1`}>
+              {cat.image ? (
+                <img src={cat.image} alt={cat.name} className="w-full h-full object-contain" />
+              ) : (
+                <cat.icon className={`w-6 h-6 ${cat.color}`} />
+              )}
             </div>
-            <span className="text-[10px] font-bold text-gray-600 uppercase tracking-tighter">
+            <span className="text-[10px] font-black text-gray-500 uppercase tracking-tighter whitespace-nowrap">
               {cat.name}
             </span>
           </Link>
@@ -1668,6 +1944,9 @@ const Home = () => {
 
         <PromoBannerSection />
 
+        {/* Electronics Shelf (Mobile) */}
+        <CategoryProductShelf category="electronics" title="Electronics" />
+
         <div className="bg-white px-4 py-6 mt-1">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900 uppercase tracking-tighter">Recommended For You</h2>
@@ -1683,6 +1962,10 @@ const Home = () => {
         <FeaturesSection />
         <CategoriesSection />
         <ModernBentoGrid />
+
+        {/* Electronics Shelf (Desktop) */}
+        <CategoryProductShelf category="electronics" title="Electronics" />
+
         <PromoBannerSection />
         <div className="bg-white">
           <FeaturedProductsSection />

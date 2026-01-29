@@ -23,32 +23,75 @@ const Profile = () => {
 
   // Address State
   const [addresses, setAddresses] = useState([]);
+  const addressesLoaded = useRef(false);
 
   // Load addresses specific to the logged-in user
   useEffect(() => {
-    if (user?.id) {
-      const key = `user_addresses_${user.id}`;
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        setAddresses(JSON.parse(saved));
-      } else {
-        // Default demo addresses for new users (optional, can be empty)
-        setAddresses([
-          { id: 1, type: "HOME", name: user.name, addr: "404 Sky Heights, Sector 72, Bangalore, KA 560102", phone: user.phone || "+91 98765 43210" },
-        ]);
-      }
-    } else {
-      // If no user, clear addresses or set to an empty array
-      setAddresses([]);
-    }
-  }, [user]);
+    const fetchBackendAddresses = async () => {
+      if (user?.id) {
+        try {
+          const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${API_BASE}/api/users/sync`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
 
-  // Save addresses to user-specific key
+          if (response.data && response.data.addresses) {
+            setAddresses(response.data.addresses);
+            addressesLoaded.current = true;
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to fetch addresses from backend", e);
+        }
+
+        // Fallback to localStorage if backend fails or has no addresses
+        const key = `user_addresses_${user.id}`;
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setAddresses(parsed);
+          addressesLoaded.current = true;
+        } else {
+          const defaultAddr = [
+            { id: 1, type: "HOME", name: user.name, addr: "404 Sky Heights, Sector 72, Bangalore, KA 560102", phone: user.phone || "+91 98765 43210" },
+          ];
+          setAddresses(defaultAddr);
+          addressesLoaded.current = true;
+        }
+
+        // Default location logic
+        if (!localStorage.getItem(`user_location_${user.id}`)) {
+          window.dispatchEvent(new Event('location_updated'));
+        }
+      } else {
+        setAddresses([]);
+        addressesLoaded.current = false;
+      }
+    };
+
+    fetchBackendAddresses();
+  }, [user?.id]);
+
+  // Save addresses to user-specific key and backend
   useEffect(() => {
-    if (user?.id) {
-      localStorage.setItem(`user_addresses_${user.id}`, JSON.stringify(addresses));
-    }
-  }, [addresses, user]);
+    const syncAddresses = async () => {
+      if (user?.id && addressesLoaded.current) {
+        // Sync to LocalStorage
+        localStorage.setItem(`user_addresses_${user.id}`, JSON.stringify(addresses));
+
+        // Sync to Backend
+        try {
+          await updateUser(user.id, { addresses });
+        } catch (e) {
+          console.error("Failed to sync addresses to backend", e);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(syncAddresses, 1500); // 1.5s debounce
+    return () => clearTimeout(timeoutId);
+  }, [addresses, user?.id]);
 
   const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
