@@ -101,6 +101,31 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
+class Address(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    phone: str
+    addr: str
+    type: str = "HOME" # HOME, WORK, OTHER
+
+class CartItem(BaseModel):
+    id: str
+    name: str
+    price: float
+    quantity: int
+    image: str
+    vendor_id: Optional[str] = None
+    category: Optional[str] = None
+    selected: bool = True
+
+class WishlistItem(BaseModel):
+    id: str
+    name: str
+    price: float
+    image: str
+    category: Optional[str] = None
+    rating: Optional[float] = 5.0
+
 class ShippingRate(BaseModel):
     zone: str
     cost: float
@@ -129,6 +154,9 @@ class User(BaseModel):
     is_blocked: bool = False
     token_version: int = 1
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    addresses: List[Address] = []
+    cart: List[CartItem] = []
+    wishlist: List[WishlistItem] = []
     shipping_rates: List[ShippingRate] = [] # For vendors
 
 class UserCreate(BaseModel):
@@ -509,6 +537,9 @@ class UserUpdate(BaseModel):
     business_category: Optional[str] = None
     owner_name: Optional[str] = None
     logo: Optional[str] = None
+    addresses: Optional[List[Address]] = None
+    cart: Optional[List[CartItem]] = None
+    wishlist: Optional[List[WishlistItem]] = None
 
 @api_router.put("/users/{user_id}")
 async def update_user(user_id: str, user_update: UserUpdate, current_user: Annotated[dict, Depends(get_current_user)]):
@@ -584,6 +615,27 @@ async def force_logout(user_id: str, current_admin: Annotated[dict, Depends(get_
     await db.vendors.update_one({"id": user_id}, {"$set": {"token_version": new_version}})
     
     return {"message": "Sessions terminated. Entity must re-authenticate."}
+
+@api_router.get("/users/sync")
+async def sync_user(current_user: Annotated[dict, Depends(get_current_user)]):
+    # current_user is already fetched from get_current_user, but we want the freshest data
+    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    user = await collection.find_one({"id": current_user['id']}, {"_id": 0, "password": 0})
+    return user
+
+@api_router.put("/users/cart")
+async def update_cart(cart: List[CartItem], current_user: Annotated[dict, Depends(get_current_user)]):
+    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    cart_data = [item.model_dump() for item in cart]
+    await collection.update_one({"id": current_user['id']}, {"$set": {"cart": cart_data}})
+    return {"message": "Cart synchronized"}
+
+@api_router.put("/users/wishlist")
+async def update_wishlist(wishlist: List[WishlistItem], current_user: Annotated[dict, Depends(get_current_user)]):
+    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    wishlist_data = [item.model_dump() for item in wishlist]
+    await collection.update_one({"id": current_user['id']}, {"$set": {"wishlist": wishlist_data}})
+    return {"message": "Wishlist synchronized"}
 
 @api_router.post("/orders/checkout")
 async def checkout(order_data: OrderCreate, request: Request, current_user: Annotated[dict, Depends(get_current_user)]):
