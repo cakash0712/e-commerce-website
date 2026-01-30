@@ -38,6 +38,7 @@ const Auth = () => {
     password: "",
     business_name: "",
     business_category: "",
+    business_categories: [],
     owner_name: ""
   });
 
@@ -201,6 +202,7 @@ const Auth = () => {
       password: "",
       business_name: "",
       business_category: "",
+      business_categories: [],
       owner_name: ""
     });
     setError("");
@@ -246,12 +248,12 @@ const Auth = () => {
           <CardContent className="p-6">
             {error && (
               <div className={`text-sm p-4 rounded-xl border mb-6 flex items-center gap-3 animate-in slide-in-from-top-2 duration-300 ${error.includes("successfully") || error.includes("pending administrative approval")
-                  ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                  : "bg-red-50 text-red-600 border-red-100"
+                ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                : "bg-red-50 text-red-600 border-red-100"
                 }`}>
                 <div className={`w-2 h-2 rounded-full animate-pulse ${error.includes("successfully") || error.includes("pending administrative approval")
-                    ? "bg-emerald-500"
-                    : "bg-red-500"
+                  ? "bg-emerald-500"
+                  : "bg-red-500"
                   }`} />
                 {error}
               </div>
@@ -271,18 +273,33 @@ const Auth = () => {
                         className="h-12 rounded-xl border-gray-200 focus:ring-2 focus:ring-indigo-600 transition-all shadow-sm"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-gray-700">Business Category</Label>
-                      <select
-                        value={signupData.business_category}
-                        onChange={(e) => setSignupData({ ...signupData, business_category: e.target.value })}
-                        className="h-12 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-medium focus:ring-2 focus:ring-indigo-600 transition-all shadow-sm"
-                      >
-                        <option value="">Select Category</option>
-                        {["Electronics", "Fashion", "Home & Kitchen", "Food & Beverages", "Beauty & Personal Care", "Books", "Sports & Outdoors", "Toys & Games", "Automotive", "Grocery", "Health & Wellness"].map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
+                    <div className="space-y-3">
+                      <Label className="text-sm font-semibold text-gray-700">Business Categories (Multiple allowed)</Label>
+                      <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-3 rounded-xl border border-gray-100 bg-gray-50/50">
+                        {["Supermarket", "Electronics", "Fashion", "Home & Kitchen", "Food & Beverages", "Beauty & Personal Care", "Books", "Sports & Outdoors", "Toys & Games", "Automotive", "Grocery", "Health & Wellness"].map(cat => (
+                          <label key={cat} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white transition-colors cursor-pointer border border-transparent hover:border-violet-100">
+                            <input
+                              type="checkbox"
+                              checked={signupData.business_categories.includes(cat)}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setSignupData(prev => ({
+                                  ...prev,
+                                  business_categories: checked
+                                    ? [...prev.business_categories, cat]
+                                    : prev.business_categories.filter(c => c !== cat),
+                                  // Set business_category to the first one for backward compatibility
+                                  business_category: checked
+                                    ? [...prev.business_categories, cat][0]
+                                    : prev.business_categories.filter(c => c !== cat)[0] || ""
+                                }));
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                            />
+                            <span className="text-xs font-bold text-gray-600 truncate">{cat}</span>
+                          </label>
                         ))}
-                      </select>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-semibold text-gray-700">Business Address</Label>
@@ -380,6 +397,7 @@ const Auth = () => {
                           address: signupData.address,
                           business_name: signupData.business_name,
                           business_category: signupData.business_category,
+                          business_categories: signupData.business_categories,
                           owner_name: signupData.owner_name,
                           user_type: "vendor"
                         };

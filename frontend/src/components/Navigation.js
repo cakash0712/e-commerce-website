@@ -60,15 +60,46 @@ const Navigation = () => {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
+  const recentSearchesFetched = useRef(false);
 
   // Fetch notifications for authenticated user
   useEffect(() => {
     if (user) {
       fetchNotifications();
+      fetchRecentSearches();
       const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
       return () => clearInterval(interval);
     }
   }, [user]);
+
+  const fetchRecentSearches = async () => {
+    try {
+      const guestSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/users/recent-searches`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+
+      let updatedSearches = response.data || [];
+      if (guestSearches.length > 0) {
+        const userSearchSet = new Set(updatedSearches.map(s => s.toLowerCase()));
+        const uniqueGuestSearches = guestSearches.filter(s => !userSearchSet.has(s.toLowerCase()));
+
+        if (uniqueGuestSearches.length > 0) {
+          updatedSearches = [...uniqueGuestSearches, ...updatedSearches].slice(0, 10);
+          // Sync merged back to backend
+          await axios.put(`${API_BASE}/api/users/recent-searches`, updatedSearches, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+        }
+      }
+
+      setRecentSearches(updatedSearches);
+      recentSearchesFetched.current = true;
+    } catch (e) {
+      console.error("Failed to fetch recent searches:", e);
+    }
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -148,10 +179,27 @@ const Navigation = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Save recent searches to localStorage
+  // Save recent searches to localStorage and sync with backend
   useEffect(() => {
     localStorage.setItem('recentSearches', JSON.stringify(recentSearches));
-  }, [recentSearches]);
+
+    // Sync with backend if user is logged in
+    const syncRecentSearches = async () => {
+      if (user && recentSearchesFetched.current) {
+        try {
+          const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+          await axios.put(`${API_BASE}/api/users/recent-searches`, recentSearches, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+        } catch (e) {
+          console.error("Failed to sync recent searches to backend:", e);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(syncRecentSearches, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [recentSearches, user]);
 
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
@@ -231,6 +279,23 @@ const Navigation = () => {
   useEffect(() => {
     const updateHeaderLocation = async () => {
       if (user?.id) {
+        // Try the backend sync first to get the most up-to-date delivery location
+        try {
+          const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${API_BASE}/api/users/sync`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          if (response.data && response.data.delivery_location) {
+            setSelectedLocation(response.data.delivery_location);
+            localStorage.setItem(`user_location_${user.id}`, response.data.delivery_location);
+            return;
+          }
+        } catch (e) {
+          console.error("Navigation: Fail to fetch backend delivery location", e);
+        }
+
         const savedLoc = localStorage.getItem(`user_location_${user.id}`);
         if (savedLoc) {
           setSelectedLocation(savedLoc);
@@ -330,6 +395,18 @@ const Navigation = () => {
 
     if (user?.id) {
       localStorage.setItem(`user_location_${user.id}`, finalLoc);
+
+      // Save to MongoDB
+      try {
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const token = localStorage.getItem('token');
+        axios.put(`${API_BASE}/api/users/${user.id}`,
+          { delivery_location: finalLoc },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch (e) {
+        console.error("Failed to save delivery location to MongoDB", e);
+      }
     }
 
     setIsLocationDialogOpen(false);
@@ -343,6 +420,18 @@ const Navigation = () => {
       setSelectedLocation(loc);
       if (user?.id) {
         localStorage.setItem(`user_location_${user.id}`, loc);
+
+        // Save to MongoDB
+        try {
+          const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+          const token = localStorage.getItem('token');
+          axios.put(`${API_BASE}/api/users/${user.id}`,
+            { delivery_location: loc },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (e) {
+          console.error("Failed to save pincode as delivery location to MongoDB", e);
+        }
       }
       setIsLocationDialogOpen(false);
       setPincode("");

@@ -72,7 +72,12 @@ const ProductItem = ({
             )}
 
             {/* Desktop-Only Discount Badge */}
-            {product.discount > 10 && (
+            {product.special_offer_enabled ? (
+              <div className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-sm z-10 hidden sm:flex items-center gap-1 uppercase tracking-tighter">
+                <Zap className="w-2.5 h-2.5 fill-current" />
+                Special Offer
+              </div>
+            ) : product.discount > 10 && (
               <div className="absolute top-2 left-2 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm z-10 hidden sm:block">
                 -{product.discount}%
               </div>
@@ -154,7 +159,12 @@ const ProductItem = ({
               alt={product.name}
               className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110"
             />
-            {product.discount > 10 && (
+            {product.special_offer_enabled ? (
+              <span className="absolute top-3 left-3 bg-amber-500 text-white text-[11px] font-black px-3 py-1 rounded-md shadow-md flex items-center gap-1 uppercase italic tracking-tighter">
+                <Zap className="w-3 h-3 fill-current" />
+                Limited Time Special
+              </span>
+            ) : product.discount > 10 && (
               <span className="absolute top-3 left-3 bg-rose-500 text-white text-[11px] font-bold px-2 py-1 rounded-md shadow-md">
                 -{product.discount}% OFF
               </span>
@@ -251,7 +261,7 @@ const FilterContent = ({
         <Slider
           value={filters.priceRange}
           onValueChange={(v) => setFilters({ ...filters, priceRange: v })}
-          max={100000}
+          max={500000}
           step={500}
           className="py-2"
         />
@@ -352,7 +362,7 @@ const Shop = () => {
   const [filters, setFilters] = useState({
     category: searchParams.get("category") || "",
     subCategory: "",
-    priceRange: [0, 100000],
+    priceRange: [0, 500000],
     rating: 0,
     brands: [],
     colors: [],
@@ -418,7 +428,7 @@ const Shop = () => {
         const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 
         // Fetch products
-        const prodRes = await axios.get(`${API_BASE}/api/products`);
+        const prodRes = await axios.get(`${API_BASE}/api/products?limit=1000`);
         setProducts(prodRes.data);
 
         // Extract unique brands
@@ -440,8 +450,8 @@ const Shop = () => {
 
   const filteredProducts = useMemo(() => {
     let result = products.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.category?.toLowerCase().includes(searchQuery.toLowerCase());
       const normalize = (str) => str?.toLowerCase().replace(/[^a-z0-9]/g, '');
       const matchesCategory = !filters.category ||
         (normalize(product.category) === normalize(filters.category)) ||
@@ -472,7 +482,7 @@ const Shop = () => {
     setFilters({
       category: "",
       subCategory: "",
-      priceRange: [0, 100000],
+      priceRange: [0, 500000],
       rating: 0,
       brands: [],
       colors: [],
@@ -488,7 +498,7 @@ const Shop = () => {
     filters.category,
     filters.subCategory,
     filters.rating > 0,
-    filters.priceRange[0] > 0 || filters.priceRange[1] < 100000,
+    filters.priceRange[0] > 0 || filters.priceRange[1] < 500000,
     filters.brands.length > 0,
     filters.colors.length > 0,
     filters.inStockOnly,

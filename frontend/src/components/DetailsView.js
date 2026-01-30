@@ -205,7 +205,7 @@ const DetailsView = () => {
                 price: product.price
             });
         }
-    }, [product?.id]);
+    }, [product, addToRecentlyViewed]);
 
     if (loading) {
         return (

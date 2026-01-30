@@ -1,4 +1,4 @@
-import { useEffect, useState, createContext, useContext, useRef } from "react";
+import { useEffect, useState, createContext, useContext, useRef, useCallback } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -255,7 +255,45 @@ const RecentlyViewedProvider = ({ children }) => {
   useEffect(() => {
     const fetchRecent = async () => {
       recentLoaded.current = false;
-      // First load from local storage
+      const guestKey = 'ZippyCart_recent_guest';
+      const guestItems = JSON.parse(localStorage.getItem(guestKey) || '[]');
+
+      if (user?.id) {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${API}/users/recently-viewed`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          if (response.data) {
+            let updatedRecent = response.data;
+            // Merge guest items if they exist
+            if (guestItems.length > 0) {
+              const userRecentIds = new Set(updatedRecent.map(p => p.id));
+              const uniqueGuestItems = guestItems.filter(p => !userRecentIds.has(p.id));
+
+              if (uniqueGuestItems.length > 0) {
+                updatedRecent = [...uniqueGuestItems, ...updatedRecent].slice(0, 10);
+                // Clean up guest recent after merging
+                localStorage.removeItem(guestKey);
+
+                // Sync the merged list back to backend
+                axios.put(`${API}/users/recently-viewed`, updatedRecent.map(p => p.id), {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+              }
+            }
+            setRecentProducts(updatedRecent);
+            recentLoaded.current = true;
+            localStorage.setItem(userKey, JSON.stringify(updatedRecent));
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to sync recently viewed from backend", e);
+        }
+      }
+
+      // Fallback to local storage (for guest or if backend fails)
       const saved = localStorage.getItem(userKey);
       if (saved) {
         try {
@@ -264,26 +302,12 @@ const RecentlyViewedProvider = ({ children }) => {
           setRecentProducts([]);
         }
       }
-
-      if (user?.id) {
-        try {
-          const token = localStorage.getItem('token');
-          const response = await axios.get(`${API}/users/recently-viewed`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (response.data) {
-            setRecentProducts(response.data);
-          }
-        } catch (e) {
-          console.error("Failed to fetch recently viewed from backend", e);
-        }
-      }
       recentLoaded.current = true;
     };
     fetchRecent();
   }, [user?.id, userKey]);
 
-  const addToRecentlyViewed = async (product) => {
+  const addToRecentlyViewed = useCallback(async (product) => {
     setRecentProducts(prev => {
       const filtered = prev.filter(p => p.id !== product.id);
       const newList = [product, ...filtered].slice(0, 10);
@@ -301,7 +325,7 @@ const RecentlyViewedProvider = ({ children }) => {
 
       return newList;
     });
-  };
+  }, [user?.id, userKey]);
 
   return (
     <RecentViewedContext.Provider value={{ recentProducts, addToRecentlyViewed }}>
@@ -702,7 +726,7 @@ const HeroSection = ({ stats }) => {
                     <CarouselItem>
                       <div className="relative h-[220px] sm:h-[350px] lg:h-[400px]">
                         <img
-                          src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop"
+                          src="assets/slider1.jpeg"
                           alt="Modern fashion collection"
                           className="w-full h-full object-cover"
                         />
@@ -715,7 +739,7 @@ const HeroSection = ({ stats }) => {
                     <CarouselItem>
                       <div className="relative h-[220px] sm:h-[350px] lg:h-[400px]">
                         <img
-                          src="https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=800&h=600&fit=crop"
+                          src="assets/slider2.jpeg"
                           alt="Premium tech products"
                           className="w-full h-full object-cover"
                         />
@@ -728,7 +752,7 @@ const HeroSection = ({ stats }) => {
                     <CarouselItem>
                       <div className="relative h-[220px] sm:h-[350px] lg:h-[400px]">
                         <img
-                          src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=600&fit=crop"
+                          src="assets/slider3.jpeg"
                           alt="Luxury watches"
                           className="w-full h-full object-cover"
                         />
@@ -854,7 +878,7 @@ const ModernBentoGrid = () => {
     {
       title: "Audio Elite",
       tag: "Pure Sound",
-      image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80",
+      image: "/assets/audio-elite.jpg",
       description: "Experience sound like never before with our studio-grade headphones.",
       width: "col-span-1 lg:col-span-2",
       height: "h-[240px] lg:h-[300px]",
@@ -863,7 +887,7 @@ const ModernBentoGrid = () => {
     {
       title: "Pro Workspaces",
       tag: "Efficiency",
-      image: "https://images.unsplash.com/photo-1493934558415-9d19f0b2b4d2?w=800&q=80",
+      image: "/assets/pro-workspaces.jpg",
       description: "Minimalist desk setups for maximum focus.",
       width: "col-span-1",
       height: "h-[240px] lg:h-[300px]",
@@ -872,7 +896,7 @@ const ModernBentoGrid = () => {
     {
       title: "Active Life",
       tag: "Peak Performance",
-      image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
+      image: "assets/active-life.jpg",
       description: "Gear that moves with you.",
       width: "col-span-1",
       height: "h-[240px] lg:h-[360px]",
@@ -881,7 +905,7 @@ const ModernBentoGrid = () => {
     {
       title: "Urban Style",
       tag: "2025 Look",
-      image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&q=80",
+      image: "/assets/urban-style.jpg",
       description: "Modern fashion for the urban explorer.",
       width: "col-span-1 lg:col-span-2",
       height: "h-[240px] lg:h-[360px]",
@@ -1157,7 +1181,7 @@ const PromoBannerSection = () => {
   }, []);
 
   useEffect(() => {
-    const targetDate = bestDeal?.offer_expires_at ? new Date(bestDeal.offer_expires_at) : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    const targetDate = bestDeal?.special_offer_end ? new Date(bestDeal.special_offer_end) : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
 
     const timer = setInterval(() => {
       const now = new Date().getTime();
@@ -1322,7 +1346,7 @@ const CategoriesSection = () => {
           const metadata = catRes.data.find(bc => bc.name?.toLowerCase() === catName.toLowerCase());
           return {
             name: catName,
-            link: metadata?.link || `/categories/${catName.toLowerCase().replace(/\s+/g, '-')}`
+            link: metadata?.link || `/shop?category=${encodeURIComponent(catName.toLowerCase())}`
           };
         });
 
@@ -1502,16 +1526,17 @@ const FlashDealsSection = () => {
   useEffect(() => {
     const fetchDeals = async () => {
       try {
-        const response = await axios.get('https://dummyjson.com/products?limit=4&skip=20');
-        setDeals(response.data.products.map(p => ({
-          ...p,
-          discountPrice: Math.round(p.price * 83),
-          originalPrice: Math.round(p.price * 83 * 1.5),
-          rating: p.rating,
-          reviews: Math.floor(Math.random() * 200) + 50
-        })));
+        const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const response = await axios.get(`${API_BASE}/api/products?only_deals=true&limit=100`);
+
+        // Sort by discount descending and take top 4
+        const highestOffers = response.data
+          .sort((a, b) => (b.discount || 0) - (a.discount || 0))
+          .slice(0, 4);
+
+        setDeals(highestOffers);
       } catch (e) {
-        console.error(e);
+        console.error("Error fetching homepage deals:", e);
       }
     };
     fetchDeals();
@@ -1559,27 +1584,41 @@ const FlashDealsSection = () => {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {deals.map(p => (
-            <div key={p.id} className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-[2.5rem] p-6 transition-all duration-500 hover:bg-white/10 hover:-translate-y-2 shadow-2xl">
-              <div className="relative aspect-square rounded-3xl overflow-hidden mb-6">
-                <img src={p.thumbnail} alt={p.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
-                <div className="absolute top-4 left-4">
-                  <Badge className="bg-violet-600 text-white border-none font-black">SAVE 40%</Badge>
+            <div key={p.id} className="group bg-white/5 backdrop-blur-md border border-white/10 rounded-[2.5rem] p-6 transition-all duration-500 hover:bg-white/10 hover:-translate-y-2 shadow-2xl relative">
+              <Link to={`/product/${p.id}`} className="block">
+                <div className="relative aspect-square rounded-3xl overflow-hidden mb-6 bg-white/10">
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    className="w-full h-full object-contain p-4 transition-transform duration-700 group-hover:scale-110"
+                    loading="lazy"
+                    onError={(e) => { e.target.src = "/assets/zlogo.png" }}
+                  />
+                  <div className="absolute top-4 left-4">
+                    <Badge className="bg-rose-600 text-white border-none font-black uppercase italic tracking-tighter">SAVE {p.discount}%</Badge>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-1 mb-2">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className={`w-3 h-3 ${i < Math.floor(p.rating) ? 'fill-amber-400 text-amber-400' : 'text-white/20'}`} />
-                ))}
-                <span className="text-[10px] text-gray-500 font-bold ml-1">({p.reviews})</span>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2 line-clamp-1">{p.title}</h3>
-              <div className="flex items-end gap-3 mb-6">
-                <span className="text-3xl font-black text-white tracking-tighter">₹{p.discountPrice}</span>
-                <span className="text-sm text-gray-400 line-through font-bold mb-1">₹{p.originalPrice}</span>
-              </div>
+                <div className="flex items-center gap-1 mb-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className={`w-3 h-3 ${i < Math.floor(p.rating || 4) ? 'fill-amber-400 text-amber-400' : 'text-white/20'}`} />
+                  ))}
+                  <span className="text-[10px] text-gray-500 font-bold ml-1">({p.reviews?.length || 0})</span>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2 line-clamp-1 group-hover:text-violet-400 transition-colors">{p.name}</h3>
+                <div className="flex items-end gap-3 mb-6">
+                  <span className="text-3xl font-black text-white tracking-tighter">₹{p.price.toLocaleString()}</span>
+                  {p.originalPrice > p.price && (
+                    <span className="text-sm text-gray-400 line-through font-bold mb-1">₹{p.originalPrice.toLocaleString()}</span>
+                  )}
+                </div>
+              </Link>
               <Button
-                className="w-full bg-white text-gray-950 hover:bg-violet-400 hover:text-white rounded-2xl h-14 font-black uppercase tracking-widest transition-all shadow-xl"
-                onClick={() => addToCart({ ...p, price: p.discountPrice })}
+                className="w-full bg-white text-gray-950 hover:bg-violet-400 hover:text-white rounded-2xl h-14 font-black uppercase tracking-widest transition-all shadow-xl mt-auto"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  addToCart({ ...p, quantity: 1 });
+                }}
               >
                 Snap It Up
               </Button>
@@ -2049,10 +2088,10 @@ const Home = () => {
           <AmazonGridCard
             title="International Brands"
             items={[
-              { name: "Electronics", image: "https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=400&q=80", link: "/shop?category=electronics" },
-              { name: "Luxury Fashion", image: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&q=80", link: "/shop?category=fashion" },
-              { name: "Smart Home", image: "https://images.unsplash.com/photo-1558002038-1055907df827?w=400&q=80", link: "/shop?category=home" },
-              { name: "Pro Fitness", image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&q=80", link: "/shop?category=sports" },
+              { name: "Electronics", image: "assets/electronics.jpg", link: "/shop?category=electronics" },
+              { name: "Luxury Fashion", image: "assets/urban-style.jpg", link: "/shop?category=fashion" },
+              { name: "Smart Home", image: "assets/smart-home.jpg", link: "/shop?category=home" },
+              { name: "Pro Fitness", image: "assets/active-life.jpg", link: "/shop?category=sports" },
             ]}
             link="/categories"
           />

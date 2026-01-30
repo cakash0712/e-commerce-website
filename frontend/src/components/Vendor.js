@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -19,7 +19,7 @@ import {
   Settings, Image, FileText, CheckCircle2, AlertCircle,
   XCircle, Search, Bell, MoreVertical, Globe, ShieldCheck,
   ChevronRight, ChevronDown, Tag, UserCheck, Store, Mail, MapPin, Phone,
-  RotateCcw, LifeBuoy, BookOpen, Headset, Send, Truck, Clock
+  RotateCcw, LifeBuoy, BookOpen, Headset, Send, Truck, Clock, Zap
 } from "lucide-react";
 import { useAuth } from "../App";
 import {
@@ -57,6 +57,7 @@ const CATEGORY_CONFIG = {
 };
 
 const SUB_CATEGORIES = {
+  'Supermarket': ['Grocery', 'Household', 'Personal Care', 'Beverages', 'Snacks', 'Packaged Food', 'Dairy'],
   'Electronics': ['Mobile Phones', 'Laptops', 'Audio', 'Wearables', 'Cameras', 'Accessories', 'Gaming'],
   'Fashion': ['Men', 'Women', 'Kids', 'Footwear', 'Watches', 'Accessories', 'Activewear'],
   'Home': ['Furniture', 'Decor', 'Kitchen', 'Bedding', 'Lighting', 'Storage'],
@@ -67,7 +68,7 @@ const SUB_CATEGORIES = {
   'Toys': ['Action Figures', 'Board Games', 'Outdoor', 'Educational'],
   'Health': ['Supplements', 'Equipment', 'Personal Care'],
   'Automotive': ['Car Accessories', 'Bike Accessories', 'Tools'],
-  'Office': ['Stationery', 'Furniture', 'Electronics']
+  'Office': ['Stationery', 'Furniture', 'Office Electronics']
 };
 
 const Vendor = () => {
@@ -86,6 +87,7 @@ const Vendor = () => {
     fetchSupportTickets();
     fetchVendorCoupons();
     fetchVendorReviews();
+    fetchCategories();
   }, []);
 
   useEffect(() => {
@@ -191,6 +193,16 @@ const Vendor = () => {
       setReviews(response.data);
     } catch (e) {
       console.error("Failed to fetch reviews:", e);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/public/categories`);
+      setAvailableCategories(response.data);
+    } catch (e) {
+      console.error("Failed to fetch categories:", e);
     }
   };
 
@@ -473,6 +485,7 @@ const Vendor = () => {
     logo: user?.logo || '',
     banner: user?.banner || '',
     business_category: user?.business_category || '',
+    business_categories: user?.business_categories || [],
     business_sub_category: user?.business_sub_category || ''
   });
 
@@ -738,7 +751,17 @@ const Vendor = () => {
     brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
     offer_expires_at: '', deal_duration: 'custom',
     images: '', highlights: '', specifications: '', warranty: '', box_contents: '',
-    delivery_type: 'free', delivery_charge: '', free_delivery_above: ''
+    delivery_type: 'free', delivery_charge: '', free_delivery_above: '',
+    base_price: '',
+    normal_discount_type: 'percentage',
+    normal_discount_value: '',
+    special_offer_enabled: false,
+    special_offer_type: 'percentage',
+    special_offer_value: '',
+    special_offer_start: '',
+    special_offer_end: '',
+    search_tags: '',
+    return_policy: '7-day easy replacement/return'
   });
 
   const handleEditInitiate = (product) => {
@@ -767,7 +790,17 @@ const Vendor = () => {
       deal_duration: 'custom',
       delivery_type: product.delivery_type || 'free',
       delivery_charge: (product.delivery_charge || '').toString(),
-      free_delivery_above: (product.free_delivery_above || '').toString()
+      free_delivery_above: (product.free_delivery_above || '').toString(),
+      base_price: (product.base_price || product.originalPrice || product.price).toString(),
+      normal_discount_type: product.normal_discount_type || 'percentage',
+      normal_discount_value: (product.normal_discount_value || 0).toString(),
+      special_offer_enabled: product.special_offer_enabled || false,
+      special_offer_type: product.special_offer_type || 'percentage',
+      special_offer_value: (product.special_offer_value || 0).toString(),
+      special_offer_start: product.special_offer_start ? new Date(new Date(product.special_offer_start).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '',
+      special_offer_end: product.special_offer_end ? new Date(new Date(product.special_offer_end).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '',
+      search_tags: (product.search_tags || []).join(', '),
+      return_policy: product.return_policy || '7-day easy replacement/return'
     });
     setShowAddForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -804,7 +837,7 @@ const Vendor = () => {
     const newErrors = {};
     if (!newProduct.name) newErrors.name = "Product Name is required";
     if (!newProduct.category) newErrors.category = "Category is required";
-    if (!newProduct.price) newErrors.price = "Price is required";
+    if (!newProduct.base_price) newErrors.base_price = "Base Price is required";
     if (!newProduct.stock) newErrors.stock = "Stock is required";
     if (!newProduct.description) newErrors.description = "Description is required";
     if (!newProduct.image) newErrors.image = "Main Image is required";
@@ -826,9 +859,26 @@ const Vendor = () => {
         });
       }
 
+      const getParentCategory = (sub) => {
+        for (const [parent, subs] of Object.entries(SUB_CATEGORIES)) {
+          if (subs.includes(sub)) return parent;
+        }
+        return sub; // Fallback if no parent found (e.g. it is a parent)
+      };
+
+      const finalCategory = getParentCategory(newProduct.category);
+      const finalSubCategory = finalCategory !== newProduct.category ? newProduct.category : '';
+
       const payload = {
         ...newProduct,
-        price: parseFloat(newProduct.price),
+        category: finalCategory,
+        sub_category: finalSubCategory || newProduct.sub_category,
+        base_price: parseFloat(newProduct.base_price),
+        normal_discount_value: parseFloat(newProduct.normal_discount_value || 0),
+        special_offer_value: parseFloat(newProduct.special_offer_value || 0),
+        special_offer_start: newProduct.special_offer_start ? new Date(newProduct.special_offer_start).toISOString() : null,
+        special_offer_end: newProduct.special_offer_end ? new Date(newProduct.special_offer_end).toISOString() : null,
+        price: parseFloat(newProduct.price || 0), // Backend will recalculate
         stock: parseInt(newProduct.stock),
         discount: parseInt(newProduct.discount || 0),
         colors: newProduct.colors.split(',').map(c => c.trim()).filter(c => c),
@@ -839,19 +889,21 @@ const Vendor = () => {
         offer_expires_at: newProduct.offer_expires_at ? new Date(newProduct.offer_expires_at).toISOString() : null,
         delivery_type: newProduct.delivery_type,
         delivery_charge: newProduct.delivery_charge ? parseFloat(newProduct.delivery_charge) : 0,
-        free_delivery_above: newProduct.free_delivery_above ? parseFloat(newProduct.free_delivery_above) : 0
+        free_delivery_above: newProduct.free_delivery_above ? parseFloat(newProduct.free_delivery_above) : 0,
+        search_tags: newProduct.search_tags.split(',').map(t => t.trim()).filter(t => t),
+        return_policy: newProduct.return_policy || '7-day easy replacement/return'
       };
 
       if (editingProduct) {
         await axios.put(`${API_BASE}/api/products/${editingProduct}`, payload, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
-        alert("Product updated. Admin will review the changes soon.");
+        alert("Product updated and submitted for re-approval.");
       } else {
         await axios.post(`${API_BASE}/api/products`, payload, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
-        alert("Product submitted for admin review.");
+        alert("Product submitted for approval.");
       }
 
       setShowAddForm(false);
@@ -860,7 +912,11 @@ const Vendor = () => {
         brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
         offer_expires_at: '',
         images: '', highlights: '', specifications: '', warranty: '', box_contents: '',
-        delivery_type: 'free', delivery_charge: '', free_delivery_above: ''
+        delivery_type: 'free', delivery_charge: '', free_delivery_above: '',
+        base_price: '', normal_discount_type: 'percentage', normal_discount_value: '',
+        special_offer_enabled: false, special_offer_type: 'percentage', special_offer_value: '',
+        special_offer_start: '', special_offer_end: '',
+        search_tags: '', return_policy: '7-day easy replacement/return'
       });
       fetchVendorProducts();
     } catch (e) {
@@ -912,7 +968,8 @@ const Vendor = () => {
               setEditingProduct(null);
               setNewProduct({
                 name: '', category: '', price: '', stock: '', image: '', description: '',
-                brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: ''
+                brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
+                search_tags: '', return_policy: '7-day easy replacement/return'
               });
             } else {
               setShowAddForm(true);
@@ -935,7 +992,7 @@ const Vendor = () => {
                     </span>
                   </CardTitle>
                   <CardDescription className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-2">
-                    Add all details for your {user?.business_category || 'product'}. Admin will review before it goes live.
+                    Add all details for your {user?.business_category || 'product'}. It will be reviewed by our admin team before going live.
                   </CardDescription>
                 </div>
                 <Button
@@ -955,6 +1012,7 @@ const Vendor = () => {
                     <TabsTrigger value="fiscal" className="h-full px-8 rounded-none border-b-2 border-transparent data-[state=active]:border-violet-600 data-[state=active]:bg-white font-black text-[10px] uppercase tracking-widest transition-all">02. Price & Stock</TabsTrigger>
                     <TabsTrigger value="media" className="h-full px-8 rounded-none border-b-2 border-transparent data-[state=active]:border-violet-600 data-[state=active]:bg-white font-black text-[10px] uppercase tracking-widest transition-all">03. Photos</TabsTrigger>
                     <TabsTrigger value="specifications" className="h-full px-8 rounded-none border-b-2 border-transparent data-[state=active]:border-violet-600 data-[state=active]:bg-white font-black text-[10px] uppercase tracking-widest transition-all">04. More Details</TabsTrigger>
+                    <TabsTrigger value="optimization" className="h-full px-8 rounded-none border-b-2 border-transparent data-[state=active]:border-violet-600 data-[state=active]:bg-white font-black text-[10px] uppercase tracking-widest transition-all">05. Optimization</TabsTrigger>
                   </TabsList>
 
                   <div className="p-10">
@@ -992,15 +1050,28 @@ const Vendor = () => {
                             <SelectTrigger className={`h-14 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white font-bold ${errors.category ? 'border-red-500 bg-red-50/10' : ''}`}>
                               <SelectValue placeholder="Select Category" />
                             </SelectTrigger>
-                            <SelectContent className="rounded-2xl border-none shadow-2xl">
-                              {user?.business_category && SUB_CATEGORIES[user.business_category] ? (
-                                SUB_CATEGORIES[user.business_category].map(cat => (
-                                  <SelectItem key={cat} value={cat} className="font-bold text-xs">{cat}</SelectItem>
+                            <SelectContent className="rounded-2xl border-none shadow-2xl max-h-80">
+                              {user?.business_categories?.length > 0 ? (
+                                user.business_categories.map(mainCat => (
+                                  <SelectGroup key={mainCat}>
+                                    <SelectLabel className="px-3 py-2 text-[9px] uppercase font-black text-violet-600 bg-violet-50/50 tracking-widest">{mainCat}</SelectLabel>
+                                    {SUB_CATEGORIES[mainCat] ? SUB_CATEGORIES[mainCat].map(sub => (
+                                      <SelectItem key={sub} value={sub} className="font-bold text-xs pl-6">{sub}</SelectItem>
+                                    )) : (
+                                      <SelectItem key={mainCat} value={mainCat} className="font-bold text-xs pl-6">{mainCat}</SelectItem>
+                                    )}
+                                  </SelectGroup>
                                 ))
                               ) : (
-                                ["Electronics", "Fashion", "Home", "Beauty", "Sports", "Toys", "Health", "Grocery", "Office", "Automotive", "Books", "VideoGames", "PetSupplies", "Tools"].map(cat => (
-                                  <SelectItem key={cat} value={cat} className="font-bold text-xs">{cat}</SelectItem>
-                                ))
+                                user?.business_category && SUB_CATEGORIES[user.business_category] ? (
+                                  SUB_CATEGORIES[user.business_category].map(cat => (
+                                    <SelectItem key={cat} value={cat} className="font-bold text-xs">{cat}</SelectItem>
+                                  ))
+                                ) : (
+                                  ["Electronics", "Fashion", "Home", "Beauty", "Sports", "Toys", "Health", "Grocery", "Office", "Automotive", "Books", "VideoGames", "PetSupplies", "Tools"].map(cat => (
+                                    <SelectItem key={cat} value={cat} className="font-bold text-xs">{cat}</SelectItem>
+                                  ))
+                                )
                               )}
                             </SelectContent>
                           </Select>
@@ -1046,39 +1117,152 @@ const Vendor = () => {
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="fiscal" className="mt-0 space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div className="space-y-3">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Price (₹) *</Label>
-                          <div className="relative">
-                            <Input
-                              required
-                              type="number"
-                              placeholder="0.00"
-                              value={newProduct.price}
-                              onChange={(e) => {
-                                setNewProduct({ ...newProduct, price: e.target.value });
-                                if (errors.price) setErrors({ ...errors, price: null });
-                              }}
-                              className={`h-14 rounded-2xl border-slate-100 font-black text-xl pl-10 ${errors.price ? 'border-red-500 bg-red-50/10' : ''}`}
-                            />
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-black">₹</span>
+                    <TabsContent value="fiscal" className="mt-0 space-y-10 animate-in fade-in slide-in-from-left-4 duration-500">
+                      {/* Price Section */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center text-violet-600">
+                            <DollarSign className="w-5 h-5" />
                           </div>
-                          {errors.price && <span className="text-red-500 text-[10px] uppercase font-bold tracking-wider ml-2 animate-pulse">{errors.price}</span>}
+                          <h4 className="text-sm font-black uppercase tracking-widest text-slate-800">Standard Pricing</h4>
                         </div>
-                        <div className="space-y-3">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Discount (%)</Label>
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            max="100"
-                            value={newProduct.discount}
-                            onChange={(e) => setNewProduct({ ...newProduct, discount: e.target.value })}
-                            className="h-14 rounded-2xl border-slate-100 font-black text-xl"
-                          />
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-8 bg-slate-50/50 rounded-[2rem] border border-slate-100">
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Base Price (₹) *</Label>
+                            <div className="relative">
+                              <Input
+                                required
+                                type="number"
+                                placeholder="0.00"
+                                value={newProduct.base_price}
+                                onChange={(e) => {
+                                  setNewProduct({ ...newProduct, base_price: e.target.value });
+                                  if (errors.base_price) setErrors({ ...errors, base_price: null });
+                                }}
+                                className={`h-14 rounded-2xl border-slate-100 font-black text-xl pl-10 ${errors.base_price ? 'border-red-500 bg-red-50/10' : ''}`}
+                              />
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-black">₹</span>
+                            </div>
+                            {errors.base_price && <span className="text-red-500 text-[10px] uppercase font-bold tracking-wider ml-2 animate-pulse">{errors.base_price}</span>}
+                          </div>
+
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Normal Discount Type</Label>
+                            <Select
+                              value={newProduct.normal_discount_type}
+                              onValueChange={(val) => setNewProduct({ ...newProduct, normal_discount_type: val })}
+                            >
+                              <SelectTrigger className="h-14 rounded-2xl border-slate-100 bg-white font-bold">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-xl border-none shadow-xl">
+                                <SelectItem value="percentage" className="font-bold text-xs">Percentage (%)</SelectItem>
+                                <SelectItem value="fixed" className="font-bold text-xs">Fixed Amount (₹)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Normal Discount Value</Label>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              value={newProduct.normal_discount_value}
+                              onChange={(e) => setNewProduct({ ...newProduct, normal_discount_value: e.target.value })}
+                              className="h-14 rounded-2xl border-slate-100 font-black text-xl"
+                            />
+                          </div>
                         </div>
+                      </div>
+
+                      {/* Special Offer Section */}
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600">
+                              <Zap className="w-5 h-5" />
+                            </div>
+                            <h4 className="text-sm font-black uppercase tracking-widest text-slate-800">Special Offer Zone</h4>
+                          </div>
+                          <div className="flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-xl">
+                            <input
+                              type="checkbox"
+                              id="special_offer_enabled"
+                              className="w-4 h-4 accent-violet-600"
+                              checked={newProduct.special_offer_enabled}
+                              onChange={(e) => setNewProduct({ ...newProduct, special_offer_enabled: e.target.checked })}
+                            />
+                            <Label htmlFor="special_offer_enabled" className="text-[10px] font-black uppercase tracking-widest cursor-pointer">Enable Special Offer</Label>
+                          </div>
+                        </div>
+
+                        <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 p-8 bg-amber-50/30 rounded-[2rem] border border-amber-100 transition-all duration-500 ${!newProduct.special_offer_enabled ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Offer Discount Type</Label>
+                            <Select
+                              value={newProduct.special_offer_type}
+                              onValueChange={(val) => setNewProduct({ ...newProduct, special_offer_type: val })}
+                            >
+                              <SelectTrigger className="h-14 rounded-2xl border-slate-100 bg-white font-bold">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-xl border-none shadow-xl">
+                                <SelectItem value="percentage" className="font-bold text-xs">Percentage (%)</SelectItem>
+                                <SelectItem value="fixed" className="font-bold text-xs">Fixed Amount (₹)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Offer Value</Label>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              value={newProduct.special_offer_value}
+                              onChange={(e) => setNewProduct({ ...newProduct, special_offer_value: e.target.value })}
+                              className="h-14 rounded-2xl border-slate-100 font-black text-xl"
+                            />
+                          </div>
+
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Start Date & Time</Label>
+                            <Input
+                              type="datetime-local"
+                              value={newProduct.special_offer_start}
+                              onChange={(e) => setNewProduct({ ...newProduct, special_offer_start: e.target.value })}
+                              className="h-14 rounded-2xl border-slate-100 font-bold"
+                            />
+                          </div>
+
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">End Date & Time</Label>
+                            <Input
+                              type="datetime-local"
+                              value={newProduct.special_offer_end}
+                              onChange={(e) => setNewProduct({ ...newProduct, special_offer_end: e.target.value })}
+                              className="h-14 rounded-2xl border-slate-100 font-bold"
+                            />
+                          </div>
+
+                          <div className="space-y-3 md:col-span-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Offer Details (e.g. Buy 1 Get 1)</Label>
+                            <Input
+                              placeholder="e.g. Buy 1 Get 1, Free gift with purchase, use code SAVE10"
+                              value={newProduct.offers}
+                              onChange={(e) => setNewProduct({ ...newProduct, offers: e.target.value })}
+                              className="h-14 rounded-2xl border-slate-100 font-bold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stock & Preview */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-slate-100">
                         <div className="space-y-3">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Items in Stock *</Label>
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 flex items-center gap-2">
+                            <Box className="w-3 h-3 text-slate-400" /> Items in Stock *
+                          </Label>
                           <Input
                             required
                             type="number"
@@ -1092,55 +1276,29 @@ const Vendor = () => {
                           />
                           {errors.stock && <span className="text-red-500 text-[10px] uppercase font-bold tracking-wider ml-2 animate-pulse">{errors.stock}</span>}
                         </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Special Offers</Label>
-                          <Input
-                            placeholder="e.g. Buy 1 Get 1, Use code FIRST50 for 50% extra credit"
-                            value={newProduct.offers}
-                            onChange={(e) => setNewProduct({ ...newProduct, offers: e.target.value })}
-                            className="h-14 rounded-2xl border-slate-100 font-bold"
-                          />
-                        </div>
-                        <div className="space-y-3">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 italic text-violet-600">Offer end date & time</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              type="datetime-local"
-                              value={newProduct.offer_expires_at}
-                              onChange={(e) => setNewProduct({ ...newProduct, offer_expires_at: e.target.value, deal_duration: 'custom' })}
-                              className="h-14 rounded-2xl border-slate-100 font-bold flex-1"
-                            />
-                            <Select
-                              value={newProduct.deal_duration}
-                              onValueChange={(val) => {
-                                if (val === 'custom') return;
-                                const now = new Date();
-                                if (val === '24h') now.setHours(now.getHours() + 24);
-                                if (val === '3d') now.setDate(now.getDate() + 3);
-                                if (val === '7d') now.setDate(now.getDate() + 7);
-                                if (val === '30d') now.setDate(now.getDate() + 30);
-                                setNewProduct({
-                                  ...newProduct,
-                                  deal_duration: val,
-                                  offer_expires_at: now.toISOString().slice(0, 16)
-                                });
-                              }}
-                            >
-                              <SelectTrigger className="w-32 h-14 rounded-2xl border-slate-100 font-bold">
-                                <SelectValue placeholder="Duration" />
-                              </SelectTrigger>
-                              <SelectContent className="rounded-xl border-none shadow-xl">
-                                <SelectItem value="custom" className="font-bold text-xs">Custom</SelectItem>
-                                <SelectItem value="24h" className="font-bold text-xs text-rose-600">24 Hours</SelectItem>
-                                <SelectItem value="3d" className="font-bold text-xs text-orange-600">3 Days</SelectItem>
-                                <SelectItem value="7d" className="font-bold text-xs text-violet-600">1 Week</SelectItem>
-                                <SelectItem value="30d" className="font-bold text-xs text-blue-600">1 Month</SelectItem>
-                              </SelectContent>
-                            </Select>
+
+                        <div className="bg-violet-50 rounded-[2rem] p-6 flex flex-col justify-center border border-violet-100">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-violet-400 mb-1">Estimated Final Price</p>
+                          <div className="flex items-end gap-2">
+                            <span className="text-4xl font-black text-violet-600">₹{(() => {
+                              let base = parseFloat(newProduct.base_price || 0);
+                              let current = base;
+                              if (newProduct.normal_discount_type === 'percentage') {
+                                current -= (base * (parseFloat(newProduct.normal_discount_value || 0) / 100));
+                              } else {
+                                current -= parseFloat(newProduct.normal_discount_value || 0);
+                              }
+                              if (newProduct.special_offer_enabled) {
+                                if (newProduct.special_offer_type === 'percentage') {
+                                  current -= (current * (parseFloat(newProduct.special_offer_value || 0) / 100));
+                                } else {
+                                  current -= parseFloat(newProduct.special_offer_value || 0);
+                                }
+                              }
+                              return Math.max(0, Math.round(current)).toLocaleString();
+                            })()}</span>
+                            <span className="text-[10px] font-bold text-violet-400 mb-2 uppercase">System Calculated</span>
                           </div>
-                          <p className="text-[10px] text-slate-400 ml-2">Setting a duration will automatically calculate the expiry date.</p>
                         </div>
                       </div>
 
@@ -1388,11 +1546,38 @@ const Vendor = () => {
                         </div>
                       </div>
                     </TabsContent>
+
+                    <TabsContent value="optimization" className="mt-0 space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
+                      <div className="space-y-6">
+                        <div className="space-y-3">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Search Optimized Keywords (Tags)</Label>
+                          <Input
+                            placeholder="e.g. bluetooth headphones, wireless earphones, bass boost, sony alternative"
+                            value={newProduct.search_tags}
+                            onChange={(e) => setNewProduct({ ...newProduct, search_tags: e.target.value })}
+                            className="h-14 rounded-2xl border-slate-100 font-bold"
+                          />
+                          <p className="text-[10px] text-slate-400 ml-2 uppercase font-black tracking-widest italic">Use commas to separate tags. These keywords help customers find your product.</p>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Customer Return Policy</Label>
+                          <Textarea
+                            placeholder="e.g. 7-day easy replacement if product is damaged. Box & bill must be preserved."
+                            rows={4}
+                            value={newProduct.return_policy}
+                            onChange={(e) => setNewProduct({ ...newProduct, return_policy: e.target.value })}
+                            className="rounded-2xl border-slate-100 font-medium"
+                          />
+                          <p className="text-[10px] text-slate-400 ml-2 uppercase font-black tracking-widest italic">Be clear about return conditions to avoid disputes.</p>
+                        </div>
+                      </div>
+                    </TabsContent>
                   </div>
 
                   <div className="p-10 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
-                      Admin will review your product before it goes live.
+                      Your product will be reviewed by our team before listing.
                     </p>
                     <Button type="submit" className="h-14 px-12 bg-violet-600 hover:bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-2xl shadow-violet-200 transition-all active:scale-95">
                       {editingProduct ? 'Save Changes' : 'Add Product'}
@@ -1434,16 +1619,22 @@ const Vendor = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-bold text-sm text-gray-900">{p.name}</p>
-                            {p.discount >= 35 && (
-                              <Badge className="bg-rose-100 text-rose-600 border-none px-1.5 py-0 text-[8px] font-black uppercase">Active Deal</Badge>
+                            {p.special_offer_enabled && (
+                              <Badge className="bg-amber-100 text-amber-600 border-none px-1.5 py-0 text-[8px] font-black uppercase">Special Offer</Badge>
+                            )}
+                            {p.offers && (
+                              <Badge className="bg-blue-100 text-blue-600 border-none px-1.5 py-0 text-[8px] font-black uppercase">Bundle Offer</Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5">
+                          <div className="flex flex-wrap items-center gap-2 mt-0.5">
                             <p className="text-xs text-gray-400">{p.category}</p>
-                            {p.offer_expires_at && new Date(p.offer_expires_at) > new Date() && (
-                              <div className="flex items-center gap-1 text-[9px] text-blue-600 font-bold">
-                                <Clock className="w-2.5 h-2.5" />
-                                {Math.ceil((new Date(p.offer_expires_at) - new Date()) / (1000 * 60 * 60 * 24))} days left
+                            {p.offers && (
+                              <p className="text-[10px] text-blue-500 font-bold italic truncate max-w-[120px]" title={p.offers}>{p.offers}</p>
+                            )}
+                            {p.special_offer_end && new Date(p.special_offer_end) > new Date() && (
+                              <div className="flex items-center gap-1 text-[9px] text-amber-600 font-bold">
+                                <Zap className="w-2.5 h-2.5" />
+                                {Math.ceil((new Date(p.special_offer_end) - new Date()) / (1000 * 60 * 60 * 24))}d left
                               </div>
                             )}
                           </div>
@@ -1457,10 +1648,10 @@ const Vendor = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex flex-col items-end">
-                        <span className="text-sm font-black text-gray-900">₹{p.price}</span>
+                        <span className="text-sm font-black text-gray-900">₹{p.price.toLocaleString()}</span>
                         {p.discount > 0 && (
                           <span className="text-[10px] text-gray-400 line-through font-bold">
-                            ₹{Math.round(p.price / (1 - p.discount / 100))}
+                            ₹{(p.base_price || p.originalPrice || Math.round(p.price / (1 - p.discount / 100))).toLocaleString()}
                           </span>
                         )}
                       </div>
@@ -2011,14 +2202,14 @@ const Vendor = () => {
                 }}>Save Changes</Button>
                 <Button variant="ghost" className="rounded-xl" onClick={() => {
                   setIsEditingBusiness(false);
-                  // Reset to original user data
                   setStoreSettings({
                     ...storeSettings,
                     business_name: user?.business_name || '',
                     owner_name: user?.owner_name || '',
                     phone: user?.phone || '',
                     email: user?.email || '',
-                    business_category: user?.business_category || ''
+                    business_category: user?.business_category || '',
+                    business_categories: user?.business_categories || []
                   });
                 }}>Cancel</Button>
               </div>
@@ -2076,49 +2267,45 @@ const Vendor = () => {
               )}
             </div>
 
-            <div className="space-y-1 md:col-span-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Business Category <span className="text-violet-600">*</span></Label>
+            <div className="space-y-3 md:col-span-2 pt-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Authorized Product Categories</Label>
               {isEditingBusiness ? (
-                <Select
-                  value={storeSettings.business_category}
-                  onValueChange={(val) => setStoreSettings({ ...storeSettings, business_category: val, business_sub_category: '' })}
-                >
-                  <SelectTrigger className="bg-white border-violet-200 font-bold h-12">
-                    <SelectValue placeholder="Select Primary Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["Electronics", "Fashion", "Home & Kitchen", "Food & Beverages", "Beauty & Personal Care", "Books", "Sports & Outdoors", "Toys & Games", "Automotive", "Grocery", "Health & Wellness"].map(cat => (
-                      <SelectItem key={cat} value={cat} className="font-medium">{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-4 rounded-2xl border border-violet-100 bg-violet-50/30 max-h-48 overflow-y-auto">
+                  {["Supermarket", "Electronics", "Fashion", "Home & Kitchen", "Food & Beverages", "Beauty & Personal Care", "Books", "Sports & Outdoors", "Toys & Games", "Automotive", "Grocery", "Health & Wellness"].map(cat => (
+                    <label key={cat} className="flex items-center gap-2 p-2 rounded-xl hover:bg-white transition-all cursor-pointer group border border-transparent hover:border-violet-200">
+                      <input
+                        type="checkbox"
+                        checked={storeSettings.business_categories?.includes(cat)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setStoreSettings(prev => ({
+                            ...prev,
+                            business_categories: checked
+                              ? [...(prev.business_categories || []), cat]
+                              : (prev.business_categories || []).filter(c => c !== cat)
+                          }));
+                        }}
+                        className="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-600"
+                      />
+                      <span className="text-xs font-bold text-gray-600 group-hover:text-violet-600 transition-colors uppercase tracking-tighter">{cat}</span>
+                    </label>
+                  ))}
+                </div>
               ) : (
-                <Input value={user?.business_category || 'Not Set'} readOnly className="bg-gray-50 border-gray-100 font-bold text-violet-600" />
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {(user?.business_categories || []).length > 0 ? user.business_categories.map(cat => (
+                    <Badge key={cat} className="bg-violet-50 text-violet-700 border-violet-100 font-bold px-3 py-1 rounded-lg">
+                      {cat}
+                    </Badge>
+                  )) : (
+                    <Badge className="bg-gray-50 text-gray-400 border-gray-100 font-bold px-3 py-1 rounded-lg">
+                      {user?.business_category || 'General'}
+                    </Badge>
+                  )}
+                </div>
               )}
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest italic ml-1">Select all categories you plan to sell in.</p>
             </div>
-
-            {storeSettings.business_category && SUB_CATEGORIES[storeSettings.business_category] && (
-              <div className="space-y-1 md:col-span-2">
-                <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Business Sub-Category</Label>
-                {isEditingBusiness ? (
-                  <Select
-                    value={storeSettings.business_sub_category}
-                    onValueChange={(val) => setStoreSettings({ ...storeSettings, business_sub_category: val })}
-                  >
-                    <SelectTrigger className="bg-white border-violet-200 font-bold h-12">
-                      <SelectValue placeholder="Select Sub-Category (Optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SUB_CATEGORIES[storeSettings.business_category].map(sub => (
-                        <SelectItem key={sub} value={sub} className="font-medium">{sub}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input value={user?.business_sub_category || 'Not Set'} readOnly className="bg-gray-50 border-gray-100 font-bold text-violet-600" />
-                )}
-              </div>
-            )}
 
             <div className="md:col-span-2 mt-4 p-4 bg-emerald-50 rounded-xl border border-emerald-100 flex items-start gap-4">
               <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -2129,7 +2316,6 @@ const Vendor = () => {
             </div>
           </CardContent>
         </Card>
-
       </div>
     </div>
   );

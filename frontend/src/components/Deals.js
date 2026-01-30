@@ -4,7 +4,7 @@ import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { useAuth, useCart, useWishlist } from "../App";
+import { useAuth, useCart, useWishlist, useRecentlyViewed } from "../App";
 import {
   ShoppingBag,
   Star,
@@ -26,8 +26,50 @@ import {
 import Navigation from "./Navigation";
 import Footer from "./Footer";
 
-// Minimum discount threshold for deals
-const MIN_DISCOUNT_THRESHOLD = 35;
+// Deals page configuration
+const DEALS_PAGE_TITLE = "Special Offers";
+
+// Bottom Section for recently viewed items
+const RecentlyViewedSection = () => {
+  const { recentProducts } = useRecentlyViewed();
+
+  if (!recentProducts || recentProducts.length === 0) return null;
+
+  return (
+    <div className="mt-12 lg:mt-20">
+      <div className="flex items-center justify-between mb-8">
+        <div className="space-y-1">
+          <Badge className="bg-violet-100 text-violet-600 border-none px-3 py-1 text-[10px] font-black uppercase tracking-widest">Your History</Badge>
+          <h2 className="text-2xl lg:text-3xl font-black text-gray-900 tracking-tighter uppercase">Pick up where you left off</h2>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        {recentProducts.map((product) => (
+          <Link
+            key={product.id}
+            to={`/product/${product.id}`}
+            className="group bg-white rounded-xl border border-gray-100 p-3 hover:shadow-xl transition-all duration-300"
+          >
+            <div className="aspect-square rounded-lg overflow-hidden bg-gray-50 mb-3 flex items-center justify-center p-2">
+              <img
+                src={product.image}
+                alt={product.name}
+                className="max-w-full max-h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500"
+              />
+            </div>
+            <h3 className="text-xs font-bold text-gray-900 line-clamp-1 group-hover:text-violet-600">
+              {product.name}
+            </h3>
+            <p className="text-sm font-black text-violet-600 mt-1">
+              ₹{product.price?.toLocaleString()}
+            </p>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 // Deals Page Component - Premium Mobile-First Design
 const Deals = () => {
@@ -44,14 +86,23 @@ const Deals = () => {
       try {
         setLoading(true);
         const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-        const response = await axios.get(`${API_BASE}/api/products`);
+        const response = await axios.get(`${API_BASE}/api/products?only_deals=true&limit=1000`);
 
-        // Filter products with minimum 35% discount
+        // Filter products with active special offers
+        const now = new Date();
         const mappedDeals = response.data
-          .filter(p => p.discount >= MIN_DISCOUNT_THRESHOLD)
+          .filter(p => {
+            if (!p.special_offer_enabled) return false;
+
+            // Check if offer is currently active
+            if (p.special_offer_start && new Date(p.special_offer_start) > now) return false;
+            if (p.special_offer_end && new Date(p.special_offer_end) < now) return false;
+
+            return true;
+          })
           .map(p => ({
             ...p,
-            timeLeft: calculateTimeLeft(p.offer_expires_at),
+            timeLeft: calculateTimeLeft(p.special_offer_end || p.offer_expires_at),
             isFlashDeal: p.discount >= 50,
             isSuperDeal: p.discount >= 60
           }));
@@ -237,7 +288,7 @@ const Deals = () => {
                   <div className="absolute inset-0 w-16 h-16 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
                 </div>
                 <p className="mt-4 text-gray-500 font-medium">Finding best deals for you...</p>
-                <p className="text-xs text-gray-400 mt-1">Minimum {MIN_DISCOUNT_THRESHOLD}% off guaranteed</p>
+                <p className="text-xs text-gray-400 mt-1">Exclusive limited-time deals</p>
               </div>
             ) : error ? (
               <div className="text-center py-20">
@@ -259,7 +310,7 @@ const Deals = () => {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">No Deals Available</h3>
                 <p className="text-gray-500 mb-4">
-                  No products with {MIN_DISCOUNT_THRESHOLD}%+ discount right now
+                  No products on special offer right now
                 </p>
                 <Link to="/shop">
                   <Button className="bg-violet-600 hover:bg-violet-700">
@@ -385,8 +436,8 @@ const Deals = () => {
                       <Percent className="w-6 h-6" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-sm sm:text-base">Exclusive {MIN_DISCOUNT_THRESHOLD}%+ Discount Zone</h4>
-                      <p className="text-violet-200 text-xs sm:text-sm mt-1">All deals on this page offer minimum {MIN_DISCOUNT_THRESHOLD}% off!</p>
+                      <h4 className="font-bold text-sm sm:text-base">Exclusive Special Offer Zone</h4>
+                      <p className="text-violet-200 text-xs sm:text-sm mt-1">All products in this section are currently on limited-time special offer!</p>
                     </div>
                   </div>
                 </div>
@@ -394,6 +445,9 @@ const Deals = () => {
             )}
           </div>
         </div>
+
+        {/* Recently Viewed Section - Pick up where you left off */}
+        <RecentlyViewedSection />
       </main>
 
       <Footer />

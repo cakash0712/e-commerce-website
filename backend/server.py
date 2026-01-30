@@ -45,7 +45,13 @@ async def lifespan(app: FastAPI):
             { "name": "Home & Garden", "image": "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=500&q=80", "items": "950+ Products", "link": "/shop?category=Home" },
             { "name": "Sports", "image": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=500&q=80", "items": "1.2k+ Products", "link": "/shop?category=Sports" },
             { "name": "Beauty", "image": "https://images.unsplash.com/photo-1596462502278-27bfdc4033c8?w=500&q=80", "items": "800+ Products", "link": "/shop?category=Beauty" },
-            { "name": "Books", "image": "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=500&q=80", "items": "3.5k+ Products", "link": "/shop?category=Books" }
+            { "name": "Books", "image": "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=500&q=80", "items": "3.5k+ Products", "link": "/shop?category=Books" },
+            { "name": "Automotive", "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&q=80", "items": "600+ Products", "link": "/shop?category=Automotive" },
+            { "name": "Toys & Games", "image": "https://images.unsplash.com/photo-1558877385-1199c1af4e8e?w=500&q=80", "items": "1.1k+ Products", "link": "/shop?category=Toys" },
+            { "name": "Health & Personal Care", "image": "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=500&q=80", "items": "750+ Products", "link": "/shop?category=Health" },
+            { "name": "Grocery", "image": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&q=80", "items": "2.1k+ Products", "link": "/shop?category=Grocery" },
+            { "name": "Pet Supplies", "image": "https://images.unsplash.com/photo-1544568100-847a948585b9?w=500&q=80", "items": "400+ Products", "link": "/shop?category=Pets" },
+            { "name": "Jewelry", "image": "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500&q=80", "items": "900+ Products", "link": "/shop?category=Jewelry" }
         ]
         for cat in initial_categories:
             cat['id'] = str(uuid.uuid4())
@@ -58,6 +64,7 @@ async def lifespan(app: FastAPI):
 
 # Create the main app with lifespan
 app = FastAPI(lifespan=lifespan)
+
 
 # Mount static files
 app.mount("/uploads", StaticFiles(directory=str(ROOT_DIR / 'uploads')), name="uploads")
@@ -126,6 +133,24 @@ class WishlistItem(BaseModel):
     category: Optional[str] = None
     rating: Optional[float] = 5.0
 
+class Cart(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: Optional[str] = None  # For logged-in users
+    guest_id: Optional[str] = None  # For anonymous users
+    items: List[CartItem] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class Wishlist(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: Optional[str] = None  # For logged-in users
+    guest_id: Optional[str] = None  # For anonymous users
+    items: List[WishlistItem] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class ShippingRate(BaseModel):
     zone: str
     cost: float
@@ -165,6 +190,7 @@ class User(BaseModel):
     logo: str = ""
     business_name: str = ""
     business_category: str = ""
+    business_categories: List[str] = []
     owner_name: str = ""
     user_type: str = "user"  # user, admin, vendor
     status: str = "active"   # active, pending, rejected
@@ -180,6 +206,8 @@ class User(BaseModel):
     saved_upis: List[UPI] = []
     active_gift_cards: List[GiftCard] = []
     shipping_rates: List[ShippingRate] = [] # For vendors
+    delivery_location: str = ""
+    recent_searches: List[str] = []
 
 class UserCreate(BaseModel):
     name: str
@@ -193,6 +221,8 @@ class UserCreate(BaseModel):
     business_category: str = ""
     owner_name: str = ""
     user_type: str = "user"
+    delivery_location: str = ""
+    recent_searches: List[str] = []
 
 class UserLogin(BaseModel):
     identifier: str  # phone or email
@@ -210,6 +240,7 @@ class UserUpdate(BaseModel):
     banner: Optional[str] = None
     business_name: Optional[str] = None
     business_category: Optional[str] = None
+    business_categories: Optional[List[str]] = None
     owner_name: Optional[str] = None
     logo: Optional[str] = None
     addresses: Optional[List[Address]] = None
@@ -219,6 +250,8 @@ class UserUpdate(BaseModel):
     saved_cards: Optional[List[PaymentCard]] = None
     saved_upis: Optional[List[UPI]] = None
     active_gift_cards: Optional[List[GiftCard]] = None
+    delivery_location: Optional[str] = None
+    recent_searches: Optional[List[str]] = None
 
 class Product(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -242,12 +275,22 @@ class Product(BaseModel):
     weight: str = ""
     dimensions: str = ""
     material: str = ""
+    base_price: float = 0.0
+    normal_discount_type: str = "percentage"  # percentage, fixed
+    normal_discount_value: float = 0.0
+    special_offer_enabled: bool = False
+    special_offer_type: str = "percentage"  # percentage, fixed
+    special_offer_value: float = 0.0
+    special_offer_start: Optional[datetime] = None
+    special_offer_end: Optional[datetime] = None
     vendor_id: str
     offers: str = ""
     offer_expires_at: Optional[datetime] = None
     delivery_type: str = "free"  # free, fixed, weight, distance
     delivery_charge: float = 0
     free_delivery_above: float = 0
+    search_tags: List[str] = []
+    return_policy: str = "7-day easy replacement/return"
     status: str = "approved" # pending, approved, rejected
     rejection_reason: Optional[str] = None
     sales_count: int = 0
@@ -258,7 +301,15 @@ class ProductCreate(BaseModel):
     category: str
     sub_category: str = ""
     brand: str = ""
-    price: float
+    base_price: float
+    normal_discount_type: str = "percentage"
+    normal_discount_value: float = 0.0
+    special_offer_enabled: bool = False
+    special_offer_type: str = "percentage"
+    special_offer_value: float = 0.0
+    special_offer_start: Optional[datetime] = None
+    special_offer_end: Optional[datetime] = None
+    price: float = 0.0
     discount: int = 0
     stock: int
     image: str
@@ -277,6 +328,8 @@ class ProductCreate(BaseModel):
     delivery_type: str = "free"  # free, fixed, weight, distance
     delivery_charge: float = 0
     free_delivery_above: float = 0
+    search_tags: List[str] = []
+    return_policy: str = "7-day easy replacement/return"
 
 class Notification(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -567,22 +620,6 @@ async def login_user(login_data: UserLogin, request: Request):
     user_data = {k: v for k, v in user.items() if k != 'password' and k != '_id'}
     return {**user_data, "token": token}
 
-class UserUpdate(BaseModel):
-    name: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    gender: Optional[str] = None
-    dob: Optional[str] = None
-    address: Optional[str] = None
-    avatar: Optional[str] = None
-    banner: Optional[str] = None
-    business_name: Optional[str] = None
-    business_category: Optional[str] = None
-    owner_name: Optional[str] = None
-    logo: Optional[str] = None
-    addresses: Optional[List[Address]] = None
-    cart: Optional[List[CartItem]] = None
-    wishlist: Optional[List[WishlistItem]] = None
 
 @api_router.put("/users/{user_id}")
 async def update_user(user_id: str, user_update: UserUpdate, current_user: Annotated[dict, Depends(get_current_user)]):
@@ -713,6 +750,20 @@ async def get_recently_viewed(current_user: Annotated[dict, Depends(get_current_
             
     return ordered_products
 
+@api_router.put("/users/recent-searches")
+async def update_recent_searches(searches: List[str], current_user: Annotated[dict, Depends(get_current_user)]):
+    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    # Keep only last 10 searches
+    searches = searches[:10]
+    await collection.update_one({"id": current_user['id']}, {"$set": {"recent_searches": searches}})
+    return {"message": "Recent searches updated"}
+
+@api_router.get("/users/recent-searches")
+async def get_recent_searches(current_user: Annotated[dict, Depends(get_current_user)]):
+    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    user = await collection.find_one({"id": current_user['id']}, {"recent_searches": 1})
+    return user.get('recent_searches', [])
+
 @api_router.post("/orders/checkout")
 async def checkout(order_data: OrderCreate, request: Request, current_user: Annotated[dict, Depends(get_current_user)]):
     # Rate Limiting Logic for Checkout (max 3 per minute)
@@ -781,6 +832,13 @@ async def checkout(order_data: OrderCreate, request: Request, current_user: Anno
         "is_read": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
+
+    # Update product sales count for deals tracking
+    for item in order_data.items:
+        await db.products.update_one(
+            {"id": item.product_id},
+            {"$inc": {"sales_count": item.quantity}}
+        )
     
     # Notify Vendors
     vendor_ids = {item.vendor_id for item in order_obj.items}
@@ -821,11 +879,35 @@ async def add_product(product_data: ProductCreate, current_user: Annotated[dict,
     product_obj = Product(**product_data.model_dump(), vendor_id=current_user['id'], status="pending")
     doc = product_obj.model_dump()
     
-    # Calculate originalPrice if discount is provided
-    if doc.get('discount', 0) > 0:
-        doc['originalPrice'] = round(doc['price'] / (1 - doc['discount'] / 100), 2)
+    # Automated Pricing & Discount Protocol
+    base = doc.get('base_price', 0.0)
+    current = base
+    
+    # Apply Normal Discount
+    n_type = doc.get('normal_discount_type', 'percentage')
+    n_val = doc.get('normal_discount_value', 0.0)
+    if n_type == "percentage":
+        current -= (base * (n_val / 100))
     else:
-        doc['originalPrice'] = doc['price']
+        current -= n_val
+        
+    # Apply Special Offer if enabled
+    if doc.get('special_offer_enabled'):
+        s_type = doc.get('special_offer_type', 'percentage')
+        s_val = doc.get('special_offer_value', 0.0)
+        if s_type == "percentage":
+            current -= (current * (s_val / 100))
+        else:
+            current -= s_val
+            
+    final_price = max(0.0, round(current, 2))
+    doc['price'] = final_price
+    doc['originalPrice'] = base
+    
+    if base > 0:
+        doc['discount'] = int(round(((base - final_price) / base) * 100))
+    else:
+        doc['discount'] = 0
         
     doc['created_at'] = doc['created_at'].isoformat()
 
@@ -848,14 +930,17 @@ async def add_product(product_data: ProductCreate, current_user: Annotated[dict,
 
 @api_router.get("/products")
 async def list_public_products(
-    limit: int = 20, 
+    limit: int = 100, 
     sort: str = "newest", 
-    category: Optional[str] = None
+    category: Optional[str] = None,
+    only_deals: bool = False
 ):
     # Base filter: only show approved products
     query = {"status": "approved"}
     if category:
         query["category"] = category
+    if only_deals:
+        query["special_offer_enabled"] = True
         
     products_cursor = db.products.find(query)
     
@@ -1088,18 +1173,56 @@ async def update_product(product_id: str, product_data: ProductCreate, current_u
     
     update_doc = product_data.model_dump()
     update_doc['status'] = 'pending'
-    # Recalculate originalPrice if discount is provided
-    if update_doc.get('discount', 0) > 0:
-        update_doc['originalPrice'] = round(update_doc['price'] / (1 - update_doc['discount'] / 100), 2)
+
+    # Automated Pricing & Discount Protocol
+    base = update_doc.get('base_price', 0.0)
+    current = base
+    
+    # Apply Normal Discount
+    n_type = update_doc.get('normal_discount_type', 'percentage')
+    n_val = update_doc.get('normal_discount_value', 0.0)
+    if n_type == "percentage":
+        current -= (base * (n_val / 100))
     else:
-        update_doc['originalPrice'] = update_doc['price']
+        current -= n_val
+        
+    # Apply Special Offer if enabled
+    if update_doc.get('special_offer_enabled'):
+        s_type = update_doc.get('special_offer_type', 'percentage')
+        s_val = update_doc.get('special_offer_value', 0.0)
+        if s_type == "percentage":
+            current -= (current * (s_val / 100))
+        else:
+            current -= s_val
+            
+    final_price = max(0.0, round(current, 2))
+    update_doc['price'] = final_price
+    update_doc['originalPrice'] = base
+    
+    if base > 0:
+        update_doc['discount'] = int(round(((base - final_price) / base) * 100))
+    else:
+        update_doc['discount'] = 0
     
     # Ensure current ID stays the same
     if existing_product.get('id'):
         update_doc['id'] = existing_product['id']
     
     await db.products.update_one(query, {"$set": update_doc})
-    return {"message": "Inventory updated and queued for re-audit."}
+    # Notify Admins of product update
+    admins = await db.users.find({"user_type": "admin"}).to_list(None)
+    for admin in admins:
+        await db.notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": admin['id'],
+            "title": "Inventory Update Pending",
+            "message": f"Product '{product_data.name}' has been updated and requires re-auditing.",
+            "type": "warning",
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+
+    return {"message": "Inventory updated and queued for re-auditing."}
 
 @api_router.delete("/products/{product_id}")
 async def delete_product(product_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
@@ -1822,11 +1945,39 @@ async def get_public_categories():
 async def add_category(category: Category, current_user: Annotated[dict, Depends(get_current_user)]):
     if current_user['user_type'] != 'admin':
         raise HTTPException(status_code=403, detail="Only admins can add categories")
-    
+
     cat_dict = category.model_dump()
     cat_dict['created_at'] = datetime.now(timezone.utc)
     await db.categories.insert_one(cat_dict)
     return {"message": "Category added successfully."}
+
+@api_router.post("/vendor/categories")
+async def add_vendor_category(category_data: dict, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'vendor':
+        raise HTTPException(status_code=403, detail="Only vendors can add custom categories")
+
+    name = category_data.get('name', '').strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Category name is required")
+
+    # Check if category already exists
+    existing = await db.categories.find_one({"name": {"$regex": f"^{name}$", "$options": "i"}})
+    if existing:
+        raise HTTPException(status_code=400, detail="Category already exists")
+
+    # Create new category
+    category_obj = Category(
+        name=name,
+        image="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=500&q=80",  # Default image
+        items="0 Products",
+        link=f"/shop?category={name.replace(' ', '%20')}"
+    )
+
+    cat_dict = category_obj.model_dump()
+    cat_dict['created_at'] = datetime.now(timezone.utc)
+
+    await db.categories.insert_one(cat_dict)
+    return {"message": "Custom category added successfully.", "category": cat_dict}
 
 @api_router.post("/reviews")
 async def add_review(review: Review, current_user: Annotated[dict, Depends(get_current_user)]):

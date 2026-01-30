@@ -106,7 +106,7 @@ const Profile = () => {
     };
 
     fetchUserData();
-  }, [user?.id, user?.name, user?.phone]);
+  }, [user?.id, user?.name, user?.phone, user?.address]);
 
   // Save sync with debounce
   useEffect(() => {
@@ -124,7 +124,8 @@ const Profile = () => {
             addresses,
             saved_cards: savedCards,
             saved_upis: savedUPIs,
-            active_gift_cards: activeGiftCards
+            active_gift_cards: activeGiftCards,
+            delivery_location: localStorage.getItem(`user_location_${user.id}`) || ""
           });
         } catch (e) {
           console.error("Failed to sync profile data to backend", e);
