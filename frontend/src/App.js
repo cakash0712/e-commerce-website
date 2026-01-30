@@ -235,6 +235,81 @@ export const useCoupons = () => {
   return context;
 };
 
+// Recently Viewed Context
+const RecentViewedContext = createContext();
+
+export const useRecentlyViewed = () => {
+  const context = useContext(RecentViewedContext);
+  if (!context) {
+    throw new Error('useRecentlyViewed must be used within a RecentlyViewedProvider');
+  }
+  return context;
+};
+
+const RecentlyViewedProvider = ({ children }) => {
+  const { user } = useAuth();
+  const [recentProducts, setRecentProducts] = useState([]);
+  const recentLoaded = useRef(false);
+  const userKey = user?.id ? `ZippyCart_recent_${user.id}` : 'ZippyCart_recent_guest';
+
+  useEffect(() => {
+    const fetchRecent = async () => {
+      recentLoaded.current = false;
+      // First load from local storage
+      const saved = localStorage.getItem(userKey);
+      if (saved) {
+        try {
+          setRecentProducts(JSON.parse(saved));
+        } catch (e) {
+          setRecentProducts([]);
+        }
+      }
+
+      if (user?.id) {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${API}/users/recently-viewed`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (response.data) {
+            setRecentProducts(response.data);
+          }
+        } catch (e) {
+          console.error("Failed to fetch recently viewed from backend", e);
+        }
+      }
+      recentLoaded.current = true;
+    };
+    fetchRecent();
+  }, [user?.id, userKey]);
+
+  const addToRecentlyViewed = async (product) => {
+    setRecentProducts(prev => {
+      const filtered = prev.filter(p => p.id !== product.id);
+      const newList = [product, ...filtered].slice(0, 10);
+
+      // Sync to local storage immediately
+      localStorage.setItem(userKey, JSON.stringify(newList));
+
+      // Sync to backend if user is logged in
+      if (user?.id) {
+        const token = localStorage.getItem('token');
+        axios.put(`${API}/users/recently-viewed`, newList.map(p => p.id), {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(e => console.error("Recent sync error", e));
+      }
+
+      return newList;
+    });
+  };
+
+  return (
+    <RecentViewedContext.Provider value={{ recentProducts, addToRecentlyViewed }}>
+      {children}
+    </RecentViewedContext.Provider>
+  );
+};
+
 const CartProvider = ({ children }) => {
   const { user } = useAuth();
   const [cartItems, setCartItems] = useState([]);
@@ -1005,7 +1080,7 @@ const FeaturedProductsSection = () => {
                       ({product.reviews})
                     </span>
                   </div>
-                  <Link to={`/shop`}>
+                  <Link to={`/product/${product.id}`}>
                     <h3 className="font-bold text-gray-900 mb-1 group-hover:text-violet-600 transition-colors line-clamp-2 text-sm leading-tight h-8">
                       {product.name}
                     </h3>
@@ -1778,7 +1853,9 @@ const BestSellersSection = () => {
                 ))}
                 <span className="text-[9px] font-black text-gray-400 ml-1">({p.reviews})</span>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-1 px-2 line-clamp-1">{p.title}</h3>
+              <Link to={`/product/${p.id}`}>
+                <h3 className="text-xl font-bold text-gray-900 mb-1 px-2 line-clamp-1 hover:text-violet-600 transition-colors">{p.title}</h3>
+              </Link>
               <p className="text-gray-500 text-sm px-2 mb-3 font-medium">{p.category}</p>
               <div className="flex items-center gap-2 px-2">
                 <span className="text-2xl font-black text-violet-600 tracking-tighter">₹{p.price}</span>
@@ -1933,14 +2010,21 @@ const Home = () => {
     }
   };
 
+  const { recentProducts } = useRecentlyViewed();
+
   useEffect(() => {
     fetchStats();
     fetchReviews();
-
-    // Load recently viewed
-    const saved = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
-    setRecentlyViewed(saved.length > 0 ? saved : fallbackViews);
   }, []);
+
+  // Use provider data for the mobile grid, or fallback if empty
+  const displayRecentlyViewed = recentProducts.length > 0
+    ? recentProducts.map(p => ({
+      name: p.name,
+      image: p.image || p.thumbnail,
+      link: `/product/${p.id}`
+    }))
+    : fallbackViews;
 
   return (
     <div className="min-h-screen bg-gray-50 lg:bg-white pb-20 lg:pb-0">
@@ -1960,7 +2044,7 @@ const Home = () => {
         <div className="space-y-2 mt-2">
           <AmazonGridCard
             title="Pick up where you left off"
-            items={recentlyViewed}
+            items={displayRecentlyViewed}
           />
           <AmazonGridCard
             title="International Brands"
@@ -2156,10 +2240,12 @@ function App() {
           <CartProvider>
             <WishlistProvider>
               <OrderProvider>
-                <BrowserRouter>
-                  <ScrollToTop />
-                  <AppRouter />
-                </BrowserRouter>
+                <RecentlyViewedProvider> {/* Added RecentlyViewedProvider */}
+                  <BrowserRouter>
+                    <ScrollToTop />
+                    <AppRouter />
+                  </BrowserRouter>
+                </RecentlyViewedProvider>
               </OrderProvider>
             </WishlistProvider>
           </CartProvider>

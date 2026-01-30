@@ -82,6 +82,50 @@ const Payment = () => {
         zip: '',
         phone: ''
     });
+    const [savedAddresses, setSavedAddresses] = useState([]);
+    const [selectedAddressId, setSelectedAddressId] = useState(null);
+    const [saveNewAddress, setSaveNewAddress] = useState(false);
+
+    // Fetch saved addresses from user profile/backend
+    useEffect(() => {
+        const fetchAddresses = async () => {
+            if (user?.id) {
+                try {
+                    const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                    const token = localStorage.getItem('token');
+                    const response = await axios.get(`${API_BASE}/api/users/sync`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (response.data && response.data.addresses) {
+                        setSavedAddresses(response.data.addresses);
+                        // If user has a default profile address and no saved addresses, use it
+                        if (response.data.addresses.length === 0 && user.address) {
+                            // Split user's profile address if possible, or just put in street
+                            setAddress(prev => ({ ...prev, street: user.address }));
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch addresses in payment:", e);
+                }
+            }
+        };
+        fetchAddresses();
+    }, [user]);
+
+    const handleSelectSavedAddress = (addr) => {
+        setSelectedAddressId(addr.id);
+        // Attempt to parse address string (Building, City, State ZIP)
+        const parts = addr.addr.split(',').map(s => s.trim());
+        setAddress({
+            email: user?.email || '',
+            name: addr.name,
+            street: parts[0] || '',
+            city: parts[1] || '',
+            state: parts[2] || '',
+            zip: parts[parts.length - 1]?.match(/\d{6}/)?.[0] || '',
+            phone: addr.phone || user?.phone || ''
+        });
+    };
 
     const shippingCost = shippingMethod === 'express' ? 150 : (subtotal > 499 ? 0 : 99);
     const tax = subtotal * 0.18;
@@ -95,11 +139,13 @@ const Payment = () => {
         setIsProcessing(true);
         try {
             const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+            const fullAddressString = `${address.street}, ${address.city}, ${address.state || ""} ${address.zip}`;
+
             const orderPayload = {
                 customer_name: address.name,
                 email: address.email,
                 phone: address.phone || "",
-                address: `${address.street}, ${address.city}, ${address.state || ""} ${address.zip}`,
+                address: fullAddressString,
                 payment_method: paymentMethod,
                 items: cartItems.map(item => ({
                     product_id: item.id,
@@ -118,6 +164,21 @@ const Payment = () => {
             const response = await axios.post(`${API_BASE}/api/orders/checkout`, orderPayload, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
+
+            // If user opted to save this address and it's not a saved one
+            if (saveNewAddress && user?.id && !selectedAddressId) {
+                const newSavedAddresses = [...savedAddresses, {
+                    id: Date.now(),
+                    name: address.name,
+                    phone: address.phone,
+                    addr: fullAddressString,
+                    type: "HOME"
+                }];
+                const token = localStorage.getItem('token');
+                await axios.put(`${API_BASE}/api/users/${user.id}`, { addresses: newSavedAddresses }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            }
 
             // Sync with local state if needed
             addOrder({
@@ -314,6 +375,36 @@ const Payment = () => {
 
                                     {activeSection === 1 ? (
                                         <div className="grid md:grid-cols-2 gap-8">
+                                            {/* Saved Addresses Section */}
+                                            {user && savedAddresses.length > 0 && (
+                                                <div className="col-span-full mb-6">
+                                                    <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-violet-600 mb-4 block">Use a Saved Address</Label>
+                                                    <div className="grid sm:grid-cols-2 gap-4">
+                                                        {savedAddresses.map(addr => (
+                                                            <div
+                                                                key={addr.id}
+                                                                onClick={() => handleSelectSavedAddress(addr)}
+                                                                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${selectedAddressId === addr.id ? 'border-violet-600 bg-violet-50' : 'border-gray-50 bg-gray-50/30 hover:border-gray-100'}`}
+                                                            >
+                                                                <div className="flex justify-between items-start mb-1">
+                                                                    <span className="font-bold text-sm text-gray-900">{addr.name}</span>
+                                                                    <Badge className="text-[8px] bg-white border-gray-100 text-gray-400">{addr.type}</Badge>
+                                                                </div>
+                                                                <p className="text-xs text-gray-500 line-clamp-2 mb-2">{addr.addr}</p>
+                                                                <p className="text-[10px] font-bold text-gray-400">{addr.phone}</p>
+                                                            </div>
+                                                        ))}
+                                                        <div
+                                                            onClick={() => { setSelectedAddressId(null); setAddress({ ...address, street: '', city: '', zip: '', state: '' }); }}
+                                                            className={`p-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-2 cursor-pointer transition-all ${!selectedAddressId ? 'border-violet-300 bg-white' : 'border-gray-200 text-gray-400 hover:border-violet-300 hover:text-violet-600'}`}
+                                                        >
+                                                            <Plus className="w-4 h-4" />
+                                                            <span className="text-xs font-bold uppercase tracking-wider">New Address</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {!user && (
                                                 <div className="col-span-full p-8 bg-violet-50/50 rounded-[2.5rem] border border-violet-100 flex items-start gap-5 mb-4 group hover:bg-violet-50 transition-colors">
                                                     <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-violet-600 shadow-sm border border-violet-100 shrink-0 group-hover:scale-110 transition-transform">
@@ -380,11 +471,25 @@ const Payment = () => {
                                                     <Input
                                                         placeholder="000 000"
                                                         value={address.zip}
-                                                        onChange={e => setAddress({ ...address, zip: e.target.value })}
+                                                        onChange={e => { setAddress({ ...address, zip: e.target.value }); setSelectedAddressId(null); }}
                                                         className="h-16 pl-14 rounded-2xl border-gray-100 bg-gray-50/50 focus:bg-white focus:border-violet-600 focus:ring-4 focus:ring-violet-50 transition-all font-bold text-gray-900"
                                                     />
                                                 </div>
                                             </div>
+
+                                            {user && !selectedAddressId && (
+                                                <div className="col-span-full flex items-center gap-3 ml-3 mt-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="save-addr"
+                                                        checked={saveNewAddress}
+                                                        onChange={(e) => setSaveNewAddress(e.target.checked)}
+                                                        className="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                                                    />
+                                                    <Label htmlFor="save-addr" className="text-xs font-bold text-gray-600 cursor-pointer">Save this address to my profile</Label>
+                                                </div>
+                                            )}
+
                                             <Button onClick={() => setActiveSection(2)} className="col-span-full h-20 bg-gray-900 hover:bg-violet-600 text-white rounded-3xl font-black uppercase tracking-[0.3em] text-xs shadow-2xl transition-all mt-6 active:scale-95 flex items-center gap-4">
                                                 Synchronize Coordinates <ChevronRight className="w-5 h-5" />
                                             </Button>

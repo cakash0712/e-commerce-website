@@ -26,7 +26,7 @@ import {
     Award,
     ArrowRight
 } from "lucide-react";
-import { useAuth, useCart, useWishlist } from "../App";
+import { useAuth, useCart, useWishlist, useRecentlyViewed } from "../App";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
 
@@ -36,6 +36,7 @@ const DetailsView = () => {
     const { user } = useAuth();
     const { addToCart } = useCart();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+    const { addToRecentlyViewed } = useRecentlyViewed();
 
     const handleWishlistAction = () => {
         if (!user) {
@@ -197,21 +198,14 @@ const DetailsView = () => {
     // Tracking Recently Viewed
     useEffect(() => {
         if (product) {
-            const recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
-            const newItem = {
+            addToRecentlyViewed({
                 id: product.id,
                 name: product.name,
-                image: product.images?.[0] || product.image,
-                link: `/product/${product.id}`
-            };
-
-            // Filter out existing entries with same ID
-            const filtered = recentlyViewed.filter(item => item.id !== product.id);
-            // Add to start and limit to 4
-            const updated = [newItem, ...filtered].slice(0, 4);
-            localStorage.setItem('recentlyViewed', JSON.stringify(updated));
+                image: getImageUrl(product.images?.[0] || product.image),
+                price: product.price
+            });
         }
-    }, [product]);
+    }, [product?.id]);
 
     if (loading) {
         return (

@@ -19,7 +19,7 @@ import {
   Settings, Image, FileText, CheckCircle2, AlertCircle,
   XCircle, Search, Bell, MoreVertical, Globe, ShieldCheck,
   ChevronRight, ChevronDown, Tag, UserCheck, Store, Mail, MapPin, Phone,
-  RotateCcw, LifeBuoy, BookOpen, Headset, Send, Truck
+  RotateCcw, LifeBuoy, BookOpen, Headset, Send, Truck, Clock
 } from "lucide-react";
 import { useAuth } from "../App";
 import {
@@ -736,7 +736,7 @@ const Vendor = () => {
   const [newProduct, setNewProduct] = useState({
     name: '', category: user?.business_category || '', sub_category: '', price: '', stock: '', image: '', description: '',
     brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
-    offer_expires_at: '',
+    offer_expires_at: '', deal_duration: 'custom',
     images: '', highlights: '', specifications: '', warranty: '', box_contents: '',
     delivery_type: 'free', delivery_charge: '', free_delivery_above: ''
   });
@@ -764,6 +764,7 @@ const Vendor = () => {
       material: product.material || '',
       offers: product.offers || '',
       offer_expires_at: product.offer_expires_at ? new Date(product.offer_expires_at).toISOString().slice(0, 16) : '',
+      deal_duration: 'custom',
       delivery_type: product.delivery_type || 'free',
       delivery_charge: (product.delivery_charge || '').toString(),
       free_delivery_above: (product.free_delivery_above || '').toString()
@@ -1104,12 +1105,42 @@ const Vendor = () => {
                         </div>
                         <div className="space-y-3">
                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 italic text-violet-600">Offer end date & time</Label>
-                          <Input
-                            type="datetime-local"
-                            value={newProduct.offer_expires_at}
-                            onChange={(e) => setNewProduct({ ...newProduct, offer_expires_at: e.target.value })}
-                            className="h-14 rounded-2xl border-slate-100 font-bold"
-                          />
+                          <div className="flex gap-2">
+                            <Input
+                              type="datetime-local"
+                              value={newProduct.offer_expires_at}
+                              onChange={(e) => setNewProduct({ ...newProduct, offer_expires_at: e.target.value, deal_duration: 'custom' })}
+                              className="h-14 rounded-2xl border-slate-100 font-bold flex-1"
+                            />
+                            <Select
+                              value={newProduct.deal_duration}
+                              onValueChange={(val) => {
+                                if (val === 'custom') return;
+                                const now = new Date();
+                                if (val === '24h') now.setHours(now.getHours() + 24);
+                                if (val === '3d') now.setDate(now.getDate() + 3);
+                                if (val === '7d') now.setDate(now.getDate() + 7);
+                                if (val === '30d') now.setDate(now.getDate() + 30);
+                                setNewProduct({
+                                  ...newProduct,
+                                  deal_duration: val,
+                                  offer_expires_at: now.toISOString().slice(0, 16)
+                                });
+                              }}
+                            >
+                              <SelectTrigger className="w-32 h-14 rounded-2xl border-slate-100 font-bold">
+                                <SelectValue placeholder="Duration" />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-xl border-none shadow-xl">
+                                <SelectItem value="custom" className="font-bold text-xs">Custom</SelectItem>
+                                <SelectItem value="24h" className="font-bold text-xs text-rose-600">24 Hours</SelectItem>
+                                <SelectItem value="3d" className="font-bold text-xs text-orange-600">3 Days</SelectItem>
+                                <SelectItem value="7d" className="font-bold text-xs text-violet-600">1 Week</SelectItem>
+                                <SelectItem value="30d" className="font-bold text-xs text-blue-600">1 Month</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <p className="text-[10px] text-slate-400 ml-2">Setting a duration will automatically calculate the expiry date.</p>
                         </div>
                       </div>
 
@@ -1401,8 +1432,21 @@ const Vendor = () => {
                           />
                         </div>
                         <div>
-                          <p className="font-bold text-sm text-gray-900">{p.name}</p>
-                          <p className="text-xs text-gray-500">{p.category}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-sm text-gray-900">{p.name}</p>
+                            {p.discount >= 35 && (
+                              <Badge className="bg-rose-100 text-rose-600 border-none px-1.5 py-0 text-[8px] font-black uppercase">Active Deal</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-xs text-gray-400">{p.category}</p>
+                            {p.offer_expires_at && new Date(p.offer_expires_at) > new Date() && (
+                              <div className="flex items-center gap-1 text-[9px] text-blue-600 font-bold">
+                                <Clock className="w-2.5 h-2.5" />
+                                {Math.ceil((new Date(p.offer_expires_at) - new Date()) / (1000 * 60 * 60 * 24))} days left
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>

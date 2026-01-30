@@ -175,6 +175,7 @@ class User(BaseModel):
     addresses: List[Address] = []
     cart: List[CartItem] = []
     wishlist: List[WishlistItem] = []
+    recently_viewed: List[str] = [] # List of product IDs
     saved_cards: List[PaymentCard] = []
     saved_upis: List[UPI] = []
     active_gift_cards: List[GiftCard] = []
@@ -214,6 +215,7 @@ class UserUpdate(BaseModel):
     addresses: Optional[List[Address]] = None
     cart: Optional[List[CartItem]] = None
     wishlist: Optional[List[WishlistItem]] = None
+    recently_viewed: Optional[List[str]] = None
     saved_cards: Optional[List[PaymentCard]] = None
     saved_upis: Optional[List[UPI]] = None
     active_gift_cards: Optional[List[GiftCard]] = None
@@ -678,6 +680,39 @@ async def update_wishlist(wishlist: List[WishlistItem], current_user: Annotated[
     await collection.update_one({"id": current_user['id']}, {"$set": {"wishlist": wishlist_data}})
     return {"message": "Wishlist synchronized"}
 
+@api_router.put("/users/recently-viewed")
+async def update_recently_viewed(product_ids: List[str], current_user: Annotated[dict, Depends(get_current_user)]):
+    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    # Keep only last 20 items
+    product_ids = product_ids[:20]
+    await collection.update_one({"id": current_user['id']}, {"$set": {"recently_viewed": product_ids}})
+    return {"message": "Recently viewed history updated"}
+
+@api_router.get("/users/recently-viewed")
+async def get_recently_viewed(current_user: Annotated[dict, Depends(get_current_user)]):
+    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    user = await collection.find_one({"id": current_user['id']}, {"recently_viewed": 1})
+    product_ids = user.get('recently_viewed', [])
+    
+    if not product_ids:
+        return []
+        
+    # Fetch actual product details
+    products_cursor = db.products.find({"id": {"$in": product_ids}})
+    products = await products_cursor.to_list(None)
+    
+    # Sort products based on the order in product_ids (recent first)
+    products_map = {p['id']: p for p in products}
+    ordered_products = []
+    for p_id in product_ids:
+        if p_id in products_map:
+            p = products_map[p_id]
+            p['id'] = p.get('id') or str(p['_id'])
+            if '_id' in p: del p['_id']
+            ordered_products.append(p)
+            
+    return ordered_products
+
 @api_router.post("/orders/checkout")
 async def checkout(order_data: OrderCreate, request: Request, current_user: Annotated[dict, Depends(get_current_user)]):
     # Rate Limiting Logic for Checkout (max 3 per minute)
@@ -785,6 +820,13 @@ async def add_product(product_data: ProductCreate, current_user: Annotated[dict,
 
     product_obj = Product(**product_data.model_dump(), vendor_id=current_user['id'], status="pending")
     doc = product_obj.model_dump()
+    
+    # Calculate originalPrice if discount is provided
+    if doc.get('discount', 0) > 0:
+        doc['originalPrice'] = round(doc['price'] / (1 - doc['discount'] / 100), 2)
+    else:
+        doc['originalPrice'] = doc['price']
+        
     doc['created_at'] = doc['created_at'].isoformat()
 
     await db.products.insert_one(doc)

@@ -41,7 +41,21 @@ const Profile = () => {
           });
 
           if (response.data) {
-            if (response.data.addresses) setAddresses(response.data.addresses);
+            let fetchedAddresses = response.data.addresses || [];
+
+            // If no addresses saved, but user has a profile address, create initial entry
+            if (fetchedAddresses.length === 0 && (response.data.address || user.address)) {
+              const initialAddress = {
+                id: Date.now(),
+                name: response.data.name || user.name,
+                phone: response.data.phone || user.phone || "",
+                addr: response.data.address || user.address,
+                type: "HOME"
+              };
+              fetchedAddresses = [initialAddress];
+            }
+
+            setAddresses(fetchedAddresses);
             if (response.data.saved_cards) setSavedCards(response.data.saved_cards);
             if (response.data.saved_upis) setSavedUPIs(response.data.saved_upis);
             if (response.data.active_gift_cards) setActiveGiftCards(response.data.active_gift_cards);
@@ -59,8 +73,18 @@ const Profile = () => {
         const savedUPIsLocal = localStorage.getItem(`user_upis_${userId}`);
         const savedGiftLocal = localStorage.getItem(`user_giftcards_${userId}`);
 
-        if (savedAddr) setAddresses(JSON.parse(savedAddr));
-        else setAddresses([{ id: 1, type: "HOME", name: user.name, addr: "404 Sky Heights, Sector 72, Bangalore, KA 560102", phone: user.phone || "+91 98765 43210" }]);
+        if (savedAddr) {
+          setAddresses(JSON.parse(savedAddr));
+        } else {
+          // Default initial address from profile
+          setAddresses([{
+            id: 1,
+            type: "HOME",
+            name: user.name,
+            addr: user.address || "404 Sky Heights, Sector 72, Bangalore, KA 560102",
+            phone: user.phone || "+91 98765 43210"
+          }]);
+        }
 
         if (savedCardsLocal) setSavedCards(JSON.parse(savedCardsLocal));
         else setSavedCards([
