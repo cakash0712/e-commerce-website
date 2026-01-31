@@ -307,22 +307,34 @@ const RecentlyViewedProvider = ({ children }) => {
     fetchRecent();
   }, [user?.id, userKey]);
 
-  const addToRecentlyViewed = useCallback(async (product) => {
+  const addToRecentlyViewed = useCallback((product) => {
     setRecentProducts(prev => {
+      // Check if item is already at the top to avoid unnecessary updates
+      if (prev.length > 0 && prev[0].id === product.id) return prev;
+
       const filtered = prev.filter(p => p.id !== product.id);
       const newList = [product, ...filtered].slice(0, 10);
 
-      // Sync to local storage immediately
-      localStorage.setItem(userKey, JSON.stringify(newList));
+      // Synch logic
+      const syncToBackend = async () => {
+        if (user?.id) {
+          try {
+            const token = localStorage.getItem('token');
+            const ids = newList.map(p => p.id).filter(id => id);
+            console.log("APP: Syncing Recent:", ids);
+            await axios.put(`${API}/users/recently-viewed`, ids, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            console.log("APP: Sync Recent OK");
+          } catch (e) {
+            console.error("APP: Recent sync error", e.response?.data || e.message);
+          }
+        }
+        // Save to local storage
+        localStorage.setItem(userKey, JSON.stringify(newList));
+      };
 
-      // Sync to backend if user is logged in
-      if (user?.id) {
-        const token = localStorage.getItem('token');
-        axios.put(`${API}/users/recently-viewed`, newList.map(p => p.id), {
-          headers: { Authorization: `Bearer ${token}` }
-        }).catch(e => console.error("Recent sync error", e));
-      }
-
+      syncToBackend();
       return newList;
     });
   }, [user?.id, userKey]);
@@ -359,7 +371,20 @@ const CartProvider = ({ children }) => {
               const userCartIds = new Set(updatedCart.map(i => i.id));
               const uniqueGuestItems = guestItems.filter(i => !userCartIds.has(i.id));
               if (uniqueGuestItems.length > 0) {
-                updatedCart = [...updatedCart, ...uniqueGuestItems];
+                // We need to push these guest items to backend one by one or via bulk update
+                // For now, let's just add them locally and let the user save or we can iterate
+                // Ideally backend should handle merge, but here we can just "add" them
+                for (const item of uniqueGuestItems) {
+                  await axios.post(`${API}/users/cart/items`, item, {
+                    headers: { Authorization: `Bearer ${token}` }
+                  });
+                }
+                // Refetch to get merged state
+                const refetch = await axios.get(`${API}/users/sync`, {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                updatedCart = refetch.data.cart;
+
                 // Clean up guest cart after merging
                 localStorage.removeItem('ZippyCart_cart_guest');
               }
@@ -386,30 +411,16 @@ const CartProvider = ({ children }) => {
     fetchCart();
   }, [user?.id, userKey]);
 
-  // Save cart when items change
+  // Save cart to local storage always
   useEffect(() => {
-    const syncCart = async () => {
-      if (cartItems.length > 0 || localStorage.getItem(userKey)) {
-        localStorage.setItem(userKey, JSON.stringify(cartItems));
-      }
+    if (cartItems.length > 0 || localStorage.getItem(userKey)) {
+      localStorage.setItem(userKey, JSON.stringify(cartItems));
+    }
+  }, [cartItems, userKey]);
 
-      if (user?.id && cartLoaded.current) {
-        try {
-          const token = localStorage.getItem('token');
-          await axios.put(`${API}/users/cart`, cartItems, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-        } catch (e) {
-          console.error("Failed to sync cart to backend", e);
-        }
-      }
-    };
 
-    const timeoutId = setTimeout(syncCart, 1000); // Debounce sync
-    return () => clearTimeout(timeoutId);
-  }, [cartItems, userKey, user?.id, cartLoaded]);
-
-  const addToCart = (product) => {
+  const addToCart = async (product) => {
+    // 1. Optimistic UI Update
     setCartItems(prevItems => {
       const existingItem = prevItems.find(item => item.id === product.id);
       if (existingItem) {
@@ -422,10 +433,45 @@ const CartProvider = ({ children }) => {
         return [...prevItems, { ...product, quantity: product.quantity || 1, selected: true }];
       }
     });
+
+    // 2. Backend Sync if logged in
+    if (user?.id) {
+      try {
+        const token = localStorage.getItem('token');
+        // Construct the item payload exactly as expected by backend model
+        const itemPayload = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: product.quantity || 1,
+          image: product.image || (product.images && product.images[0]) || "",
+          vendor_id: product.vendor_id,
+          category: product.category,
+          selected: true
+        };
+        await axios.post(`${API}/users/cart/items`, itemPayload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (e) {
+        console.error("Failed to add to cart backend", e);
+        // Optionally revert state here if strict consistency needed
+      }
+    }
   };
 
-  const removeFromCart = (id) => {
+  const removeFromCart = async (id) => {
     setCartItems(prevItems => prevItems.filter(item => item.id !== id));
+
+    if (user?.id) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(`${API}/users/cart/items/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (e) {
+        console.error("Failed to remove from cart backend", e);
+      }
+    }
   };
 
   const toggleSelected = (id) => {
@@ -434,19 +480,70 @@ const CartProvider = ({ children }) => {
         item.id === id ? { ...item, selected: !item.selected } : item
       )
     );
+    // Note: selection state is usually local, but if we want to persist it, we might need a specific endpoint or just leave it local/session
   };
 
-  const updateQuantity = (id, quantity) => {
+  const updateQuantity = async (id, quantity) => {
     if (quantity <= 0) {
       removeFromCart(id);
       return;
     }
+
+    // Calculate difference for efficient update if needed, but for now we just "set" logic or "add" logic
+    // Our backend adds quantity, so setting absolute quantity is tricky with just $inc unless we compute diff.
+    // For simplicity with current backend add_to_cart (which is $inc), we might need an explicit 'update quantity' endpoint or careful logic.
+    // Actually, let's just use the bulk update for quantity changes OR improved logic.
+    // Given the constraints, let's just update local and do a debounced bulk sync OR implement a set_quantity endpoint.
+    // For now, let's stick to Local + Background Sync for quantity to avoid complexity, or better:
+
     setCartItems(prevItems =>
       prevItems.map(item =>
         item.id === id ? { ...item, quantity } : item
       )
     );
+
+    // Debounced sync for this specific item or just use the old Put for full cart if complex?
+    // Let's rely on the fact that we can just Push the difference? No, easier to just use the PUT endpoint for quantity updates
+    // if we don't want to make a new "set quantity" endpoint.
+    // Lets use the existing Bulk PUT for quantity updates to be safe, but explicitly triggered, not effect based.
+
+    if (user?.id) {
+      // Create a small debounce or just fire and forget (eventual consistency)
+      // We'll use a timeout ref in a real app, but here:
+      setTimeout(async () => {
+        try {
+          const token = localStorage.getItem('token');
+          // We need the latest items, but inside timeout we might have stale closure.
+          // It's safer to use the Effect for "quantity" updates if we want to avoid refactoring everything.
+          // BUT, the user complained about empty array.
+          // Let's try to make a dedicated update call for the item using the add_to_cart with a "set" flag? 
+          // Or just use the bulk update BUT ONLY when we confirm we have a non-empty cart?
+
+          // Let's keep it simple: We already updated local state.
+          // We will add a debounced sync in the Effect ONLY if cart is NOT empty.
+        } catch (e) { }
+      }, 500);
+    }
   };
+
+  // Re-enable the effect but with a guard clause
+  useEffect(() => {
+    const syncCart = async () => {
+      if (user?.id && cartLoaded.current && cartItems.length > 0) {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.put(`${API}/users/cart`, cartItems, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (e) {
+          console.error("Cart sync failed", e);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(syncCart, 2000);
+    return () => clearTimeout(timeoutId);
+  }, [cartItems, user?.id]);
 
   const getCartTotal = () => {
     return cartItems
@@ -498,7 +595,16 @@ const WishlistProvider = ({ children }) => {
               const userWishIds = new Set(updatedWishlist.map(i => i.id));
               const uniqueGuestItems = guestItems.filter(i => !userWishIds.has(i.id));
               if (uniqueGuestItems.length > 0) {
-                updatedWishlist = [...updatedWishlist, ...uniqueGuestItems];
+                for (const item of uniqueGuestItems) {
+                  await axios.post(`${API}/users/wishlist/items`, item, {
+                    headers: { Authorization: `Bearer ${token}` }
+                  });
+                }
+                const refetch = await axios.get(`${API}/users/sync`, {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                updatedWishlist = refetch.data.wishlist;
+
                 localStorage.removeItem('ZippyCart_wishlist_guest');
               }
             }
@@ -523,30 +629,14 @@ const WishlistProvider = ({ children }) => {
     fetchWishlist();
   }, [user?.id, userKey]);
 
-  // Save wishlist when items change
+  // Save wishlist to local storage always
   useEffect(() => {
-    const syncWishlist = async () => {
-      if (wishlistItems.length > 0 || localStorage.getItem(userKey)) {
-        localStorage.setItem(userKey, JSON.stringify(wishlistItems));
-      }
+    if (wishlistItems.length > 0 || localStorage.getItem(userKey)) {
+      localStorage.setItem(userKey, JSON.stringify(wishlistItems));
+    }
+  }, [wishlistItems, userKey]);
 
-      if (user?.id && wishlistLoaded.current) {
-        try {
-          const token = localStorage.getItem('token');
-          await axios.put(`${API}/users/wishlist`, wishlistItems, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-        } catch (e) {
-          console.error("Failed to sync wishlist to backend", e);
-        }
-      }
-    };
-
-    const timeoutId = setTimeout(syncWishlist, 1000); // Debounce sync
-    return () => clearTimeout(timeoutId);
-  }, [wishlistItems, userKey, user?.id, wishlistLoaded]);
-
-  const addToWishlist = (product) => {
+  const addToWishlist = async (product) => {
     setWishlistItems(prevItems => {
       const existingItem = prevItems.find(item => item.id === product.id);
       if (!existingItem) {
@@ -554,10 +644,40 @@ const WishlistProvider = ({ children }) => {
       }
       return prevItems;
     });
+
+    if (user?.id) {
+      try {
+        const token = localStorage.getItem('token');
+        const itemPayload = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image || (product.images && product.images[0]) || "",
+          category: product.category,
+          rating: product.rating || 5.0
+        };
+        await axios.post(`${API}/users/wishlist/items`, itemPayload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (e) {
+        console.error("Failed to add to wishlist backend", e);
+      }
+    }
   };
 
-  const removeFromWishlist = (id) => {
+  const removeFromWishlist = async (id) => {
     setWishlistItems(prevItems => prevItems.filter(item => item.id !== id));
+
+    if (user?.id) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(`${API}/users/wishlist/items/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (e) {
+        console.error("Failed to remove from wishlist backend", e);
+      }
+    }
   };
 
   const isInWishlist = (id) => {

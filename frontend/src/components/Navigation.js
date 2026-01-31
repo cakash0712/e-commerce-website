@@ -400,10 +400,13 @@ const Navigation = () => {
       try {
         const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
         const token = localStorage.getItem('token');
-        axios.put(`${API_BASE}/api/users/${user.id}`,
+        console.log("NAV: Updating Loc:", finalLoc);
+        // Note: axios.put is async but we don't necessarily need to await it here if we don't block
+        axios.put(`${API_BASE}/api/users/delivery-location`,
           { delivery_location: finalLoc },
           { headers: { Authorization: `Bearer ${token}` } }
-        );
+        ).then(() => console.log("NAV: Loc Updated"))
+          .catch(e => console.error("NAV: Loc Error", e.response?.data || e.message));
       } catch (e) {
         console.error("Failed to save delivery location to MongoDB", e);
       }
@@ -425,10 +428,12 @@ const Navigation = () => {
         try {
           const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
           const token = localStorage.getItem('token');
-          axios.put(`${API_BASE}/api/users/${user.id}`,
+          console.log("NAV: Updating Loc (Pin):", loc);
+          axios.put(`${API_BASE}/api/users/delivery-location`,
             { delivery_location: loc },
             { headers: { Authorization: `Bearer ${token}` } }
-          );
+          ).then(() => console.log("NAV: Loc Pin Updated"))
+            .catch(e => console.error("NAV: Loc Pin Error", e.response?.data || e.message));
         } catch (e) {
           console.error("Failed to save pincode as delivery location to MongoDB", e);
         }

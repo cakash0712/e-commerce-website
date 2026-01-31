@@ -197,7 +197,8 @@ const DetailsView = () => {
 
     // Tracking Recently Viewed
     useEffect(() => {
-        if (product) {
+        if (product && product.id) {
+            console.log("DetailsView: Adding to recently viewed:", product.id);
             addToRecentlyViewed({
                 id: product.id,
                 name: product.name,
