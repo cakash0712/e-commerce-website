@@ -20,7 +20,8 @@ import {
   Tag,
   ArrowRight,
   BadgePercent,
-  Timer
+  Timer,
+  ShoppingCart
 } from "lucide-react";
 
 import Navigation from "./Navigation";
@@ -31,9 +32,9 @@ const DEALS_PAGE_TITLE = "Special Offers";
 
 // Bottom Section for recently viewed items
 const RecentlyViewedSection = () => {
-  const { recentProducts } = useRecentlyViewed();
+  const { pickupProducts } = useRecentlyViewed();
 
-  if (!recentProducts || recentProducts.length === 0) return null;
+  if (!pickupProducts || pickupProducts.length === 0) return null;
 
   return (
     <div className="mt-12 lg:mt-20">
@@ -45,7 +46,7 @@ const RecentlyViewedSection = () => {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {recentProducts.map((product) => (
+        {pickupProducts.map((product) => (
           <Link
             key={product.id}
             to={`/product/${product.id}`}
@@ -88,18 +89,9 @@ const Deals = () => {
         const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
         const response = await axios.get(`${API_BASE}/api/products?only_deals=true&limit=1000`);
 
-        // Filter products with active special offers
-        const now = new Date();
+        // Filter products with active special offers (Trusting the backend's is_special_active)
         const mappedDeals = response.data
-          .filter(p => {
-            if (!p.special_offer_enabled) return false;
-
-            // Check if offer is currently active
-            if (p.special_offer_start && new Date(p.special_offer_start) > now) return false;
-            if (p.special_offer_end && new Date(p.special_offer_end) < now) return false;
-
-            return true;
-          })
+          .filter(p => p.is_special_active)
           .map(p => ({
             ...p,
             timeLeft: calculateTimeLeft(p.special_offer_end || p.offer_expires_at),
@@ -189,67 +181,54 @@ const Deals = () => {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-gray-100 flex flex-col">
       <Navigation />
 
-      {/* Simplified Marketplace Header - Slimmer Height */}
-      <div className="bg-white border-b border-gray-200 pt-24 pb-6 lg:pt-28 lg:pb-6">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
-          {/* Breadcrumb */}
-          <nav className="text-[10px] text-gray-400 mb-3 flex items-center gap-1 uppercase tracking-widest font-bold">
-            <Link to="/" className="hover:text-blue-600 transition-colors">Home</Link>
-            <ChevronRight className="w-2.5 h-2.5" />
-            <span className="text-gray-900">Today's Deals</span>
-          </nav>
+      {/* Hero Header - Premium Dark Aesthetic */}
+      <div className="bg-slate-950 border-b border-white/5 pt-24 sm:pt-32 pb-8 sm:pb-12 relative">
+        {/* Subtle Background Glow */}
+        <div className="absolute top-0 right-0 w-[500px] h-full bg-violet-600/10 blur-[120px] -z-0"></div>
+        <div className="absolute bottom-0 left-0 w-[300px] h-full bg-blue-600/5 blur-[100px] -z-0"></div>
 
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl lg:text-3xl font-black text-gray-900 tracking-tight">Today's Deals</h1>
-                <Badge className="bg-blue-600 text-white hover:bg-blue-700 border-none px-3 py-0.5 text-[10px] font-black uppercase tracking-tighter rounded-sm">
-                  Verified Offers
-                </Badge>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <div className="flex-1">
+              <nav className="flex items-center gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-4 sm:mb-6">
+                <Link to="/" className="hover:text-white transition-colors">Home</Link>
+                <ChevronRight className="w-3 h-3 opacity-30" />
+                <span className="text-slate-300">Today's Deals</span>
+              </nav>
+
+              <div className="space-y-1 sm:space-y-2 text-left">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tighter uppercase leading-none">
+                    {DEALS_PAGE_TITLE}
+                  </h1>
+                  <Badge className="bg-amber-400 text-black border-none px-3 py-0.5 text-[10px] font-black uppercase tracking-tighter rounded-sm hidden sm:block h-6 self-end mb-1">
+                    Verified
+                  </Badge>
+                </div>
+                <p className="text-slate-400 text-xs sm:text-sm font-medium max-w-xl">
+                  Explore our best limited-time savings on top-rated products. Inventory synchronized in real-time.
+                </p>
               </div>
-              <p className="text-gray-500 text-xs lg:text-sm font-medium">
-                Explore our best limited-time savings on top-rated products.
-              </p>
             </div>
 
-            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-rose-50 border border-rose-100 rounded-lg">
-              <Percent className="w-4 h-4 text-rose-600" />
-              <span className="text-xs font-bold text-rose-700 uppercase tracking-tight">Save up to 80% today</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sticky Sort Bar - Mobile Optimized */}
-      <div className="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-16 z-10 shadow-lg">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            {/* Deal Stats */}
-            <div className="flex items-center gap-2">
-              <BadgePercent className="w-5 h-5 text-violet-600" />
-              <span className="text-sm font-semibold text-gray-700">
-                {sortedDeals.length} <span className="text-gray-400 font-normal">offers</span>
-              </span>
-            </div>
-
-            {/* Sort Dropdown */}
+            {/* Top Filter Selection - Glassmorphism style */}
             <div className="relative">
               <button
                 onClick={() => setShowSortMenu(!showSortMenu)}
-                className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 active:scale-95 transition-all"
+                className="flex items-center gap-3 px-6 h-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white shadow-2xl hover:bg-white/10 transition-all active:scale-95"
               >
-                <TrendingDown className="w-4 h-4 text-violet-600" />
-                <span className="hidden sm:inline">Sort:</span>
-                <span className="text-violet-600 capitalize text-xs sm:text-sm">
+                <TrendingDown className="w-4 h-4 text-amber-400" />
+                <span>Filter By:</span>
+                <span className="text-amber-400">
                   {sortBy.replace('-', ' ')}
                 </span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${showSortMenu ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3 h-3 transition-transform ${showSortMenu ? 'rotate-180' : ''}`} />
               </button>
 
               {showSortMenu && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowSortMenu(false)} />
-                  <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-2xl z-20 overflow-hidden">
+                  <div className="fixed inset-0 z-50" onClick={() => setShowSortMenu(false)} />
+                  <div className="absolute right-0 mt-3 w-56 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-[60] overflow-hidden p-2 animate-in fade-in zoom-in-95 duration-200">
                     {[
                       { key: 'highest-discount', label: 'Highest Discount', icon: Percent },
                       { key: 'price-low', label: 'Price: Low to High', icon: TrendingDown },
@@ -259,9 +238,9 @@ const Deals = () => {
                       <button
                         key={key}
                         onClick={() => { setSortBy(key); setShowSortMenu(false); }}
-                        className={`w-full text-left px-4 py-3 text-sm flex items-center gap-3 transition-colors ${sortBy === key
-                          ? 'bg-violet-50 text-violet-600 font-semibold'
-                          : 'text-gray-700 hover:bg-gray-50'
+                        className={`w-full text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all rounded-xl ${sortBy === key
+                          ? 'bg-amber-400 text-black'
+                          : 'text-slate-400 hover:bg-white/5 hover:text-white'
                           }`}
                       >
                         <Icon className="w-4 h-4" />
@@ -276,8 +255,8 @@ const Deals = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 sm:px-6 py-8">
+      {/* Main Content - Using standard 7xl container */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12">
         <div className="flex flex-col gap-6">
           {/* Deals Grid Area */}
           <div className="flex-1">
@@ -320,96 +299,97 @@ const Deals = () => {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-4 sm:space-y-6 max-w-[1600px] mx-auto">
-                {/* Product Grid - Amazon/Flipkart Density */}
-                <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-4">
-                  {sortedDeals.map((deal, index) => (
+              <div className="space-y-4 sm:space-y-6">
+                {/* Product Grid - Proper Square Shape & Containerized */}
+                <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-6 sm:mt-0">
+                  {sortedDeals.map((deal) => (
                     <Link
                       key={deal.id}
                       to={`/product/${deal.id}`}
-                      className="group bg-white rounded-lg lg:rounded-md border border-gray-200 overflow-hidden transition-all hover:shadow-[0_2px_12px_0_rgba(0,0,0,0.12)] flex sm:flex-col lg:relative"
+                      className="group bg-white rounded-2xl sm:rounded-[1.5rem] border border-gray-100 overflow-hidden transition-all hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)] hover:border-violet-200 flex flex-row sm:flex-col h-full"
                     >
-                      {/* Product Image */}
-                      <div className="relative w-32 h-32 sm:w-full sm:aspect-square bg-white flex items-center justify-center p-2 lg:p-4 overflow-hidden shrink-0 border-b border-gray-50 lg:h-48">
+                      {/* Product Image Section - Compact Size for Desktop */}
+                      <div className="relative w-28 h-28 sm:w-full sm:h-[220px] bg-gray-50/30 flex items-center justify-center p-2 sm:p-6 overflow-hidden shrink-0 border-r sm:border-r-0 sm:border-b border-gray-100/50">
                         <img
                           src={deal.image}
                           alt={deal.name}
-                          className="max-w-full max-h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                          className="max-w-full max-h-full object-contain transition-all duration-700 group-hover:scale-105"
                           loading="lazy"
                         />
 
-                        {/* Wishlist Button (Marketplace style) */}
+                        {/* Status Badges */}
+                        <div className="absolute top-1.5 left-1.5 sm:top-4 sm:left-4 flex flex-wrap gap-1 sm:gap-1.5 max-w-[85%]">
+                          <div className={`px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full ${getDiscountBadgeStyle(deal.discount)} text-white text-[7px] sm:text-[9px] font-black uppercase tracking-widest shadow-lg`}>
+                            {deal.discount}%
+                          </div>
+                          {deal.isFlashDeal && (
+                            <div className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-slate-950 text-white text-[7px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shadow-lg">
+                              <Zap className="w-2 h-2 sm:w-2.5 sm:h-2.5 fill-amber-400 text-amber-400" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Wishlist Button */}
                         <button
                           onClick={(e) => handleWishlistAction(e, deal)}
-                          className={`absolute top-2 right-2 w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center transition-all bg-white shadow-sm hover:border-rose-200 ${isInWishlist(deal.id) ? 'text-rose-500' : 'text-gray-300 hover:text-rose-400'}`}
+                          className={`absolute top-1.5 right-1.5 sm:top-4 sm:right-4 w-6 h-6 sm:w-9 sm:h-9 rounded-full border border-white/20 flex items-center justify-center transition-all bg-white/40 backdrop-blur-xl shadow-lg hover:bg-white z-10 ${isInWishlist(deal.id) ? 'text-rose-500' : 'text-slate-400 hover:text-rose-500'}`}
                         >
-                          <Heart className={`w-4 h-4 ${isInWishlist(deal.id) ? 'fill-current' : ''}`} />
+                          <Heart className={`w-3 h-3 sm:w-4 sm:h-4 ${isInWishlist(deal.id) ? 'fill-current' : ''}`} />
                         </button>
                       </div>
 
-                      <div className="flex-1 p-3 lg:p-4 flex flex-col justify-between">
-                        <div className="space-y-1.5 flex-1">
-                          {/* Top Badge (Amazon Style) */}
-                          <div className="hidden lg:flex items-center gap-1.5 mb-1">
-                            {deal.discount >= 60 ? (
-                              <span className="bg-rose-700 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm">Deal of the Day</span>
-                            ) : (
-                              <span className="bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm">Limited time deal</span>
-                            )}
+                      {/* Content Area - Compact Desktop Layout */}
+                      <div className="p-3 sm:p-5 flex flex-col flex-1 bg-white relative justify-between">
+                        <div className="space-y-1 sm:space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[7px] sm:text-[9px] font-black text-violet-600 uppercase tracking-[0.15em] line-clamp-1">{deal.category}</span>
+                            <div className="flex items-center gap-1">
+                              <Star className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-orange-400 fill-current" />
+                              <span className="text-[7px] sm:text-[8px] font-black text-gray-900">{deal.rating || '4.5'}</span>
+                            </div>
                           </div>
 
-                          <h3 className="text-xs sm:text-sm text-gray-900 line-clamp-2 leading-snug group-hover:text-blue-700 lg:h-10">
+                          <h3 className="text-xs sm:text-[15px] font-bold text-gray-900 line-clamp-2 leading-snug group-hover:text-violet-600 transition-colors h-8 sm:h-10">
                             {deal.name}
                           </h3>
 
-                          {/* Ratings (Marketplace Style) */}
-                          <div className="flex items-center gap-1 lg:mt-1">
-                            <div className="flex items-center gap-0.5">
-                              {[1, 2, 3, 4, 5].map(star => (
-                                <Star key={star} className={`w-3 h-3 ${star <= Math.floor(deal.rating || 4) ? 'text-orange-400 fill-current' : 'text-gray-200'}`} />
-                              ))}
+                          <div className="pt-1">
+                            <div className="flex items-baseline gap-1.5 sm:gap-2 mb-1">
+                              <div className="text-base sm:text-2xl font-black text-gray-900 tracking-tighter">
+                                ₹{deal.price?.toLocaleString()}
+                              </div>
+                              <div className="text-[9px] sm:text-xs text-gray-300 line-through font-bold">
+                                ₹{deal.originalPrice?.toLocaleString()}
+                              </div>
+                              <div className={`text-[9px] font-black uppercase tracking-tighter self-end mb-1 ${deal.delivery_type === 'free' ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                {deal.delivery_type === 'free' ? 'FREE' : `+ ₹${deal.delivery_charge}`}
+                              </div>
                             </div>
-                            <span className="text-[10px] text-blue-600 font-medium">{deal.reviews || 428}</span>
+
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 sm:px-2.5 sm:py-1.5 bg-rose-50 rounded-md sm:rounded-lg self-start border border-rose-100/30">
+                              <Clock className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-rose-500" />
+                              <div className="text-[7px] sm:text-[9px] font-black text-rose-600 uppercase tracking-widest">
+                                {deal.timeLeft.hours}h {deal.timeLeft.minutes}m Left
+                              </div>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="mt-2 lg:mt-3">
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-lg lg:text-xl font-bold text-gray-900 tracking-tight">
-                              ₹{deal.price?.toLocaleString()}
-                            </span>
-                            <span className="text-[10px] text-gray-500 line-through">
-                              M.R.P: ₹{deal.originalPrice?.toLocaleString()}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs font-bold text-rose-600">({deal.discount}% off)</span>
-                            <span className="hidden lg:inline text-[10px] text-gray-500 truncate">Inclusive of all taxes</span>
-                          </div>
-
-                          {/* Mobile-only CTA (Maintained) */}
+                        {/* CTA */}
+                        <div className="mt-2.5 sm:mt-4">
                           <Button
                             onClick={(e) => handleAddToCart(e, deal)}
-                            className="w-full mt-3 h-9 bg-amber-400 hover:bg-amber-500 text-black text-xs font-bold rounded-full lg:hidden"
+                            className="w-full h-8 sm:h-10 bg-slate-950 hover:bg-violet-600 text-white text-[8px] sm:text-[9px] font-black uppercase tracking-widest rounded-lg sm:rounded-xl transition-all active:scale-95 shadow-lg group/btn relative overflow-hidden"
                           >
-                            Add to Cart
+                            <ShoppingCart className="w-3.5 h-3.5 mr-2 hidden sm:block" />
+                            <span className="sm:hidden text-[7px]">Add</span>
+                            <span className="hidden sm:block">Claim Deal</span>
                           </Button>
-
-                          {/* Desktop Minimalist Hover Action */}
-                          <div className="hidden lg:block mt-3 pt-3 border-t border-gray-50 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              onClick={(e) => handleAddToCart(e, deal)}
-                              className="w-full h-8 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-md"
-                            >
-                              Get this Deal
-                            </Button>
-                          </div>
                         </div>
                       </div>
                     </Link>
                   ))}
                 </div>
-
                 {/* Load More Button */}
                 {displayedDeals.length < deals.length && (
                   <div className="flex justify-center py-6">

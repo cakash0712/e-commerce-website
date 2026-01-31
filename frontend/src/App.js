@@ -249,8 +249,10 @@ export const useRecentlyViewed = () => {
 const RecentlyViewedProvider = ({ children }) => {
   const { user } = useAuth();
   const [recentProducts, setRecentProducts] = useState([]);
+  const [pickupProducts, setPickupProducts] = useState([]);
   const recentLoaded = useRef(false);
   const userKey = user?.id ? `ZippyCart_recent_${user.id}` : 'ZippyCart_recent_guest';
+  const pickupKey = user?.id ? `ZippyCart_pickup_${user.id}` : 'ZippyCart_pickup_guest';
 
   useEffect(() => {
     const fetchRecent = async () => {
@@ -304,43 +306,96 @@ const RecentlyViewedProvider = ({ children }) => {
       }
       recentLoaded.current = true;
     };
+
+    const fetchPickup = async () => {
+      const guestKey = 'ZippyCart_pickup_guest';
+      const guestItems = JSON.parse(localStorage.getItem(guestKey) || '[]');
+
+      if (user?.id) {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${API}/users/pickup-items`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (response.data) {
+            let updatedPickup = response.data;
+            if (guestItems.length > 0) {
+              const userPickupIds = new Set(updatedPickup.map(p => p.id));
+              const uniqueGuestItems = guestItems.filter(p => !userPickupIds.has(p.id));
+              if (uniqueGuestItems.length > 0) {
+                updatedPickup = [...uniqueGuestItems, ...updatedPickup].slice(0, 10);
+                localStorage.removeItem(guestKey);
+                axios.put(`${API}/users/pickup-items`, updatedPickup.map(p => p.id), {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+              }
+            }
+            setPickupProducts(updatedPickup);
+            localStorage.setItem(pickupKey, JSON.stringify(updatedPickup));
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to fetch pickup items", e);
+        }
+      }
+      const saved = localStorage.getItem(pickupKey);
+      if (saved) {
+        try { setPickupProducts(JSON.parse(saved)); } catch (e) { setPickupProducts([]); }
+      }
+    };
+
     fetchRecent();
-  }, [user?.id, userKey]);
+    fetchPickup();
+  }, [user?.id, userKey, pickupKey]);
 
   const addToRecentlyViewed = useCallback((product) => {
+    // 1. Update Recently Viewed
     setRecentProducts(prev => {
-      // Check if item is already at the top to avoid unnecessary updates
       if (prev.length > 0 && prev[0].id === product.id) return prev;
-
       const filtered = prev.filter(p => p.id !== product.id);
       const newList = [product, ...filtered].slice(0, 10);
 
-      // Synch logic
-      const syncToBackend = async () => {
+      const syncRecent = async () => {
         if (user?.id) {
           try {
             const token = localStorage.getItem('token');
-            const ids = newList.map(p => p.id).filter(id => id);
-            console.log("APP: Syncing Recent:", ids);
+            const ids = newList.map(p => p.id);
             await axios.put(`${API}/users/recently-viewed`, ids, {
               headers: { Authorization: `Bearer ${token}` }
             });
-            console.log("APP: Sync Recent OK");
-          } catch (e) {
-            console.error("APP: Recent sync error", e.response?.data || e.message);
-          }
+          } catch (e) { }
         }
-        // Save to local storage
         localStorage.setItem(userKey, JSON.stringify(newList));
       };
-
-      syncToBackend();
+      syncRecent();
       return newList;
     });
-  }, [user?.id, userKey]);
+
+    // 2. Update Pick Up Where You Left Off (Sync to MongoDB)
+    setPickupProducts(prev => {
+      if (prev.length > 0 && prev[0].id === product.id) return prev;
+      const filtered = prev.filter(p => p.id !== product.id);
+      const newList = [product, ...filtered].slice(0, 10); // Standard limit for pickup items
+
+      const syncPickup = async () => {
+        if (user?.id) {
+          try {
+            const token = localStorage.getItem('token');
+            const ids = newList.map(p => p.id);
+            await axios.put(`${API}/users/pickup-items`, ids, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+          } catch (e) { }
+        }
+        localStorage.setItem(pickupKey, JSON.stringify(newList));
+      };
+      syncPickup();
+      return newList;
+    });
+  }, [user?.id, userKey, pickupKey]);
 
   return (
-    <RecentViewedContext.Provider value={{ recentProducts, addToRecentlyViewed }}>
+    <RecentViewedContext.Provider value={{ recentProducts, pickupProducts, addToRecentlyViewed }}>
       {children}
     </RecentViewedContext.Provider>
   );
@@ -1280,17 +1335,14 @@ const PromoBannerSection = () => {
         const response = await axios.get(`${API_BASE}/api/products`);
         const products = response.data;
         if (products.length > 0) {
-          // Prioritize products with valid backend expiration times
-          const now = new Date();
-          const activeDeals = products.filter(p => p.offer_expires_at && new Date(p.offer_expires_at) > now);
+          // Only consider actual active special offers
+          const activeDeals = products.filter(p => p.is_special_active);
 
           if (activeDeals.length > 0) {
             activeDeals.sort((a, b) => b.discount - a.discount);
             setBestDeal(activeDeals[0]);
           } else {
-            // Fallback: Max discount if no active timed deals found
-            const sorted = [...products].sort((a, b) => b.discount - a.discount);
-            setBestDeal(sorted[0]);
+            setBestDeal(null);
           }
         }
       } catch (error) {
@@ -1301,13 +1353,19 @@ const PromoBannerSection = () => {
   }, []);
 
   useEffect(() => {
-    const targetDate = bestDeal?.special_offer_end ? new Date(bestDeal.special_offer_end) : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    if (!bestDeal || !bestDeal.special_offer_end) {
+      setTimeLeft({ days: '00', hours: '00', mins: '00', secs: '00' });
+      return;
+    }
+
+    const targetDate = new Date(bestDeal.special_offer_end);
 
     const timer = setInterval(() => {
       const now = new Date().getTime();
       const distance = targetDate.getTime() - now;
 
-      if (distance < 0) {
+      if (distance <= 0) {
+        setTimeLeft({ days: '00', hours: '00', mins: '00', secs: '00' });
         clearInterval(timer);
         return;
       }
@@ -1334,44 +1392,52 @@ const PromoBannerSection = () => {
 
         {/* Mobile Layout (Different) */}
         <div className="lg:hidden py-8">
-          <Link to={bestDeal ? `/product/${bestDeal.id}` : '/deals'} className="block">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-xl flex gap-4 items-center">
-              <div className="w-1/3 aspect-square bg-white/5 rounded-xl flex items-center justify-center p-2 relative overflow-hidden">
-                <img
-                  src={bestDeal?.image}
-                  alt={bestDeal?.name}
-                  className="w-full h-full object-contain"
-                />
-                <div className="absolute top-0 left-0 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-br-lg">
-                  -{bestDeal?.discount}%
+          {bestDeal ? (
+            <Link to={`/product/${bestDeal.id}`} className="block">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-xl flex gap-4 items-center">
+                <div className="w-1/3 aspect-square bg-white/5 rounded-xl flex items-center justify-center p-2 relative overflow-hidden">
+                  <img
+                    src={bestDeal.image}
+                    alt={bestDeal.name}
+                    className="w-full h-full object-contain"
+                  />
+                  <div className="absolute top-0 left-0 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-br-lg">
+                    -{bestDeal.discount}%
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge className="bg-amber-400 text-black text-[8px] px-1.5 py-0">FLASH SALE</Badge>
+                    <p className="text-rose-300 text-[10px] font-bold animate-pulse">Ending Soon</p>
+                  </div>
+                  <h3 className="text-white font-bold text-lg leading-tight truncate mb-1">{bestDeal.name}</h3>
+                  <div className="flex items-baseline gap-2 mb-2">
+                    <span className="text-xl font-black text-white">₹{bestDeal.price}</span>
+                    <span className="text-xs text-white/50 line-through">₹{bestDeal.originalPrice}</span>
+                  </div>
+                  <div className="flex gap-1">
+                    {[
+                      { v: timeLeft.days, l: "D" },
+                      { v: timeLeft.hours, l: "H" },
+                      { v: timeLeft.mins, l: "M" },
+                      { v: timeLeft.secs, l: "S" }
+                    ].map((t, i) => (
+                      <div key={i} className="bg-black/30 rounded px-1.5 py-0.5 min-w-[24px] text-center">
+                        <span className="text-white font-bold text-xs block leading-none">{t.v}</span>
+                        <span className="text-[8px] text-white/50 block leading-none mt-0.5">{t.l}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge className="bg-amber-400 text-black text-[8px] px-1.5 py-0">FLASH SALE</Badge>
-                  <p className="text-rose-300 text-[10px] font-bold animate-pulse">Ending Soon</p>
-                </div>
-                <h3 className="text-white font-bold text-lg leading-tight truncate mb-1">{bestDeal?.name || "Premium Deal"}</h3>
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-xl font-black text-white">₹{bestDeal?.price}</span>
-                  <span className="text-xs text-white/50 line-through">₹{bestDeal?.originalPrice}</span>
-                </div>
-                <div className="flex gap-1">
-                  {[
-                    { v: timeLeft.days, l: "D" },
-                    { v: timeLeft.hours, l: "H" },
-                    { v: timeLeft.mins, l: "M" },
-                    { v: timeLeft.secs, l: "S" }
-                  ].map((t, i) => (
-                    <div key={i} className="bg-black/30 rounded px-1.5 py-0.5 min-w-[24px] text-center">
-                      <span className="text-white font-bold text-xs block leading-none">{t.v}</span>
-                      <span className="text-[8px] text-white/50 block leading-none mt-0.5">{t.l}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            </Link>
+          ) : (
+            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-8 border border-white/10 text-center">
+              <Sparkles className="w-8 h-8 text-amber-400 mx-auto mb-3 opacity-50" />
+              <p className="text-white font-bold uppercase tracking-widest text-[10px]">No deals available now</p>
+              <p className="text-white/40 text-[9px] mt-1">Check back later for exclusive offers</p>
             </div>
-          </Link>
+          )}
         </div>
 
         {/* Desktop Layout (Original) */}
@@ -1419,23 +1485,33 @@ const PromoBannerSection = () => {
           </div>
 
           <div className="relative">
-            <div className="relative group p-4 transform scale-100">
-              <div className="absolute -inset-6 bg-gradient-to-tr from-rose-500/10 to-violet-600/10 rounded-full blur-[80px] opacity-50 group-hover:opacity-100 transition-opacity"></div>
-              <Link to={bestDeal ? `/product/${bestDeal.id}` : '#'} className="block">
-                <div className="relative bg-white/5 backdrop-blur-md rounded-[40px] p-6 border border-white/10 shadow-2xl overflow-hidden transform rotate-2 group-hover:rotate-0 transition-transform duration-1000 max-w-[400px] ml-auto cursor-pointer">
-                  <img
-                    src={bestDeal?.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=800&fit=crop"}
-                    alt={bestDeal?.name || "Premium Deal"}
-                    className="w-full object-contain rounded-[40px] brightness-90 group-hover:brightness-100 transition-all duration-700 mx-auto"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/80 via-transparent to-transparent"></div>
-                  <div className="absolute bottom-10 left-8 right-8 text-left">
-                    <p className="text-white font-black text-4xl leading-none tracking-tighter ml-6">{bestDeal?.discount || '60'}% OFF</p>
-                    <p className="text-white/60 text-[10px] font-bold uppercase mt-2 tracking-widest ml-6">Limited Batch Reveal</p>
+            {bestDeal ? (
+              <div className="relative group p-4 transform scale-100">
+                <div className="absolute -inset-6 bg-gradient-to-tr from-rose-500/10 to-violet-600/10 rounded-full blur-[80px] opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                <Link to={`/product/${bestDeal.id}`} className="block">
+                  <div className="relative bg-white/5 backdrop-blur-md rounded-[40px] p-6 border border-white/10 shadow-2xl overflow-hidden transform rotate-2 group-hover:rotate-0 transition-transform duration-1000 max-w-[400px] ml-auto cursor-pointer">
+                    <img
+                      src={bestDeal.image}
+                      alt={bestDeal.name}
+                      className="w-full object-contain rounded-[40px] brightness-90 group-hover:brightness-100 transition-all duration-700 mx-auto"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/80 via-transparent to-transparent"></div>
+                    <div className="absolute bottom-10 left-8 right-8 text-left">
+                      <p className="text-white font-black text-4xl leading-none tracking-tighter ml-6">{bestDeal.discount}% OFF</p>
+                      <p className="text-white/60 text-[10px] font-bold uppercase mt-2 tracking-widest ml-6">Limited Batch Reveal</p>
+                    </div>
                   </div>
+                </Link>
+              </div>
+            ) : (
+              <div className="relative bg-white/5 backdrop-blur-xl rounded-[40px] p-12 border border-white/10 shadow-2xl text-center max-w-[400px] ml-auto">
+                <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Sparkles className="w-10 h-10 text-amber-400 opacity-20" />
                 </div>
-              </Link>
-            </div>
+                <h3 className="text-white text-xl font-black uppercase tracking-tighter italic mb-2">No deals available now</h3>
+                <p className="text-white/40 text-xs font-medium">Our elite-tier flash sales have concluded. Stay tuned for the next synchronization.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -2169,7 +2245,7 @@ const Home = () => {
     }
   };
 
-  const { recentProducts } = useRecentlyViewed();
+  const { recentProducts, pickupProducts } = useRecentlyViewed();
 
   useEffect(() => {
     fetchStats();
@@ -2177,8 +2253,8 @@ const Home = () => {
   }, []);
 
   // Use provider data for the mobile grid, or fallback if empty
-  const displayRecentlyViewed = recentProducts.length > 0
-    ? recentProducts.map(p => ({
+  const displayPickupItems = pickupProducts.length > 0
+    ? pickupProducts.slice(0, 4).map(p => ({
       name: p.name,
       image: p.image || p.thumbnail,
       link: `/product/${p.id}`
@@ -2203,7 +2279,7 @@ const Home = () => {
         <div className="space-y-2 mt-2">
           <AmazonGridCard
             title="Pick up where you left off"
-            items={displayRecentlyViewed}
+            items={displayPickupItems}
           />
           <AmazonGridCard
             title="International Brands"

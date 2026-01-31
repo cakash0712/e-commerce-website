@@ -107,7 +107,15 @@ const Navigation = () => {
       const response = await axios.get(`${API_BASE}/api/notifications`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setNotifications(response.data);
+
+      // If we got new notifications, prepend them to the current list
+      if (response.data && response.data.length > 0) {
+        setNotifications(prev => {
+          const existingIds = new Set(prev.map(n => n.id));
+          const newNotifications = response.data.filter(n => !existingIds.has(n.id));
+          return [...newNotifications, ...prev].slice(0, 20); // Keep a reasonable history limit
+        });
+      }
     } catch (e) {
       console.error("Failed to fetch notifications:", e);
     }
@@ -279,7 +287,6 @@ const Navigation = () => {
   useEffect(() => {
     const updateHeaderLocation = async () => {
       if (user?.id) {
-        // Try the backend sync first to get the most up-to-date delivery location
         try {
           const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
           const token = localStorage.getItem('token');
@@ -287,60 +294,50 @@ const Navigation = () => {
             headers: { Authorization: `Bearer ${token}` }
           });
 
+          // 1. If we have a delivery_location in MongoDB, use it
           if (response.data && response.data.delivery_location) {
             setSelectedLocation(response.data.delivery_location);
             localStorage.setItem(`user_location_${user.id}`, response.data.delivery_location);
             return;
           }
+
+          // 2. If no delivery_location but we have addresses, use the first one and SAVE to MongoDB
+          if (response.data && response.data.addresses?.length > 0) {
+            const firstAddr = response.data.addresses[0];
+            const displayLoc = firstAddr.addr.length > 30 ? firstAddr.addr.substring(0, 30) + "..." : firstAddr.addr;
+            setSelectedLocation(displayLoc);
+            localStorage.setItem(`user_location_${user.id}`, displayLoc);
+
+            // Sync this default back to MongoDB
+            axios.put(`${API_BASE}/api/users/delivery-location`,
+              { delivery_location: displayLoc },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            return;
+          }
         } catch (e) {
-          console.error("Navigation: Fail to fetch backend delivery location", e);
+          console.error("Navigation: Sync failed", e);
         }
 
+        // Fallback to local storage
         const savedLoc = localStorage.getItem(`user_location_${user.id}`);
         if (savedLoc) {
           setSelectedLocation(savedLoc);
           return;
         }
 
-        let savedAddr = localStorage.getItem(`user_addresses_${user.id}`);
-
-        // If no local addresses, try the backend sync
-        if (!savedAddr) {
-          try {
-            const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`${API_BASE}/api/users/sync`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.data && response.data.addresses?.length > 0) {
-              savedAddr = JSON.stringify(response.data.addresses);
-              // Save locally for other components
-              localStorage.setItem(`user_addresses_${user.id}`, savedAddr);
-            }
-          } catch (e) {
-            console.error("Navigation: Fail to fetch backend addresses", e);
-          }
-        }
-
+        const savedAddr = localStorage.getItem(`user_addresses_${user.id}`);
         if (savedAddr) {
           try {
             const addresses = JSON.parse(savedAddr);
             if (addresses.length > 0) {
               const firstAddr = addresses[0].addr;
-              const displayLoc = firstAddr.substring(0, 30) + (firstAddr.length > 30 ? "..." : "");
+              const displayLoc = firstAddr.length > 30 ? firstAddr.substring(0, 30) + "..." : firstAddr;
               setSelectedLocation(displayLoc);
               localStorage.setItem(`user_location_${user.id}`, displayLoc);
-            } else {
-              setSelectedLocation("Select a location");
             }
-          } catch (e) {
-            setSelectedLocation("Select a location");
-          }
-        } else {
-          setSelectedLocation("Select a location");
+          } catch (e) { }
         }
-      } else {
-        setSelectedLocation("Select a location");
       }
     };
 

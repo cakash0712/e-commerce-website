@@ -26,6 +26,7 @@ const Profile = () => {
   const [savedCards, setSavedCards] = useState([]);
   const [savedUPIs, setSavedUPIs] = useState([]);
   const [activeGiftCards, setActiveGiftCards] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
   const profileLoaded = useRef(false);
 
@@ -64,6 +65,18 @@ const Profile = () => {
           }
         } catch (e) {
           console.error("Failed to fetch profile data from backend", e);
+        }
+
+        // Fetch notifications
+        try {
+          const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${API_BASE}/api/notifications`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setNotifications(response.data);
+        } catch (e) {
+          console.error("Failed to fetch notifications in profile", e);
         }
 
         // Fallback to localStorage
@@ -771,20 +784,34 @@ const Profile = () => {
                             <div className="flex items-center gap-3">
                               <h4 className="font-bold text-gray-900 text-sm">{addr.name}</h4>
                               <span className="font-bold text-gray-900 text-sm">{addr.phone}</span>
+                              <Badge className="bg-gray-100 text-gray-500 border-none text-[10px] font-bold px-2 py-0.5">{addr.type}</Badge>
                             </div>
-                            <div className="relative">
-                              <button type="button" onClick={() => handleEditAddress(addr)} className="text-violet-600 font-bold text-xs uppercase hover:underline mr-4">Edit</button>
-                              <button type="button" onClick={() => handleDeleteAddress(addr.id)} className="text-violet-600 font-bold text-xs uppercase hover:underline">Delete</button>
+                            <div className="flex items-center gap-4">
+                              <button
+                                onClick={() => {
+                                  const locStr = addr.addr.length > 30 ? addr.addr.substring(0, 30) + "..." : addr.addr;
+                                  if (user?.id) {
+                                    localStorage.setItem(`user_location_${user.id}`, locStr);
+                                    // Trigger sync immediately
+                                    updateUser(user.id, { delivery_location: locStr });
+                                  }
+                                  window.dispatchEvent(new Event('location_updated'));
+                                }}
+                                className={`text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${localStorage.getItem(`user_location_${user?.id}`) === (addr.addr.length > 30 ? addr.addr.substring(0, 30) + "..." : addr.addr)
+                                  ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                  : 'bg-white text-violet-600 border-violet-100 hover:bg-violet-50'}`}
+                              >
+                                {localStorage.getItem(`user_location_${user?.id}`) === (addr.addr.length > 30 ? addr.addr.substring(0, 30) + "..." : addr.addr) ? 'Active Location' : 'Deliver Here'}
+                              </button>
+                              <div className="h-4 w-px bg-gray-200 mx-1" />
+                              <button type="button" onClick={() => handleEditAddress(addr)} className="text-gray-400 hover:text-violet-600 font-bold text-xs uppercase transition-colors">Edit</button>
+                              <button type="button" onClick={() => handleDeleteAddress(addr.id)} className="text-gray-400 hover:text-rose-600 font-bold text-xs uppercase transition-colors">Delete</button>
                             </div>
                           </div>
 
-                          <p className="text-gray-600 text-sm leading-relaxed max-w-2xl mb-3">
+                          <p className="text-gray-600 text-sm leading-relaxed max-w-2xl">
                             {addr.addr}
                           </p>
-
-                          <div className="inline-block px-2 py-1 bg-gray-100 rounded text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                            {addr.type}
-                          </div>
                         </div>
                       ))}
                     </div>
@@ -1267,19 +1294,28 @@ const Profile = () => {
               <div className="space-y-10">
                 <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter">Inbox</h2>
                 <div className="space-y-4">
-                  {[
-                    { title: "Order Confirmed!", msg: "Your session IDs are being processed.", time: "2h ago" },
-                    { title: "Price Drop Alert", msg: "A shortlist item is now 20% cheaper.", time: "5h ago" }
-                  ].map((notif, i) => (
-                    <Card key={i} className="border-0 shadow-sm p-6 bg-gray-50 flex items-start gap-4 hover:border-violet-200 border-2 border-transparent transition-all">
-                      <div className="p-2 bg-violet-100 text-violet-600 rounded-lg"><Bell className="w-5 h-5" /></div>
-                      <div className="flex-1">
-                        <h4 className="font-bold text-gray-900 mb-1">{notif.title}</h4>
-                        <p className="text-sm text-gray-500 italic mb-2">{notif.msg}</p>
-                        <p className="text-[9px] font-black uppercase tracking-widest text-violet-400">{notif.time}</p>
-                      </div>
-                    </Card>
-                  ))}
+                  {notifications.length === 0 ? (
+                    <div className="p-12 text-center bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-100">
+                      <Bell className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+                      <p className="text-sm text-gray-400 font-bold uppercase tracking-widest italic">Your inbox is empty.</p>
+                      <p className="text-[10px] text-gray-300 mt-2">Any new acquisition alerts or system logs will appear here.</p>
+                    </div>
+                  ) : (
+                    notifications.map((notif, i) => (
+                      <Card key={i} className="border-0 shadow-sm p-6 bg-gray-50 flex items-start gap-4 hover:border-violet-200 border-2 border-transparent transition-all group">
+                        <div className="p-3 bg-violet-100 text-violet-600 rounded-xl group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                          <Bell className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-black text-gray-900 mb-1 italic">{notif.title}</h4>
+                          <p className="text-sm text-gray-500 italic mb-2">{notif.message}</p>
+                          <p className="text-[9px] font-black uppercase tracking-widest text-violet-400">
+                            {new Date(notif.created_at || Date.now()).toLocaleTimeString()} - Today
+                          </p>
+                        </div>
+                      </Card>
+                    ))
+                  )}
                 </div>
               </div>
             )}

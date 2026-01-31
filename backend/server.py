@@ -202,6 +202,7 @@ class User(BaseModel):
     cart: List[CartItem] = []
     wishlist: List[WishlistItem] = []
     recently_viewed: List[str] = [] # List of product IDs
+    pickup_items: List[str] = []   # List of product IDs for "Pick up where you left off"
     saved_cards: List[PaymentCard] = []
     saved_upis: List[UPI] = []
     active_gift_cards: List[GiftCard] = []
@@ -223,6 +224,7 @@ class UserCreate(BaseModel):
     user_type: str = "user"
     delivery_location: str = ""
     recent_searches: List[str] = []
+    pickup_items: List[str] = []
 
 class UserLogin(BaseModel):
     identifier: str  # phone or email
@@ -247,6 +249,7 @@ class UserUpdate(BaseModel):
     cart: Optional[List[CartItem]] = None
     wishlist: Optional[List[WishlistItem]] = None
     recently_viewed: Optional[List[str]] = None
+    pickup_items: Optional[List[str]] = None
     saved_cards: Optional[List[PaymentCard]] = None
     saved_upis: Optional[List[UPI]] = None
     active_gift_cards: Optional[List[GiftCard]] = None
@@ -281,11 +284,11 @@ class Product(BaseModel):
     special_offer_enabled: bool = False
     special_offer_type: str = "percentage"  # percentage, fixed
     special_offer_value: float = 0.0
-    special_offer_start: Optional[datetime] = None
-    special_offer_end: Optional[datetime] = None
+    special_offer_start: Optional[str] = None
+    special_offer_end: Optional[str] = None
     vendor_id: str
     offers: str = ""
-    offer_expires_at: Optional[datetime] = None
+    offer_expires_at: Optional[str] = None
     delivery_type: str = "free"  # free, fixed, weight, distance
     delivery_charge: float = 0
     free_delivery_above: float = 0
@@ -307,8 +310,8 @@ class ProductCreate(BaseModel):
     special_offer_enabled: bool = False
     special_offer_type: str = "percentage"
     special_offer_value: float = 0.0
-    special_offer_start: Optional[datetime] = None
-    special_offer_end: Optional[datetime] = None
+    special_offer_start: Optional[str] = None
+    special_offer_end: Optional[str] = None
     price: float = 0.0
     discount: int = 0
     stock: int
@@ -324,7 +327,7 @@ class ProductCreate(BaseModel):
     dimensions: str = ""
     material: str = ""
     offers: str = ""
-    offer_expires_at: Optional[datetime] = None
+    offer_expires_at: Optional[str] = None
     delivery_type: str = "free"  # free, fixed, weight, distance
     delivery_charge: float = 0
     free_delivery_above: float = 0
@@ -784,6 +787,44 @@ async def get_recently_viewed(current_user: Annotated[dict, Depends(get_current_
             
     return ordered_products
 
+@api_router.put("/users/pickup-items")
+async def update_pickup_items(product_ids: List[str], current_user: Annotated[dict, Depends(get_current_user)]):
+    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    # Keep only last 10 items
+    product_ids = product_ids[:10]
+    await collection.update_one({"id": current_user['id']}, {"$set": {"pickup_items": product_ids}})
+    return {"message": "Pick up where you left off history updated"}
+
+@api_router.get("/users/pickup-items")
+async def get_pickup_items(current_user: Annotated[dict, Depends(get_current_user)]):
+    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    user = await collection.find_one({"id": current_user['id']}, {"pickup_items": 1})
+    product_ids = user.get('pickup_items', [])
+    
+    if not product_ids:
+        # Fallback to recently_viewed if pickup_items is empty
+        user = await collection.find_one({"id": current_user['id']}, {"recently_viewed": 1})
+        product_ids = user.get('recently_viewed', [])[:4] # Just the last 4
+        
+    if not product_ids:
+        return []
+        
+    # Fetch actual product details
+    products_cursor = db.products.find({"id": {"$in": product_ids}})
+    products = await products_cursor.to_list(None)
+    
+    # Sort products based on the order in product_ids
+    products_map = {p['id']: p for p in products}
+    ordered_products = []
+    for p_id in product_ids:
+        if p_id in products_map:
+            p = products_map[p_id]
+            p['id'] = p.get('id') or str(p['_id'])
+            if '_id' in p: del p['_id']
+            ordered_products.append(p)
+            
+    return ordered_products
+
 @api_router.put("/users/recent-searches")
 async def update_recent_searches(searches: List[str], current_user: Annotated[dict, Depends(get_current_user)]):
     collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
@@ -911,6 +952,89 @@ async def subscribe_newsletter(data: NewsletterCreate):
 
 # --- Product Endpoints ---
 
+def sync_product_price(p):
+    """
+    Dynamically recalculates the product price based on whether 
+    special offers are currently active.
+    """
+    base = p.get('base_price', 0.0)
+    if base <= 0:
+        base = p.get('originalPrice', p.get('price', 0.0))
+        p['base_price'] = base
+    
+    # 1. Calculate 'Normal' Price (Base - Normal Discount)
+    n_type = p.get('normal_discount_type', 'percentage')
+    n_val = p.get('normal_discount_value', 0.0)
+    normal_price = base
+    if n_type == "percentage":
+        normal_price -= (base * (n_val / 100))
+    else:
+        normal_price -= n_val
+    normal_price = max(0.0, normal_price)
+
+    # 2. Check if Special Offer is currently Active
+    is_deal_active = False
+    if p.get('special_offer_enabled'):
+        now = datetime.now(timezone.utc)
+        start_str = p.get('special_offer_start')
+        end_str = p.get('special_offer_end')
+        
+        is_timing_pass = True
+        try:
+            def parse_dt(s):
+                if not s: return None
+                if isinstance(s, datetime):
+                    return s if s.tzinfo else s.replace(tzinfo=timezone.utc)
+                dt = datetime.fromisoformat(s.replace('Z', '+00:00'))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt
+
+            if start_str:
+                start = parse_dt(start_str)
+                if start and now < start: is_timing_pass = False
+            if end_str and is_timing_pass:
+                end = parse_dt(end_str)
+                if end and now > end: is_timing_pass = False
+            
+            # Check legacy expiration field as well
+            exp_str = p.get('offer_expires_at')
+            if exp_str and is_timing_pass:
+                exp = parse_dt(exp_str)
+                if exp and now > exp: is_timing_pass = False
+        except Exception:
+            is_timing_pass = False 
+            
+        if is_timing_pass:
+            is_deal_active = True
+
+    # 3. Final Price Determination
+    final_price = normal_price
+    if is_deal_active:
+        s_type = p.get('special_offer_type', 'percentage')
+        s_val = p.get('special_offer_value', 0.0)
+        if s_type == "percentage":
+            final_price -= (normal_price * (s_val / 100))
+        else:
+            final_price -= s_val
+    
+    p['price'] = max(0.0, round(final_price, 2))
+    p['originalPrice'] = base
+    p['is_special_active'] = is_deal_active
+    if base > 0:
+        p['discount'] = int(round(((base - p['price']) / base) * 100))
+    else:
+        p['discount'] = 0
+
+    # 4. Normalize Datetimes for JSON consistency (Force UTC 'Z')
+    for key, value in p.items():
+        if isinstance(value, datetime):
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=timezone.utc)
+            p[key] = value.isoformat().replace('+00:00', 'Z')
+            
+    return p
+
 @api_router.post("/products")
 async def add_product(product_data: ProductCreate, current_user: Annotated[dict, Depends(get_current_user)]):
     if current_user['user_type'] != 'vendor':
@@ -919,37 +1043,8 @@ async def add_product(product_data: ProductCreate, current_user: Annotated[dict,
     product_obj = Product(**product_data.model_dump(), vendor_id=current_user['id'], status="pending")
     doc = product_obj.model_dump()
     
-    # Automated Pricing & Discount Protocol
-    base = doc.get('base_price', 0.0)
-    current = base
-    
-    # Apply Normal Discount
-    n_type = doc.get('normal_discount_type', 'percentage')
-    n_val = doc.get('normal_discount_value', 0.0)
-    if n_type == "percentage":
-        current -= (base * (n_val / 100))
-    else:
-        current -= n_val
-        
-    # Apply Special Offer if enabled
-    if doc.get('special_offer_enabled'):
-        s_type = doc.get('special_offer_type', 'percentage')
-        s_val = doc.get('special_offer_value', 0.0)
-        if s_type == "percentage":
-            current -= (current * (s_val / 100))
-        else:
-            current -= s_val
-            
-    final_price = max(0.0, round(current, 2))
-    doc['price'] = final_price
-    doc['originalPrice'] = base
-    
-    if base > 0:
-        doc['discount'] = int(round(((base - final_price) / base) * 100))
-    else:
-        doc['discount'] = 0
-        
-    doc['created_at'] = doc['created_at'].isoformat()
+    # Calculate dynamic price and discounts using unified logic
+    doc = sync_product_price(doc)
 
     await db.products.insert_one(doc)
     
@@ -1003,6 +1098,13 @@ async def list_public_products(
         p_id = p.get('id') or str(p['_id'])
         p['id'] = p_id
         if '_id' in p: del p['_id']
+        
+        # Sync price dynamically
+        p = sync_product_price(p)
+        
+        # If only deals are requested, skip if the deal is not active
+        if only_deals and not p.get('is_special_active'):
+            continue
 
         # Robust vendor lookup
         vendor_id = p.get('vendor_id')
@@ -1100,6 +1202,7 @@ async def list_vendor_products(current_user: Annotated[dict, Depends(get_current
         p_id = p.get('id') or str(p['_id'])
         p['id'] = p_id
         if '_id' in p: del p['_id']
+        p = sync_product_price(p)
         products.append(p)
     return products
 
@@ -1119,6 +1222,9 @@ async def get_product(product_id: str):
     
     product['id'] = product.get('id') or str(product['_id'])
     if '_id' in product: del product['_id']
+    
+    # Recalculate dynamic price
+    product = sync_product_price(product)
 
     # Robust vendor lookup
     vendor_id = product.get('vendor_id')
@@ -1214,35 +1320,8 @@ async def update_product(product_id: str, product_data: ProductCreate, current_u
     update_doc = product_data.model_dump()
     update_doc['status'] = 'pending'
 
-    # Automated Pricing & Discount Protocol
-    base = update_doc.get('base_price', 0.0)
-    current = base
-    
-    # Apply Normal Discount
-    n_type = update_doc.get('normal_discount_type', 'percentage')
-    n_val = update_doc.get('normal_discount_value', 0.0)
-    if n_type == "percentage":
-        current -= (base * (n_val / 100))
-    else:
-        current -= n_val
-        
-    # Apply Special Offer if enabled
-    if update_doc.get('special_offer_enabled'):
-        s_type = update_doc.get('special_offer_type', 'percentage')
-        s_val = update_doc.get('special_offer_value', 0.0)
-        if s_type == "percentage":
-            current -= (current * (s_val / 100))
-        else:
-            current -= s_val
-            
-    final_price = max(0.0, round(current, 2))
-    update_doc['price'] = final_price
-    update_doc['originalPrice'] = base
-    
-    if base > 0:
-        update_doc['discount'] = int(round(((base - final_price) / base) * 100))
-    else:
-        update_doc['discount'] = 0
+    # Calculate dynamic price and discounts using unified logic
+    update_doc = sync_product_price(update_doc)
     
     # Ensure current ID stays the same
     if existing_product.get('id'):
@@ -1912,7 +1991,18 @@ async def reject_payout(payout_id: str, reason_data: dict, current_user: Annotat
 
 @api_router.get("/notifications")
 async def get_notifications(current_user: Annotated[dict, Depends(get_current_user)]):
-    notifications = await db.notifications.find({"user_id": current_user['id'], "is_read": False}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    # Find all unread notifications
+    cursor = db.notifications.find({"user_id": current_user['id'], "is_read": False}, {"_id": 0}).sort("created_at", -1)
+    notifications = await cursor.to_list(100)
+    
+    # Immediately mark these as "read" in the DB so they won't be returned again
+    if notifications:
+        notification_ids = [n['id'] for n in notifications]
+        await db.notifications.update_many(
+            {"id": {"$in": notification_ids}, "user_id": current_user['id']},
+            {"$set": {"is_read": True}}
+        )
+        
     return notifications
 
 @api_router.post("/notifications/read/{notification_id}")

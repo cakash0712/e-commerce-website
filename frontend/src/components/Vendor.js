@@ -748,8 +748,8 @@ const Vendor = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [newProduct, setNewProduct] = useState({
     name: '', category: user?.business_category || '', sub_category: '', price: '', stock: '', image: '', description: '',
-    brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
-    offer_expires_at: '', deal_duration: 'custom',
+    brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '',
+    offers: '', deal_duration: 'custom',
     images: '', highlights: '', specifications: '', warranty: '', box_contents: '',
     delivery_type: 'free', delivery_charge: '', free_delivery_above: '',
     base_price: '',
@@ -766,6 +766,14 @@ const Vendor = () => {
 
   const handleEditInitiate = (product) => {
     setEditingProduct(product.id);
+    const formatLocal = (date) => {
+      if (!date) return '';
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '';
+      const pad = (n) => n.toString().padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
     setNewProduct({
       name: product.name,
       category: product.category,
@@ -786,7 +794,7 @@ const Vendor = () => {
       dimensions: product.dimensions || '',
       material: product.material || '',
       offers: product.offers || '',
-      offer_expires_at: product.offer_expires_at ? new Date(product.offer_expires_at).toISOString().slice(0, 16) : '',
+      offer_expires_at: formatLocal(product.offer_expires_at),
       deal_duration: 'custom',
       delivery_type: product.delivery_type || 'free',
       delivery_charge: (product.delivery_charge || '').toString(),
@@ -797,8 +805,8 @@ const Vendor = () => {
       special_offer_enabled: product.special_offer_enabled || false,
       special_offer_type: product.special_offer_type || 'percentage',
       special_offer_value: (product.special_offer_value || 0).toString(),
-      special_offer_start: product.special_offer_start ? new Date(new Date(product.special_offer_start).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '',
-      special_offer_end: product.special_offer_end ? new Date(new Date(product.special_offer_end).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '',
+      special_offer_start: formatLocal(product.special_offer_start),
+      special_offer_end: formatLocal(product.special_offer_end),
       search_tags: (product.search_tags || []).join(', '),
       return_policy: product.return_policy || '7-day easy replacement/return'
     });
@@ -869,6 +877,18 @@ const Vendor = () => {
       const finalCategory = getParentCategory(newProduct.category);
       const finalSubCategory = finalCategory !== newProduct.category ? newProduct.category : '';
 
+      const toLocalISO = (dateStr) => {
+        if (!dateStr) return null;
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return null;
+        const offset = -date.getTimezoneOffset();
+        const absOffset = Math.abs(offset);
+        const hours = Math.floor(absOffset / 60);
+        const minutes = absOffset % 60;
+        const sign = offset >= 0 ? '+' : '-';
+        return `${dateStr}:00${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      };
+
       const payload = {
         ...newProduct,
         category: finalCategory,
@@ -876,17 +896,18 @@ const Vendor = () => {
         base_price: parseFloat(newProduct.base_price),
         normal_discount_value: parseFloat(newProduct.normal_discount_value || 0),
         special_offer_value: parseFloat(newProduct.special_offer_value || 0),
-        special_offer_start: newProduct.special_offer_start ? new Date(newProduct.special_offer_start).toISOString() : null,
-        special_offer_end: newProduct.special_offer_end ? new Date(newProduct.special_offer_end).toISOString() : null,
+        special_offer_start: toLocalISO(newProduct.special_offer_start),
+        special_offer_end: toLocalISO(newProduct.special_offer_end),
         price: parseFloat(newProduct.price || 0), // Backend will recalculate
         stock: parseInt(newProduct.stock),
         discount: parseInt(newProduct.discount || 0),
         colors: newProduct.colors.split(',').map(c => c.trim()).filter(c => c),
-        images: newProduct.images.split(',').map(c => c.trim()).filter(c => c),
+        image: newProduct.image,
+        images: newProduct.images.split(',').map(img => img.trim()).filter(img => img),
+        description: newProduct.description,
         highlights: newProduct.highlights.split('\n').map(c => c.trim()).filter(c => c),
         specifications: specObj,
         offers: newProduct.offers,
-        offer_expires_at: newProduct.offer_expires_at ? new Date(newProduct.offer_expires_at).toISOString() : null,
         delivery_type: newProduct.delivery_type,
         delivery_charge: newProduct.delivery_charge ? parseFloat(newProduct.delivery_charge) : 0,
         free_delivery_above: newProduct.free_delivery_above ? parseFloat(newProduct.free_delivery_above) : 0,
@@ -909,9 +930,11 @@ const Vendor = () => {
       setShowAddForm(false);
       setEditingProduct(null);
       setNewProduct({
-        brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '', offers: '',
-        offer_expires_at: '',
-        images: '', highlights: '', specifications: '', warranty: '', box_contents: '',
+        name: '', category: user?.business_category || '', sub_category: '',
+        price: '', stock: '', image: '', images: '', description: '',
+        brand: '', discount: '', colors: '', weight: '', dimensions: '', material: '',
+        offers: '', deal_duration: 'custom',
+        highlights: '', specifications: '', warranty: '', box_contents: '',
         delivery_type: 'free', delivery_charge: '', free_delivery_above: '',
         base_price: '', normal_discount_type: 'percentage', normal_discount_value: '',
         special_offer_enabled: false, special_offer_type: 'percentage', special_offer_value: '',
@@ -1174,6 +1197,43 @@ const Vendor = () => {
                             />
                           </div>
                         </div>
+
+                        {/* Persistent Offer Details */}
+                        <div className="space-y-3 pt-4">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Permanent Offer Details</Label>
+                          <Select
+                            value={newProduct.offers || "None"}
+                            onValueChange={(val) => {
+                              const updated = { ...newProduct, offers: val === "None" ? "" : val };
+                              if (val === "Free Delivery") {
+                                updated.delivery_type = 'free';
+                                updated.delivery_charge = 0;
+                                updated.free_delivery_above = 0;
+                              }
+                              setNewProduct(updated);
+                            }}
+                          >
+                            <SelectTrigger className="h-14 rounded-2xl border-slate-100 bg-white font-bold">
+                              <SelectValue placeholder="Select Offer (e.g. Free Delivery)" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-none shadow-xl">
+                              <SelectItem value="Free Delivery" className="font-bold text-xs">Free Delivery (Autosets Zero Shipping)</SelectItem>
+                              <SelectItem value="Buy 1 Get 1" className="font-bold text-xs">Buy 1 Get 1</SelectItem>
+                              <SelectItem value="Buy 2 Get 1" className="font-bold text-xs">Buy 2 Get 1</SelectItem>
+                              <SelectItem value="Limited Edition" className="font-bold text-xs">Limited Edition</SelectItem>
+                              <SelectItem value="2 Year Warranty" className="font-bold text-xs">2 Year Warranty</SelectItem>
+                              <SelectItem value="None" className="font-bold text-xs">None / Custom</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {newProduct.offers !== "Free Delivery" && newProduct.offers !== "Buy 1 Get 1" && newProduct.offers !== "Buy 2 Get 1" && (
+                            <Input
+                              placeholder="Or type custom offer details here..."
+                              value={newProduct.offers}
+                              onChange={(e) => setNewProduct({ ...newProduct, offers: e.target.value })}
+                              className="mt-2 h-14 rounded-2xl border-slate-100 font-bold bg-white"
+                            />
+                          )}
+                        </div>
                       </div>
 
                       {/* Special Offer Section */}
@@ -1244,16 +1304,6 @@ const Vendor = () => {
                               className="h-14 rounded-2xl border-slate-100 font-bold"
                             />
                           </div>
-
-                          <div className="space-y-3 md:col-span-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Offer Details (e.g. Buy 1 Get 1)</Label>
-                            <Input
-                              placeholder="e.g. Buy 1 Get 1, Free gift with purchase, use code SAVE10"
-                              value={newProduct.offers}
-                              onChange={(e) => setNewProduct({ ...newProduct, offers: e.target.value })}
-                              className="h-14 rounded-2xl border-slate-100 font-bold"
-                            />
-                          </div>
                         </div>
                       </div>
 
@@ -1304,70 +1354,74 @@ const Vendor = () => {
 
                       {/* Delivery Charge Section */}
                       <div className="border-t border-slate-100 pt-8">
-                        <h4 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
-                          <Truck className="w-4 h-4 text-violet-600" />
-                          Delivery Charges
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                          <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Delivery Type</Label>
-                            <select
-                              value={newProduct.delivery_type}
-                              onChange={(e) => setNewProduct({ ...newProduct, delivery_type: e.target.value })}
-                              className="w-full h-14 rounded-2xl border border-slate-200 bg-white px-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                            >
-                              <option value="free">Free Delivery</option>
-                              <option value="fixed">Fixed Charge</option>
-                              <option value="weight">Based on Weight</option>
-                              <option value="distance">Based on Distance</option>
-                            </select>
-                          </div>
-
-                          {newProduct.delivery_type !== 'free' && (
-                            <div className="space-y-3">
-                              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">
-                                {newProduct.delivery_type === 'weight' ? 'Charge per Kg (₹)' :
-                                  newProduct.delivery_type === 'distance' ? 'Charge per Km (₹)' :
-                                    'Delivery Charge (₹)'}
-                              </Label>
-                              <div className="relative">
-                                <Input
-                                  type="number"
-                                  placeholder="0"
-                                  value={newProduct.delivery_charge}
-                                  onChange={(e) => setNewProduct({ ...newProduct, delivery_charge: e.target.value })}
-                                  className="h-14 rounded-2xl border-slate-100 font-black text-xl pl-10"
-                                />
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-black">₹</span>
+                        {newProduct.offers !== "Free Delivery" && (
+                          <>
+                            <h4 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                              <Truck className="w-4 h-4 text-violet-600" />
+                              Delivery Charges
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                              <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Delivery Type</Label>
+                                <select
+                                  value={newProduct.delivery_type}
+                                  onChange={(e) => setNewProduct({ ...newProduct, delivery_type: e.target.value })}
+                                  className="w-full h-14 rounded-2xl border border-slate-200 bg-white px-4 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                >
+                                  <option value="free">Free Delivery</option>
+                                  <option value="fixed">Fixed Charge</option>
+                                  <option value="weight">Based on Weight</option>
+                                  <option value="distance">Based on Distance</option>
+                                </select>
                               </div>
-                            </div>
-                          )}
 
-                          {newProduct.delivery_type !== 'free' && (
-                            <div className="space-y-3">
-                              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Free Delivery Above (₹)</Label>
-                              <div className="relative">
-                                <Input
-                                  type="number"
-                                  placeholder="e.g. 499"
-                                  value={newProduct.free_delivery_above}
-                                  onChange={(e) => setNewProduct({ ...newProduct, free_delivery_above: e.target.value })}
-                                  className="h-14 rounded-2xl border-slate-100 font-bold pl-10"
-                                />
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-black">₹</span>
+                              {newProduct.delivery_type !== 'free' && (
+                                <div className="space-y-3">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">
+                                    {newProduct.delivery_type === 'weight' ? 'Charge per Kg (₹)' :
+                                      newProduct.delivery_type === 'distance' ? 'Charge per Km (₹)' :
+                                        'Delivery Charge (₹)'}
+                                  </Label>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      placeholder="0"
+                                      value={newProduct.delivery_charge}
+                                      onChange={(e) => setNewProduct({ ...newProduct, delivery_charge: e.target.value })}
+                                      className="h-14 rounded-2xl border-slate-100 font-black text-xl pl-10"
+                                    />
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-black">₹</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {newProduct.delivery_type !== 'free' && (
+                                <div className="space-y-3">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Free Delivery Above (₹)</Label>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      placeholder="e.g. 499"
+                                      value={newProduct.free_delivery_above}
+                                      onChange={(e) => setNewProduct({ ...newProduct, free_delivery_above: e.target.value })}
+                                      className="h-14 rounded-2xl border-slate-100 font-bold pl-10"
+                                    />
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-black">₹</span>
+                                  </div>
+                                  <p className="text-[10px] text-slate-400 ml-2">Leave empty for no free delivery threshold</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {newProduct.delivery_type === 'free' && (
+                              <div className="mt-4 p-4 bg-green-50 rounded-2xl border border-green-100">
+                                <p className="text-sm text-green-700 font-medium flex items-center gap-2">
+                                  <Truck className="w-4 h-4" />
+                                  This product will have free delivery for all customers
+                                </p>
                               </div>
-                              <p className="text-[10px] text-slate-400 ml-2">Leave empty for no free delivery threshold</p>
-                            </div>
-                          )}
-                        </div>
-
-                        {newProduct.delivery_type === 'free' && (
-                          <div className="mt-4 p-4 bg-green-50 rounded-2xl border border-green-100">
-                            <p className="text-sm text-green-700 font-medium flex items-center gap-2">
-                              <Truck className="w-4 h-4" />
-                              This product will have free delivery for all customers
-                            </p>
-                          </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </TabsContent>
@@ -1619,8 +1673,8 @@ const Vendor = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-bold text-sm text-gray-900">{p.name}</p>
-                            {p.special_offer_enabled && (
-                              <Badge className="bg-amber-100 text-amber-600 border-none px-1.5 py-0 text-[8px] font-black uppercase">Special Offer</Badge>
+                            {p.is_special_active && (
+                              <Badge className="bg-amber-100 text-amber-600 border-none px-1.5 py-0 text-[8px] font-black uppercase">Active Offer</Badge>
                             )}
                             {p.offers && (
                               <Badge className="bg-blue-100 text-blue-600 border-none px-1.5 py-0 text-[8px] font-black uppercase">Bundle Offer</Badge>

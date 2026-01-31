@@ -143,8 +143,11 @@ const DetailsView = () => {
                     id: p.id,
                     name: p.name,
                     price: p.price,
-                    originalPrice: p.discount > 0 ? Math.round(p.price / (1 - p.discount / 100)) : p.price,
+                    originalPrice: p.originalPrice || (p.discount > 0 ? Math.round(p.price / (1 - p.discount / 100)) : p.price),
                     discount: p.discount,
+                    special_offer_enabled: p.special_offer_enabled,
+                    is_special_active: p.is_special_active,
+                    is_offer_expired: p.is_offer_expired,
                     description: p.description,
 
                     images: p.images && p.images.length > 0 ? [p.image, ...p.images] : [p.image],
@@ -466,6 +469,9 @@ const DetailsView = () => {
                                     </div>
                                     <div className="flex items-baseline gap-3">
                                         <span className="text-3xl font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
+                                        {product.delivery_type !== 'free' && (
+                                            <span className="text-xl font-bold text-slate-400">+ ₹{product.delivery_charge} <span className="text-[10px] uppercase tracking-tighter">Charges</span></span>
+                                        )}
                                         {product.discount > 0 && (
                                             <>
                                                 <span className="text-xl text-gray-400 line-through">₹{product.originalPrice.toLocaleString()}</span>
@@ -521,7 +527,7 @@ const DetailsView = () => {
                                             </div>
                                             <div>
                                                 <p className="text-[14px] font-bold text-gray-900">
-                                                    {product.delivery_type === 'free' ? 'FREE delivery' : `Delivery: ₹${product.delivery_charge}`}
+                                                    {product.delivery_type === 'free' ? 'FREE delivery' : `+ ₹${product.delivery_charge} extra`}
                                                 </p>
                                                 <p className="text-[13px] text-gray-500">
                                                     {product.delivery_type === 'free' && product.free_delivery_above > 0
@@ -615,7 +621,7 @@ const DetailsView = () => {
                                             <Truck className="w-6 h-6 text-violet-600" />
                                             <div>
                                                 <p className="text-sm font-bold text-gray-900">
-                                                    {product.delivery_type === 'free' ? 'Free Delivery' : `Delivery: ₹${product.delivery_charge}`}
+                                                    {product.delivery_type === 'free' ? 'Free Delivery' : `+ ₹${product.delivery_charge} extra`}
                                                 </p>
                                                 <p className="text-xs text-gray-500">
                                                     {product.delivery_type === 'free' && product.free_delivery_above > 0

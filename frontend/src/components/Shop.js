@@ -71,13 +71,7 @@ const ProductItem = ({
               </div>
             )}
 
-            {/* Desktop-Only Discount Badge */}
-            {product.special_offer_enabled ? (
-              <div className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-sm z-10 hidden sm:flex items-center gap-1 uppercase tracking-tighter">
-                <Zap className="w-2.5 h-2.5 fill-current" />
-                Special Offer
-              </div>
-            ) : product.discount > 10 && (
+            {product.discount > 10 && (
               <div className="absolute top-2 left-2 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm z-10 hidden sm:block">
                 -{product.discount}%
               </div>
@@ -135,8 +129,8 @@ const ProductItem = ({
                     <span className="text-xs sm:text-[10px] text-gray-400 line-through">₹{product.originalPrice.toLocaleString()}</span>
                   )}
                 </div>
-                <p className={`text-[11px] sm:text-[10px] font-bold ${product.delivery_type === 'free' ? 'text-green-600' : 'text-gray-500'}`}>
-                  {product.delivery_type === 'free' ? 'Free Delivery' : `+ ₹${product.delivery_charge}`}
+                <p className={`text-[11px] sm:text-[10px] font-bold ${product.delivery_type === 'free' ? 'text-green-600' : 'text-slate-400'}`}>
+                  {product.delivery_type === 'free' ? 'FREE Delivery' : `+ ₹${product.delivery_charge}`}
                 </p>
               </div>
 
@@ -159,12 +153,7 @@ const ProductItem = ({
               alt={product.name}
               className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110"
             />
-            {product.special_offer_enabled ? (
-              <span className="absolute top-3 left-3 bg-amber-500 text-white text-[11px] font-black px-3 py-1 rounded-md shadow-md flex items-center gap-1 uppercase italic tracking-tighter">
-                <Zap className="w-3 h-3 fill-current" />
-                Limited Time Special
-              </span>
-            ) : product.discount > 10 && (
+            {product.discount > 10 && (
               <span className="absolute top-3 left-3 bg-rose-500 text-white text-[11px] font-bold px-2 py-1 rounded-md shadow-md">
                 -{product.discount}% OFF
               </span>
