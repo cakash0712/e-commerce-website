@@ -29,6 +29,214 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+# Comprehensive E-commerce Categories Structure
+initial_categories = [
+    # 1. Fashion & Apparel
+    {
+        "name": "Fashion & Apparel",
+        "slug": "fashion-apparel",
+        "image": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=500&q=80",
+        "subcategories": [
+            "Men's Clothing",
+            "Women's Clothing",
+            "Kids & Baby Clothing",
+            "Shoes & Footwear",
+            "Bags & Luggage",
+            "Accessories",
+            "Watches",
+            "Jewelry"
+        ]
+    },
+    # 2. Electronics & Technology
+    {
+        "name": "Electronics & Technology",
+        "slug": "electronics-technology",
+        "image": "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&q=80",
+        "subcategories": [
+            "Mobile Phones & Accessories",
+            "Laptops & Computers",
+            "Tablets",
+            "Audio",
+            "Cameras & Photography",
+            "Gaming Consoles & Accessories",
+            "Smart Home Devices",
+            "Computer Components"
+        ]
+    },
+    # 3. Home, Furniture & Kitchen
+    {
+        "name": "Home, Furniture & Kitchen",
+        "slug": "home-furniture-kitchen",
+        "image": "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=500&q=80",
+        "subcategories": [
+            "Furniture",
+            "Home Décor",
+            "Kitchen Appliances",
+            "Cookware & Dining",
+            "Bedding & Bath",
+            "Lighting",
+            "Storage & Organization"
+        ]
+    },
+    # 4. Beauty & Personal Care
+    {
+        "name": "Beauty & Personal Care",
+        "slug": "beauty-personal-care",
+        "image": "https://images.unsplash.com/photo-1596462502278-27bfdc4033c8?w=500&q=80",
+        "subcategories": [
+            "Skincare",
+            "Haircare",
+            "Makeup & Cosmetics",
+            "Fragrances",
+            "Grooming & Shaving",
+            "Personal Hygiene"
+        ]
+    },
+    # 5. Health & Wellness
+    {
+        "name": "Health & Wellness",
+        "slug": "health-wellness",
+        "image": "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=500&q=80",
+        "subcategories": [
+            "Vitamins & Supplements",
+            "Medical Equipment",
+            "Fitness Accessories",
+            "Wellness Devices"
+        ]
+    },
+    # 6. Sports, Fitness & Outdoors
+    {
+        "name": "Sports, Fitness & Outdoors",
+        "slug": "sports-fitness-outdoors",
+        "image": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=500&q=80",
+        "subcategories": [
+            "Exercise Equipment",
+            "Sportswear",
+            "Outdoor Gear",
+            "Camping & Hiking",
+            "Cycling",
+            "Yoga & Meditation"
+        ]
+    },
+    # 7. Baby, Kids & Toys
+    {
+        "name": "Baby, Kids & Toys",
+        "slug": "baby-kids-toys",
+        "image": "https://images.unsplash.com/photo-1558877385-1199c1af4e8e?w=500&q=80",
+        "subcategories": [
+            "Baby Care",
+            "Toys & Games",
+            "School Supplies",
+            "Strollers & Car Seats",
+            "Kids Furniture"
+        ]
+    },
+    # 8. Pet Supplies
+    {
+        "name": "Pet Supplies",
+        "slug": "pet-supplies",
+        "image": "https://images.unsplash.com/photo-1544568100-847a948585b9?w=500&q=80",
+        "subcategories": [
+            "Pet Food",
+            "Toys & Accessories",
+            "Grooming Products",
+            "Pet Health"
+        ]
+    },
+    # 9. Books, Media & Stationery
+    {
+        "name": "Books, Media & Stationery",
+        "slug": "books-media-stationery",
+        "image": "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=500&q=80",
+        "subcategories": [
+            "Books",
+            "Magazines",
+            "Office Supplies",
+            "Art & Craft Supplies"
+        ]
+    },
+    # 10. Automotive & Industrial
+    {
+        "name": "Automotive & Industrial",
+        "slug": "automotive-industrial",
+        "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&q=80",
+        "subcategories": [
+            "Car Accessories",
+            "Spare Parts",
+            "Tools & Equipment",
+            "Safety Gear"
+        ]
+    },
+    # 11. Grocery & Food
+    {
+        "name": "Grocery & Food",
+        "slug": "grocery-food",
+        "image": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&q=80",
+        "subcategories": [
+            "Fresh Produce",
+            "Packaged Foods",
+            "Beverages",
+            "Organic & Specialty Foods"
+        ]
+    },
+    # 12. Digital Products & Services
+    {
+        "name": "Digital Products & Services",
+        "slug": "digital-products-services",
+        "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=500&q=80",
+        "subcategories": [
+            "Software",
+            "Online Courses",
+            "Subscriptions",
+            "Digital Downloads"
+        ]
+    },
+    # Optional / Advanced Categories
+    {
+        "name": "Handmade & Artisan",
+        "slug": "handmade-artisan",
+        "image": "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=500&q=80",
+        "subcategories": []
+    },
+    {
+        "name": "Luxury Goods",
+        "slug": "luxury-goods",
+        "image": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=500&q=80",
+        "subcategories": []
+    },
+    {
+        "name": "Second-hand & Refurbished",
+        "slug": "secondhand-refurbished",
+        "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&q=80",
+        "subcategories": []
+    },
+    {
+        "name": "B2B & Wholesale",
+        "slug": "b2b-wholesale",
+        "image": "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=500&q=80",
+        "subcategories": []
+    },
+    {
+        "name": "Custom & Print-on-Demand",
+        "slug": "custom-print-demand",
+        "image": "https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=500&q=80",
+        "subcategories": []
+    }
+]
+
+# Convert to MongoDB format
+def create_category_doc(cat):
+    return {
+        "id": str(uuid.uuid4()),
+        "name": cat["name"],
+        "slug": cat["slug"],
+        "image": cat["image"],
+        "subcategories": cat["subcategories"],
+        "items": f"{len(cat['subcategories']) * 100}+ Products",
+        "link": f"/shop?category={cat['slug']}",
+        "created_at": datetime.now(timezone.utc)
+    }
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -39,24 +247,25 @@ async def lifespan(app: FastAPI):
     # Seed Categories if empty
     cat_count = await db.categories.count_documents({})
     if cat_count == 0:
-        initial_categories = [
-            { "name": "Electronics", "image": "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&q=80", "items": "2.4k+ Products", "link": "/shop?category=Electronics" },
-            { "name": "Fashion", "image": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=500&q=80", "items": "1.8k+ Products", "link": "/shop?category=Fashion" },
-            { "name": "Home & Garden", "image": "https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=500&q=80", "items": "950+ Products", "link": "/shop?category=Home" },
-            { "name": "Sports", "image": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=500&q=80", "items": "1.2k+ Products", "link": "/shop?category=Sports" },
-            { "name": "Beauty", "image": "https://images.unsplash.com/photo-1596462502278-27bfdc4033c8?w=500&q=80", "items": "800+ Products", "link": "/shop?category=Beauty" },
-            { "name": "Books", "image": "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=500&q=80", "items": "3.5k+ Products", "link": "/shop?category=Books" },
-            { "name": "Automotive", "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&q=80", "items": "600+ Products", "link": "/shop?category=Automotive" },
-            { "name": "Toys & Games", "image": "https://images.unsplash.com/photo-1558877385-1199c1af4e8e?w=500&q=80", "items": "1.1k+ Products", "link": "/shop?category=Toys" },
-            { "name": "Health & Personal Care", "image": "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=500&q=80", "items": "750+ Products", "link": "/shop?category=Health" },
-            { "name": "Grocery", "image": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&q=80", "items": "2.1k+ Products", "link": "/shop?category=Grocery" },
-            { "name": "Pet Supplies", "image": "https://images.unsplash.com/photo-1544568100-847a948585b9?w=500&q=80", "items": "400+ Products", "link": "/shop?category=Pets" },
-            { "name": "Jewelry", "image": "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500&q=80", "items": "900+ Products", "link": "/shop?category=Jewelry" }
-        ]
         for cat in initial_categories:
-            cat['id'] = str(uuid.uuid4())
-            cat['created_at'] = datetime.now(timezone.utc)
-            await db.categories.insert_one(cat)
+            cat_doc = create_category_doc(cat)
+            await db.categories.insert_one(cat_doc)
+    else:
+        # Update existing categories with subcategories if missing
+        async for cat in db.categories.find({}):
+            if "subcategories" not in cat:
+                # Find matching category from initial_categories
+                for init_cat in initial_categories:
+                    if init_cat["name"] == cat["name"] or init_cat["slug"] == cat.get("slug"):
+                        await db.categories.update_one(
+                            {"id": cat["id"]},
+                            {"$set": {
+                                "slug": init_cat["slug"],
+                                "subcategories": init_cat["subcategories"],
+                                "items": f"{len(init_cat['subcategories']) * 100}+ Products"
+                            }}
+                        )
+                        break
 
     yield
     # Shutdown
@@ -64,7 +273,6 @@ async def lifespan(app: FastAPI):
 
 # Create the main app with lifespan
 app = FastAPI(lifespan=lifespan)
-
 
 # Mount static files
 app.mount("/uploads", StaticFiles(directory=str(ROOT_DIR / 'uploads')), name="uploads")
@@ -348,10 +556,29 @@ class Category(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
+    slug: str = ""
     image: str
+    subcategories: List[str] = []
     items: str = "0 Products"
     link: str = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CategoryWithSubs(BaseModel):
+    """Category model with detailed subcategory info"""
+    id: str
+    name: str
+    slug: str
+    image: str
+    subcategories: List[dict] = []
+    items: str
+    link: str
+
+class SubCategory(BaseModel):
+    """Individual subcategory with main category reference"""
+    name: str
+    main_category: str
+    main_category_slug: str
+    link: str
 
 class OrderItem(BaseModel):
     product_id: str
@@ -471,6 +698,35 @@ class NewsletterSubscription(BaseModel):
 
 class NewsletterCreate(BaseModel):
     email: str
+
+class AboutStat(BaseModel):
+    number: str
+    label: str
+    icon_name: str
+
+class AboutValue(BaseModel):
+    icon_name: str
+    title: str
+    description: str
+
+class AboutMilestone(BaseModel):
+    year: str
+    title: str
+    desc: str
+
+class AboutData(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    hero_title: str
+    hero_subtitle: str
+    hero_description: str
+    story_title: str
+    story_description: str
+    story_image: str
+    stats: List[AboutStat]
+    values: List[AboutValue]
+    milestones: List[AboutMilestone]
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # Add your routes to the router instead of directly to app
 
@@ -1068,12 +1324,18 @@ async def list_public_products(
     limit: int = 100, 
     sort: str = "newest", 
     category: Optional[str] = None,
+    sub_category: Optional[str] = None,
+    exclude: Optional[str] = None,
     only_deals: bool = False
 ):
     # Base filter: only show approved products
     query = {"status": "approved"}
     if category:
         query["category"] = category
+    if sub_category:
+        query["sub_category"] = sub_category
+    if exclude:
+        query["id"] = {"$ne": exclude}
     if only_deals:
         query["special_offer_enabled"] = True
         
@@ -2058,6 +2320,44 @@ async def get_public_reviews():
         reviews.append(review)
     return reviews
 
+@api_router.get("/public/about", response_model=AboutData)
+async def get_about_data():
+    about_data = await db.about.find_one({}, {"_id": 0})
+    if not about_data:
+        # Fallback/Initial data
+        initial_about = {
+            "hero_title": "Elevating the Future of Digital Commerce",
+            "hero_subtitle": "Digital Commerce",
+            "hero_description": "We're dedicated to bridging the gap between quality products and conscious consumers through a seamless, brand-focused shopping experience.",
+            "story_title": "Driven by passion, defined by purpose.",
+            "story_description": "Founded in 2018, our journey began with a simple yet powerful goal: to create a platform where quality meets convenience. We believe that everyone deserves access to authentic, high-quality products without compromise.",
+            "story_image": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1600&q=80",
+            "stats": [
+                {"number": "50K+", "label": "Happy Customers", "icon_name": "Users"},
+                {"number": "125+", "label": "Brand Partners", "icon_name": "Award"},
+                {"number": "99.9%", "label": "Satisfaction Rate", "icon_name": "Star"},
+                {"number": "24/7", "label": "Customer Support", "icon_name": "Headphones"},
+            ],
+            "values": [
+                {"icon_name": "Shield", "title": "Quality Assurance", "description": "Every product undergoes rigorous quality checks before reaching you."},
+                {"icon_name": "Truck", "title": "Fast Delivery", "description": "Quick and reliable shipping to your doorstep across India."},
+                {"icon_name": "Heart", "title": "Customer First", "description": "Your satisfaction is our priority with hassle-free returns."},
+                {"icon_name": "Zap", "title": "Best Prices", "description": "We work directly with manufacturers for the best prices."},
+            ],
+            "milestones": [
+                {"year": "2018", "title": "Company Founded", "desc": "Started with a vision to make quality products accessible"},
+                {"year": "2020", "title": "10K+ Customers", "desc": "Reached our first major customer milestone"},
+                {"year": "2022", "title": "Pan-India Delivery", "desc": "Expanded delivery to all major cities"},
+                {"year": "2024", "title": "50K+ Customers", "desc": "Celebrating 50,000+ happy customers"},
+            ]
+        }
+        about_doc = {**initial_about, "id": str(uuid.uuid4()), "updated_at": datetime.now(timezone.utc)}
+        await db.about.insert_one(about_doc)
+        del about_doc['_id']
+        about_data = about_doc
+    
+    return about_data
+
 @api_router.get("/public/categories")
 async def get_public_categories():
     """
@@ -2071,15 +2371,84 @@ async def get_public_categories():
         categories.append(cat)
     return categories
 
+@api_router.get("/public/categories/hierarchical")
+async def get_hierarchical_categories():
+    """
+    Returns all categories with subcategories in a hierarchical structure.
+    Each subcategory includes the main category name for display purposes.
+    """
+    categories_cursor = db.categories.find().sort("name", 1)
+    hierarchical = []
+    
+    async for cat in categories_cursor:
+        cat_id = str(cat.get('id') or cat['_id'])
+        main_name = cat.get('name', '')
+        main_slug = cat.get('slug', '')
+        
+        # Build subcategories with main category info
+        subcategories = []
+        for sub in cat.get('subcategories', []):
+            subcategories.append({
+                "name": sub,
+                "main_category": main_name,
+                "main_category_slug": main_slug,
+                "link": f"/shop?category={main_slug}&subcategory={sub.replace(' ', '-').lower()}"
+            })
+        
+        hierarchical.append({
+            "id": cat_id,
+            "name": main_name,
+            "slug": main_slug,
+            "image": cat.get('image', ''),
+            "subcategories": subcategories,
+            "subcategory_count": len(subcategories),
+            "items": cat.get('items', '0 Products'),
+            "link": cat.get('link', '')
+        })
+    
+    return hierarchical
+
+@api_router.get("/public/categories/all-subcategories")
+async def get_all_subcategories():
+    """
+    Returns all subcategories from all categories flattened into a single list.
+    Each subcategory includes the main category name.
+    """
+    all_subs = []
+    
+    categories_cursor = db.categories.find().sort("name", 1)
+    async for cat in categories_cursor:
+        main_name = cat.get('name', '')
+        main_slug = cat.get('slug', '')
+        
+        for sub in cat.get('subcategories', []):
+            all_subs.append({
+                "name": sub,
+                "main_category": main_name,
+                "main_category_slug": main_slug,
+                "link": f"/shop?category={main_slug}&subcategory={sub.replace(' ', '-').lower()}"
+            })
+    
+    return all_subs
+
 @api_router.post("/categories")
 async def add_category(category: Category, current_user: Annotated[dict, Depends(get_current_user)]):
     if current_user['user_type'] != 'admin':
         raise HTTPException(status_code=403, detail="Only admins can add categories")
-
+    
     cat_dict = category.model_dump()
+    
+    # Generate slug from name if not provided
+    if not cat_dict.get('slug'):
+        cat_dict['slug'] = cat_dict['name'].lower().replace(' ', '-').replace('&', 'and')
+    
+    # Generate link if not provided
+    if not cat_dict.get('link'):
+        cat_dict['link'] = f"/shop?category={cat_dict['slug']}"
+    
     cat_dict['created_at'] = datetime.now(timezone.utc)
     await db.categories.insert_one(cat_dict)
-    return {"message": "Category added successfully."}
+    return {"message": "Category added successfully.", "category": cat_dict}
 
 @api_router.post("/vendor/categories")
 async def add_vendor_category(category_data: dict, current_user: Annotated[dict, Depends(get_current_user)]):
@@ -2146,7 +2515,6 @@ async def update_user(user_id: str, update_data: dict, current_user: Annotated[d
 
     return {"message": "User updated successfully"}
 
-# Include the router in the main app
 app.include_router(api_router)
 
 app.add_middleware(

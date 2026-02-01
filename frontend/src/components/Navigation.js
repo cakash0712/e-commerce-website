@@ -24,7 +24,8 @@ import {
   Home,
   Package,
   MapPin,
-  Settings
+  Settings,
+  ArrowLeft
 } from "lucide-react";
 import CartDrawer from "./CartDrawer";
 import {
@@ -775,16 +776,27 @@ const Navigation = () => {
         <div className="lg:hidden px-4 pb-3 flex flex-col gap-2">
           <div className="relative" ref={searchRef}>
             <form onSubmit={handleSearch}>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search ZippyCart..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => setShowSuggestions(true)}
-                  className="w-full h-11 pl-10 pr-4 rounded-xl bg-gray-50 border-gray-200 border text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all shadow-sm"
-                />
+              <div className="flex items-center gap-2">
+                {showSuggestions && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSuggestions(false)}
+                    className="p-2 -ml-2 text-gray-400 hover:text-violet-600 transition-colors animate-in slide-in-from-left-2"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                )}
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search ZippyCart..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onFocus={() => setShowSuggestions(true)}
+                    className="w-full h-11 pl-10 pr-4 rounded-xl bg-gray-50 border-gray-200 border text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all shadow-sm"
+                  />
+                </div>
               </div>
             </form>
 

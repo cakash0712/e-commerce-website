@@ -36,6 +36,7 @@ import {
   Bike,
   Footprints,
   ArrowRight,
+  ArrowLeft,
   ChevronRight
 } from "lucide-react";
 
@@ -147,16 +148,24 @@ const Categories = () => {
       <Navigation />
 
       {/* Hero Header */}
-      <div className="bg-gray-50/50 border-b border-gray-100 pt-24 sm:pt-32 pb-8 sm:pb-12">
+      <div className="bg-gray-50/50 border-b border-gray-100 pt-32 sm:pt-24 pb-8 sm:pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex items-center gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-gray-400 mb-4 sm:mb-6">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-1.5 hover:text-violet-600 transition-colors mr-2 group"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+              <span>Back</span>
+            </button>
+            <div className="w-px h-3 bg-gray-200 mx-1.5" />
             <Link to="/" className="hover:text-violet-600 transition-colors">Home</Link>
             <ChevronRight className="w-3 h-3 opacity-50" />
             <span className="text-gray-900">Categories</span>
           </nav>
 
           <div className="space-y-1 sm:space-y-2 text-left">
-            <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tighter uppercase leading-none">
+            <h1 className="text-4xl sm:text-6l font-black text-gray-900 tracking-tighter uppercase leading-none">
               All Categories
             </h1>
             <p className="text-gray-500 text-xs sm:text-sm font-medium">

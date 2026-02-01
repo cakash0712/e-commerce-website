@@ -67,7 +67,7 @@ const Cart = () => {
     <div className="min-h-screen bg-white flex flex-col">
       <Navigation />
 
-      <main className="flex-1 pt-24 pb-20">
+      <main className="flex-1 pt-32 sm:pt-24 pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-12">
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tighter uppercase leading-none mb-4">
@@ -133,10 +133,13 @@ const Cart = () => {
                   ))}
                 </div>
 
-                <Link to="/shop" className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-violet-600 transition-colors">
-                  <ArrowLeft className="w-4 h-4" />
+                <button
+                  onClick={() => navigate(-1)}
+                  className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-violet-600 transition-colors group"
+                >
+                  <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                   Continue Shopping
-                </Link>
+                </button>
               </div>
 
               {/* Summary */}

@@ -3,9 +3,10 @@ import Navigation from './Navigation';
 import Footer from './Footer';
 import { Card, CardContent } from "@/components/ui/card";
 import { Shield, Eye, Lock, FileText, Bell, Globe, ArrowLeft, ShieldCheck } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const PrivacyPolicy = () => {
+    const navigate = useNavigate();
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-left">
             <Navigation />
@@ -16,6 +17,14 @@ const PrivacyPolicy = () => {
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20 text-left">
                         <div className="max-w-3xl">
                             <nav className="text-sm text-gray-400 mb-8 flex items-center gap-2">
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="flex items-center gap-1.5 hover:text-violet-600 transition-colors mr-2 group"
+                                >
+                                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                                    <span className="font-medium">Back</span>
+                                </button>
+                                <div className="w-px h-4 bg-gray-200 mx-2" />
                                 <Link to="/" className="hover:text-violet-600 transition-colors">Home</Link>
                                 <span className="text-gray-300">›</span>
                                 <span className="text-gray-900 font-medium">Privacy Policy</span>

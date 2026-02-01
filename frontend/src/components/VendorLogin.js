@@ -84,10 +84,13 @@ const VendorLogin = () => {
 
             <div className="w-full max-w-md relative z-10">
                 {/* Back to Home */}
-                <Link to="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-6 text-sm font-medium transition-colors">
-                    <ArrowLeft className="w-4 h-4" />
+                <button
+                    onClick={() => navigate(-1)}
+                    className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-6 text-sm font-medium transition-colors group"
+                >
+                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                     Back to Store
-                </Link>
+                </button>
 
                 <Card className="border-0 shadow-2xl rounded-[2.5rem] overflow-hidden bg-white/10 backdrop-blur-xl">
                     <div className="p-8 bg-gradient-to-br from-indigo-600 to-purple-700 text-white text-center relative overflow-hidden">

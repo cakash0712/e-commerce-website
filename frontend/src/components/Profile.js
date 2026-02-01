@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Settings, ShoppingBag, Bell, Shield, CreditCard, LogIn, UserPlus, LogOut, Mail, Lock, Camera, Heart, Star, MapPin, Package, ChevronRight, Wallet, Box, Plus, Trash2, Phone, CheckCircle, FileText, Upload, Gift, Clock, Smartphone } from "lucide-react";
+import { User, Settings, ShoppingBag, Bell, Shield, CreditCard, LogIn, UserPlus, LogOut, Mail, Lock, Camera, Heart, Star, MapPin, Package, ChevronRight, Wallet, Box, Plus, Trash2, Phone, CheckCircle, FileText, Upload, Gift, Clock, Smartphone, ArrowLeft } from "lucide-react";
 import { useAuth, useOrders } from "../App";
 
 import Navigation from "./Navigation";
@@ -405,6 +405,20 @@ const Profile = () => {
       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
 
       <div className="container mx-auto px-4 lg:px-8 py-8 flex-1">
+        {/* Breadcrumb / Back Navigation */}
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mb-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-1.5 hover:text-violet-600 transition-colors mr-2 group"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back</span>
+          </button>
+          <div className="w-px h-3 bg-gray-200 mx-1.5" />
+          <Link to="/" className="hover:text-violet-600">Home</Link>
+          <ChevronRight className="w-3 h-3" />
+          <span className="text-gray-900">Account Profile</span>
+        </div>
         <div className="flex flex-col lg:flex-row gap-8 items-start">
 
           {/* Sidebar (Flipkart Style) */}

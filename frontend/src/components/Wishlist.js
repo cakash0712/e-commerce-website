@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { useCart, useWishlist } from "../App";
 import {
@@ -10,13 +10,15 @@ import {
   ArrowRight,
   ChevronRight,
   ShoppingCart,
-  MoreVertical
+  MoreVertical,
+  ArrowLeft
 } from "lucide-react";
 
 import Navigation from "./Navigation";
 import Footer from "./Footer";
 
 const Wishlist = () => {
+  const navigate = useNavigate();
   const { addToCart } = useCart();
   const { wishlistItems, removeFromWishlist } = useWishlist();
 
@@ -39,6 +41,14 @@ const Wishlist = () => {
           {/* Mobile-Friendly Header */}
           <div className="px-4 sm:px-0 mb-6 sm:mb-12 text-left">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+              <button
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-1.5 hover:text-violet-600 transition-colors mr-2 group"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+                <span>Back</span>
+              </button>
+              <div className="w-px h-3 bg-gray-200 mx-1.5" />
               <Link to="/" className="hover:text-violet-600">Home</Link>
               <ChevronRight className="w-3 h-3" />
               <span className="text-gray-900">Wishlist</span>

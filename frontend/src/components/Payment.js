@@ -341,13 +341,19 @@ const Payment = () => {
         <div className="min-h-screen bg-gray-50/30 font-sans">
             <header className="border-b border-gray-100 py-6 bg-white/90 backdrop-blur-2xl fixed top-0 left-0 right-0 z-50">
                 <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-                    <Link to="/" className="flex items-center gap-2">
-                        <img
-                            src="/assets/zlogo1.png"
-                            alt="ZippyCart Logo"
-                            className="w-32 h-10 object-contain"
-                        />
-                    </Link>
+                    <div className="flex items-center gap-8">
+                        <Link to="/" className="flex items-center gap-2">
+                            <img
+                                src="/assets/zlogo1.png"
+                                alt="ZippyCart Logo"
+                                className="w-32 h-10 object-contain"
+                            />
+                        </Link>
+                        <Link to="/cart" className="hidden md:flex items-center gap-2 text-gray-400 hover:text-violet-600 transition-colors text-[10px] font-black uppercase tracking-[0.2em] group">
+                            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                            Back to System
+                        </Link>
+                    </div>
                     <div className="flex items-center gap-4 py-2 px-5 bg-emerald-50 rounded-full border border-emerald-100 animate-pulse">
                         <ShieldCheck className="w-4 h-4 text-emerald-600" />
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">Enterprise Encryption Active</span>
@@ -548,9 +554,14 @@ const Payment = () => {
                                                 </Label>
                                             </div>
 
-                                            <Button onClick={() => setActiveSection(3)} className="col-span-full h-20 bg-gray-900 hover:bg-violet-600 text-white rounded-3xl font-black uppercase tracking-[0.3em] text-xs shadow-2xl transition-all mt-6 active:scale-95 flex items-center gap-4">
-                                                Authorize Velocity <ChevronRight className="w-5 h-5" />
-                                            </Button>
+                                            <div className="col-span-full flex flex-col sm:flex-row gap-4 mt-6">
+                                                <Button onClick={() => setActiveSection(1)} variant="outline" className="h-20 bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-400 rounded-3xl font-black uppercase tracking-[0.3em] text-xs transition-all flex items-center gap-4 px-10">
+                                                    <ArrowLeft className="w-5 h-5" /> Back
+                                                </Button>
+                                                <Button onClick={() => setActiveSection(3)} className="flex-1 h-20 bg-gray-900 hover:bg-violet-600 text-white rounded-3xl font-black uppercase tracking-[0.3em] text-xs shadow-2xl transition-all active:scale-95 flex items-center gap-4">
+                                                    Authorize Velocity <ChevronRight className="w-5 h-5" />
+                                                </Button>
+                                            </div>
                                         </RadioGroup>
                                     ) : activeSection > 2 && (
                                         <div className="flex items-center gap-6 p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100">
@@ -604,9 +615,14 @@ const Payment = () => {
                                                 <CheckCircle2 className={`w-8 h-8 transition-opacity duration-300 ${paymentMethod === 'upi' ? 'text-violet-600 opacity-100' : 'opacity-0'}`} />
                                             </div>
 
-                                            <Button onClick={() => setActiveSection(4)} className="w-full h-20 bg-gray-900 hover:bg-violet-600 text-white rounded-3xl font-black uppercase tracking-[0.3em] text-xs shadow-2xl transition-all mt-6 active:scale-95 flex items-center justify-center gap-4">
-                                                Lock Method <Shield className="w-5 h-5" />
-                                            </Button>
+                                            <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                                                <Button onClick={() => setActiveSection(2)} variant="outline" className="h-20 bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-400 rounded-3xl font-black uppercase tracking-[0.3em] text-xs transition-all flex items-center gap-4 px-10">
+                                                    <ArrowLeft className="w-5 h-5" /> Back
+                                                </Button>
+                                                <Button onClick={() => setActiveSection(4)} className="flex-1 h-20 bg-gray-900 hover:bg-violet-600 text-white rounded-3xl font-black uppercase tracking-[0.3em] text-xs shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-4">
+                                                    Lock Method <Shield className="w-5 h-5" />
+                                                </Button>
+                                            </div>
                                         </RadioGroup>
                                     ) : activeSection > 3 && (
                                         <div className="flex items-center gap-6 p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100">
@@ -671,24 +687,29 @@ const Payment = () => {
                                                 </div>
                                             </div>
 
-                                            <Button
-                                                onClick={handlePlaceOrder}
-                                                disabled={isProcessing}
-                                                className="w-full h-24 bg-violet-600 hover:bg-violet-700 text-white rounded-[2.5rem] font-black uppercase tracking-[0.3em] text-sm shadow-2xl shadow-violet-200 transition-all active:scale-95 flex items-center justify-center gap-6 group overflow-hidden relative"
-                                            >
-                                                {isProcessing ? (
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
-                                                        <span className="animate-pulse">Authorizing...</span>
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                                                        <Lock className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                                                        Initialize Transaction
-                                                    </>
-                                                )}
-                                            </Button>
+                                            <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                                                <Button onClick={() => setActiveSection(3)} variant="outline" className="h-24 bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-400 rounded-[2.5rem] font-black uppercase tracking-[0.3em] text-sm transition-all flex items-center gap-4 px-10">
+                                                    <ArrowLeft className="w-5 h-5" /> Back
+                                                </Button>
+                                                <Button
+                                                    onClick={handlePlaceOrder}
+                                                    disabled={isProcessing}
+                                                    className="flex-1 h-24 bg-violet-600 hover:bg-violet-700 text-white rounded-[2.5rem] font-black uppercase tracking-[0.3em] text-sm shadow-2xl shadow-violet-200 transition-all active:scale-95 flex items-center justify-center gap-6 group overflow-hidden relative"
+                                                >
+                                                    {isProcessing ? (
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                                                            <span className="animate-pulse">Authorizing...</span>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                                                            <Lock className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                                                            Initialize Transaction
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </div>
                                         </div>
                                     )}
                                 </CardContent>

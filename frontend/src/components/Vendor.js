@@ -29,30 +29,62 @@ import {
 import * as XLSX from 'xlsx';
 
 // Category-specific labelling configuration
-// Category-specific labelling configuration
 const CATEGORY_CONFIG = {
-  'Fashion': { name: 'Apparel Name', brand: 'Brand / Designer', material: 'Fabric / Material', color: 'Colors / Variants', placeholder_name: 'e.g. Slim Fit Cotton Shirt', placeholder_material: 'e.g. 100% Cotton', highlights_label: 'Key Features & Highlights', specs_label: 'Technical Specs' },
-  'Electronics': { name: 'Product Name', brand: 'Brand / Manufacturer', material: 'Primary Material', color: 'Available Colors', placeholder_name: 'e.g. Wireless Headphones', placeholder_material: 'e.g. Plastic, Metal', highlights_label: 'Key Features & Highlights', specs_label: 'Technical Specs' },
-  'Books': { name: 'Book Title', brand: 'Author / Publisher', material: 'Binding Type', color: 'Edition / Format', placeholder_name: 'e.g. The Great Gatsby', placeholder_material: 'e.g. Hardcover, Paperback', highlights_label: 'Book Summary / Key Notes', specs_label: 'Book Details (ISBN, Pages)' },
-  'Grocery': { name: 'Product Name', brand: 'Brand', material: 'Dietary Info / Ingredients', color: 'Pack Size', placeholder_name: 'e.g. Organic Almonds', placeholder_material: 'e.g. Gluten Free, Vegan', highlights_label: 'Product Highlights', specs_label: 'Nutritional & Storage Info' },
-  'Food & Beverages': { name: 'Item Name', brand: 'Restaurant / Brand', material: 'Dietary Info', color: 'Serving Size / Pack', placeholder_name: 'e.g. Cold Brew Coffee', placeholder_material: 'e.g. Sugar Free', highlights_label: 'Dish Highlights (e.g. Spicy)', specs_label: 'Nutritional Information' },
-  'Fast Food': { name: 'Item Name', brand: 'Restaurant / Brand', material: 'Dietary Info', color: 'Serving Size', placeholder_name: 'e.g. Cheeseburger', placeholder_material: 'e.g. Contains Nuts', highlights_label: 'Dish Highlights (Spicy, Vegetarian)', specs_label: 'Ingredients & Allergens' },
-  'Bakery': { name: 'Item Name', brand: 'Bakery / Brand', material: 'Dietary Info', color: 'Pack Size / Weight', placeholder_name: 'e.g. Chocolate Croissant', placeholder_material: 'e.g. Gluten Free', highlights_label: 'Freshness & Highlights', specs_label: 'Ingredients & Storage' },
-  'Groceries': { name: 'Product Name', brand: 'Brand', material: 'Dietary Info / Ingredients', color: 'Pack Size', placeholder_name: 'e.g. Organic Rice', placeholder_material: 'e.g. Non-GMO', highlights_label: 'Product Highlights', specs_label: 'Nutritional & Storage Info' },
-  'Beverages': { name: 'Drink Name', brand: 'Brand', material: 'Dietary Info', color: 'Bottle Size / Pack', placeholder_name: 'e.g. Green Tea', placeholder_material: 'e.g. Caffeine Free', highlights_label: 'Taste & Benefits', specs_label: 'Ingredients & Serving' },
-  'Meals': { name: 'Dish Name', brand: 'Restaurant / Chef', material: 'Dietary Info', color: 'Serving Size', placeholder_name: 'e.g. Chicken Biryani', placeholder_material: 'e.g. Halal, Spicy', highlights_label: 'Dish Highlights', specs_label: 'Ingredients & Preparation' },
-  'Desserts': { name: 'Dessert Name', brand: 'Bakery / Brand', material: 'Dietary Info', color: 'Serving Size', placeholder_name: 'e.g. Chocolate Cake', placeholder_material: 'e.g. Contains Dairy', highlights_label: 'Sweetness & Highlights', specs_label: 'Ingredients & Allergens' },
-  'Snacks': { name: 'Snack Name', brand: 'Brand', material: 'Dietary Info / Ingredients', color: 'Pack Size', placeholder_name: 'e.g. Potato Chips', placeholder_material: 'e.g. Baked, Low Salt', highlights_label: 'Flavor & Highlights', specs_label: 'Nutritional Info' },
-  'Healthy Options': { name: 'Item Name', brand: 'Brand', material: 'Dietary Info / Ingredients', color: 'Pack Size', placeholder_name: 'e.g. Protein Bar', placeholder_material: 'e.g. Organic, Vegan', highlights_label: 'Health Benefits', specs_label: 'Nutritional Facts' },
-  'Catering': { name: 'Service Name', brand: 'Catering Company', material: 'Dietary Options', color: 'Serves / Event Size', placeholder_name: 'e.g. Wedding Catering', placeholder_material: 'e.g. Custom Menus', highlights_label: 'Service Highlights', specs_label: 'Menu & Pricing' },
-  'Organic Foods': { name: 'Product Name', brand: 'Brand', material: 'Certifications / Ingredients', color: 'Pack Size', placeholder_name: 'e.g. Organic Apples', placeholder_material: 'e.g. USDA Organic', highlights_label: 'Organic Benefits', specs_label: 'Certifications & Nutrition' },
-  'Street Food': { name: 'Item Name', brand: 'Vendor / Brand', material: 'Dietary Info', color: 'Serving Size', placeholder_name: 'e.g. Vada Pav', placeholder_material: 'e.g. Vegetarian', highlights_label: 'Street Food Highlights', specs_label: 'Ingredients & Spice Level' },
-  'Fine Dining': { name: 'Dish Name', brand: 'Restaurant', material: 'Dietary Info', color: 'Course Type', placeholder_name: 'e.g. Truffle Risotto', placeholder_material: 'e.g. Gluten Free Option', highlights_label: 'Culinary Highlights', specs_label: 'Ingredients & Pairing' },
-  'Cafes': { name: 'Item Name', brand: 'Cafe / Brand', material: 'Dietary Info', color: 'Cup Size / Pack', placeholder_name: 'e.g. Cappuccino', placeholder_material: 'e.g. Dairy Free', highlights_label: 'Flavor Profile', specs_label: 'Ingredients & Caffeine' },
-  'Food Trucks': { name: 'Item Name', brand: 'Food Truck', material: 'Dietary Info', color: 'Serving Size', placeholder_name: 'e.g. Gourmet Burger', placeholder_material: 'e.g. Local Ingredients', highlights_label: 'Signature Highlights', specs_label: 'Ingredients & Customization' },
-  'Grocery Stores': { name: 'Product Name', brand: 'Store / Brand', material: 'Dietary Info / Ingredients', color: 'Pack Size', placeholder_name: 'e.g. Fresh Milk', placeholder_material: 'e.g. Pasteurized', highlights_label: 'Freshness & Quality', specs_label: 'Storage & Nutrition' },
-  'Specialty Foods': { name: 'Product Name', brand: 'Specialty Brand', material: 'Dietary Info / Origin', color: 'Pack Size', placeholder_name: 'e.g. Truffle Oil', placeholder_material: 'e.g. Imported', highlights_label: 'Specialty Features', specs_label: 'Origin & Usage' },
-  'Beauty': { name: 'Product Name', brand: 'Brand', material: 'Key Ingredients', color: 'Shade / Variant', placeholder_name: 'e.g. Matte Lipstick', placeholder_material: 'e.g. Vitamin E, Aloe', highlights_label: 'Benefits & Highlights', specs_label: 'Composition & Usage' },
+  // Main Categories
+  'Supermarket': { name: 'Product Name', brand: 'Brand', weight: 'Weight / Quantity', packaging: 'Packaging Type', category: 'Product Category', placeholder_name: 'e.g. Organic Brown Rice', placeholder_weight: 'e.g. 5 kg', highlights_label: 'Product Highlights', specs_label: 'Product Details' },
+  'Electronics': { name: 'Product Name', brand: 'Brand', model: 'Model Number', features: 'Key Features', warranty: 'Warranty', placeholder_name: 'e.g. Wireless Bluetooth Headphones', placeholder_model: 'e.g. WH-1000XM5', highlights_label: 'Key Highlights', specs_label: 'Technical Specifications' },
+  'Fashion': { name: 'Apparel Name', brand: 'Brand / Designer', material: 'Fabric / Material', color: 'Colors / Variants', size: 'Available Sizes', placeholder_name: 'e.g. Slim Fit Cotton Shirt', placeholder_material: 'e.g. 100% Cotton', highlights_label: 'Additional Information', specs_label: 'Technical Specs' },
+  'Home': { name: 'Product Name', brand: 'Brand', material: 'Material', dimensions: 'Dimensions', usage: 'Usage / Room Type', placeholder_name: 'e.g. Wooden Coffee Table', placeholder_material: 'e.g. Solid Sheesham Wood', highlights_label: 'Product Highlights', specs_label: 'Specifications' },
+  'Beauty': { name: 'Product Name', brand: 'Brand', skin_type: 'Skin / Hair Type', benefits: 'Key Benefits', expiry: 'Expiry Date', placeholder_name: 'e.g. Vitamin C Face Serum', placeholder_skin_type: 'e.g. All Skin Types', highlights_label: 'Why You’ll Love It', specs_label: 'Ingredients & Details' },
+  'Food & Beverages': { name: 'Product Name', brand: 'Brand', quantity: 'Net Quantity', flavor: 'Flavor / Variant', shelf_life: 'Shelf Life', placeholder_name: 'e.g. Instant Coffee Powder', placeholder_quantity: 'e.g. 200 g', highlights_label: 'Taste & Benefits', specs_label: 'Nutritional Information' },
+  'Grocery': { name: 'Item Name', brand: 'Brand / Farm', weight: 'Weight', category: 'Category', organic: 'Organic / Non-Organic', placeholder_name: 'e.g. Fresh Tomatoes', placeholder_weight: 'e.g. 1 kg', highlights_label: 'Freshness Details', specs_label: 'Item Information' },
+  'Books': { name: 'Book Title', author: 'Author', publisher: 'Publisher', language: 'Language', format: 'Paperback / Hardcover', placeholder_name: 'e.g. Atomic Habits', placeholder_author: 'e.g. James Clear', highlights_label: 'About the Book', specs_label: 'Book Details' },
+  'Toys': { name: 'Toy Name', brand: 'Brand', age_group: 'Age Group', material: 'Material', educational: 'Educational / Fun', placeholder_name: 'e.g. Remote Control Car', placeholder_age_group: 'e.g. 6–10 Years', highlights_label: 'Fun Features', specs_label: 'Safety & Details' },
+  'Health': { name: 'Product Name', brand: 'Brand', form: 'Tablet / Syrup / Powder', benefits: 'Health Benefits', dosage: 'Dosage Information', placeholder_name: 'e.g. Multivitamin Tablets', placeholder_form: 'e.g. Tablets', highlights_label: 'Health Benefits', specs_label: 'Usage & Safety' },
+  'Automotive': { name: 'Product Name', brand: 'Brand', vehicle_type: 'Car / Bike', compatibility: 'Compatible Models', material: 'Material', placeholder_name: 'e.g. Car Air Freshener', placeholder_vehicle_type: 'e.g. Car', highlights_label: 'Key Features', specs_label: 'Compatibility & Specs' },
+  'Office': { name: 'Product Name', brand: 'Brand', type: 'Office Supply Type', material: 'Material', usage: 'Usage', placeholder_name: 'e.g. Ergonomic Office Chair', placeholder_type: 'e.g. Furniture', highlights_label: 'Work Benefits', specs_label: 'Product Specifications' },
+
+  // Fashion Sub-Categories
+  'Men': { name: 'Product Name', brand: 'Brand / Designer', material: 'Fabric / Material', color: 'Size / Color', placeholder_name: 'e.g. Classic Fit Shirt', placeholder_material: 'e.g. 100% Cotton', highlights_label: 'Style Features', specs_label: 'Size Guide & Care' },
+  'Women': { name: 'Product Name', brand: 'Brand / Designer', material: 'Fabric / Material', color: 'Size / Color', placeholder_name: 'e.g. Floral Summer Dress', placeholder_material: 'e.g. Silk, Cotton Blend', highlights_label: 'Style Features', specs_label: 'Size Guide & Care' },
+  'Kids': { name: 'Product Name', brand: 'Brand / Designer', material: 'Fabric / Material', color: 'Size / Age', placeholder_name: 'e.g. Cartoon Print T-Shirt', placeholder_material: 'e.g. Soft Cotton', highlights_label: 'Comfort Features', specs_label: 'Age Guide & Care' },
+  'Footwear': { name: 'Shoe Name', brand: 'Brand / Manufacturer', material: 'Upper / Sole Material', color: 'Color / Size', placeholder_name: 'e.g. Running Sneakers', placeholder_material: 'e.g. Mesh, Rubber', highlights_label: 'Comfort Features', specs_label: 'Size Guide & Care' },
+  'Watches': { name: 'Watch Name', brand: 'Brand / Manufacturer', material: 'Case / Strap Material', color: 'Dial Color', placeholder_name: 'e.g. Analog Wristwatch', placeholder_material: 'e.g. Stainless Steel, Leather', highlights_label: 'Special Features', specs_label: 'Movement & Warranty' },
+  'Accessories': { name: 'Accessory Name', brand: 'Brand', material: 'Material', color: 'Color', placeholder_name: 'e.g. Leather Wallet', placeholder_material: 'e.g. Genuine Leather', highlights_label: 'Special Features', specs_label: 'Dimensions & Care' },
+  'Activewear': { name: 'Activewear Name', brand: 'Brand / Designer', material: 'Fabric / Material', color: 'Size / Color', placeholder_name: 'e.g. Yoga Leggings', placeholder_material: 'e.g. Spandex, Nylon', highlights_label: 'Performance Features', specs_label: 'Size Guide & Care' },
+
+  // Electronics Sub-Categories
+  'Mobile Phones': { name: 'Phone Model', brand: 'Brand / Manufacturer', material: 'Build Material', color: 'Color Option', placeholder_name: 'e.g. Smartphone 128GB', placeholder_material: 'e.g. Glass, Aluminum', highlights_label: 'Key Features', specs_label: 'Technical Specs' },
+  'Laptops': { name: 'Laptop Model', brand: 'Brand / Manufacturer', material: 'Build Material', color: 'Color', placeholder_name: 'e.g. Gaming Laptop 16GB', placeholder_material: 'e.g. Aluminum, Plastic', highlights_label: 'Performance Features', specs_label: 'Technical Specs' },
+  'Audio': { name: 'Product Name', brand: 'Brand / Manufacturer', material: 'Build Material', color: 'Color', placeholder_name: 'e.g. Wireless Headphones', placeholder_material: 'e.g. Plastic, Metal', highlights_label: 'Sound Features', specs_label: 'Technical Specs' },
+  'Wearables': { name: 'Device Name', brand: 'Brand / Manufacturer', material: 'Strap / Body Material', color: 'Color', placeholder_name: 'e.g. Smart Watch', placeholder_material: 'e.g. Silicone, Ceramic', highlights_label: 'Smart Features', specs_label: 'Battery & Specs' },
+  'Cameras': { name: 'Camera Model', brand: 'Brand / Manufacturer', material: 'Body Material', color: 'Color', placeholder_name: 'e.g. DSLR Camera 24MP', placeholder_material: 'e.g. Magnesium Alloy', highlights_label: 'Photography Features', specs_label: 'Technical Specs' },
+  'Gaming': { name: 'Product Name', brand: 'Brand / Manufacturer', material: 'Material', color: 'Color', placeholder_name: 'e.g. Gaming Controller', placeholder_material: 'e.g. Plastic, Rubber', highlights_label: 'Gaming Features', specs_label: 'Technical Specs' },
+
+  // Home Sub-Categories
+  'Furniture': { name: 'Furniture Name', brand: 'Brand / Manufacturer', material: 'Frame / Upholstery', color: 'Finish / Color', placeholder_name: 'e.g. Modern Sofa 3-Seater', placeholder_material: 'e.g. Wood, Fabric', highlights_label: 'Design Features', specs_label: 'Dimensions & Care' },
+  'Decor': { name: 'Decor Item', brand: 'Brand / Artist', material: 'Material', color: 'Color', placeholder_name: 'e.g. Wall Art Print', placeholder_material: 'e.g. Paper, Canvas', highlights_label: 'Design Features', specs_label: 'Size & Care' },
+  'Kitchen': { name: 'Kitchen Item', brand: 'Brand / Manufacturer', material: 'Material', color: 'Color / Finish', placeholder_name: 'e.g. Non-Stick Cookware Set', placeholder_material: 'e.g. Stainless Steel, Aluminum', highlights_label: 'Cooking Features', specs_label: 'Care Instructions' },
+  'Bedding': { name: 'Bedding Item', brand: 'Brand', material: 'Fabric / Fill', color: 'Color / Pattern', placeholder_name: 'e.g. Cotton Bedsheet Set', placeholder_material: 'e.g. 100% Cotton', highlights_label: 'Comfort Features', specs_label: 'Size & Care' },
+
+  // Beauty Sub-Categories
+  'Makeup': { name: 'Product Name', brand: 'Brand', material: 'Key Ingredients', color: 'Shade / Color', placeholder_name: 'e.g. Matte Lipstick', placeholder_material: 'e.g. Vitamin E', highlights_label: 'Makeup Benefits', specs_label: 'Ingredients & Usage' },
+  'Skincare': { name: 'Product Name', brand: 'Brand', material: 'Key Ingredients', color: 'Variant', placeholder_name: 'e.g. Face Moisturizer', placeholder_material: 'e.g. Hyaluronic Acid', highlights_label: 'Skin Benefits', specs_label: 'Ingredients & Usage' },
+  'Haircare': { name: 'Product Name', brand: 'Brand', material: 'Key Ingredients', color: 'Variant', placeholder_name: 'e.g. Shampoo 500ml', placeholder_material: 'e.g. Natural Oils', highlights_label: 'Hair Benefits', specs_label: 'Ingredients & Usage' },
+
+  // Books Sub-Categories
+  'Fiction': { name: 'Book Title', brand: 'Author', material: 'Binding Type', color: 'Edition', placeholder_name: 'e.g. Mystery Novel', placeholder_material: 'e.g. Paperback', highlights_label: 'Story Summary', specs_label: 'Pages & ISBN' },
+  'Non-Fiction': { name: 'Book Title', brand: 'Author', material: 'Binding Type', color: 'Edition', placeholder_name: 'e.g. Self-Help Book', placeholder_material: 'e.g. Hardcover', highlights_label: 'Key Takeaways', specs_label: 'Pages & ISBN' },
+
+  // Food & Beverages Sub-Categories
+  'Snacks': { name: 'Snack Name', brand: 'Brand', material: 'Dietary Info', color: 'Pack Size', placeholder_name: 'e.g. Potato Chips', placeholder_material: 'e.g. Baked, Low Salt', highlights_label: 'Flavor Highlights', specs_label: 'Nutritional Info' },
+  'Beverages': { name: 'Drink Name', brand: 'Brand', material: 'Dietary Info', color: 'Bottle Size', placeholder_name: 'e.g. Green Tea', placeholder_material: 'e.g. Caffeine Free', highlights_label: 'Taste & Benefits', specs_label: 'Ingredients & Serving' },
+
+  // Grocery Sub-Categories
+  'Staples': { name: 'Product Name', brand: 'Brand', material: 'Dietary Info', color: 'Pack Size', placeholder_name: 'e.g. Basmati Rice', placeholder_material: 'e.g. Long Grain', highlights_label: 'Product Highlights', specs_label: 'Nutritional Info' },
+  'Household': { name: 'Product Name', brand: 'Brand', material: 'Material', color: 'Size', placeholder_name: 'e.g. Cleaning Spray', placeholder_material: 'e.g. Chemical, Natural', highlights_label: 'Usage Features', specs_label: 'Safety & Storage' },
+
+  // Default fallback
   'default': { name: 'Product Name', brand: 'Brand Name', material: 'Material / Composition', color: 'Colors / Variants', placeholder_name: 'e.g. Titanium Watch', placeholder_material: 'e.g. Brushed Steel', highlights_label: 'Key Features & Highlights', specs_label: 'Technical Specs' }
 };
 
@@ -978,8 +1010,25 @@ const Vendor = () => {
     }
   };
 
+  // Helper function to get category labels based on category or sub-category
+  const getCategoryLabels = (category) => {
+    // First try direct match
+    if (CATEGORY_CONFIG[category]) {
+      return CATEGORY_CONFIG[category];
+    }
+
+    // Find parent category from SUB_CATEGORIES
+    for (const [parent, subCategories] of Object.entries(SUB_CATEGORIES)) {
+      if (subCategories.includes(category)) {
+        return CATEGORY_CONFIG[parent] || CATEGORY_CONFIG['default'];
+      }
+    }
+
+    return CATEGORY_CONFIG['default'];
+  };
+
   const renderProducts = () => {
-    const labels = CATEGORY_CONFIG[newProduct.category] || CATEGORY_CONFIG['default'];
+    const labels = getCategoryLabels(newProduct.category);
 
     return (
       <div className="space-y-6">
@@ -1040,6 +1089,50 @@ const Vendor = () => {
 
                   <div className="p-10">
                     <TabsContent value="essential" className="mt-0 space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
+                      {/* Product Image Placeholder Section */}
+                      <div className="flex flex-col items-center justify-center p-10 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200 hover:border-violet-300 transition-all group">
+                        <div className="relative w-full max-w-md">
+                          {newProduct.image ? (
+                            <div className="relative">
+                              <img
+                                src={newProduct.image}
+                                alt="Product preview"
+                                className="w-full h-64 object-contain rounded-2xl bg-white shadow-lg"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute -top-3 -right-3 rounded-full h-8 w-8"
+                                onClick={() => setNewProduct({ ...newProduct, image: '' })}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center h-64 bg-white rounded-2xl border border-slate-100">
+                              <div className="w-20 h-20 bg-violet-50 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <Image className="w-10 h-10 text-violet-500" />
+                              </div>
+                              <p className="text-slate-600 font-bold text-lg mb-2">Upload Product Image</p>
+                              <p className="text-slate-400 text-sm text-center mb-4">Drag & drop or click to browse</p>
+                              <label className="cursor-pointer">
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleImageUpload}
+                                  className="hidden"
+                                />
+                                <Button type="button" variant="outline" className="rounded-xl">
+                                  Choose File
+                                </Button>
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                        {errors.image && <span className="text-red-500 text-[10px] uppercase font-bold tracking-wider mt-2 animate-pulse">{errors.image}</span>}
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-3">
                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">{labels.name} *</Label>
@@ -1065,34 +1158,65 @@ const Vendor = () => {
                           />
                         </div>
                         <div className="space-y-3">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Category *</Label>
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Category / Sub-Category *</Label>
                           <Select onValueChange={(val) => {
                             setNewProduct({ ...newProduct, category: val });
                             if (errors.category) setErrors({ ...errors, category: null });
                           }} defaultValue={newProduct.category}>
                             <SelectTrigger className={`h-14 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white font-bold ${errors.category ? 'border-red-500 bg-red-50/10' : ''}`}>
-                              <SelectValue placeholder="Select Category" />
+                              <SelectValue placeholder="Select Category → Sub-Category" />
                             </SelectTrigger>
-                            <SelectContent className="rounded-2xl border-none shadow-2xl max-h-80">
+                            <SelectContent className="rounded-2xl border-none shadow-2xl max-h-96">
                               {user?.business_categories?.length > 0 ? (
                                 user.business_categories.map(mainCat => (
                                   <SelectGroup key={mainCat}>
-                                    <SelectLabel className="px-3 py-2 text-[9px] uppercase font-black text-violet-600 bg-violet-50/50 tracking-widest">{mainCat}</SelectLabel>
-                                    {SUB_CATEGORIES[mainCat] ? SUB_CATEGORIES[mainCat].map(sub => (
-                                      <SelectItem key={sub} value={sub} className="font-bold text-xs pl-6">{sub}</SelectItem>
-                                    )) : (
-                                      <SelectItem key={mainCat} value={mainCat} className="font-bold text-xs pl-6">{mainCat}</SelectItem>
+                                    <SelectLabel className="px-3 py-2 text-[9px] uppercase font-black text-violet-600 bg-violet-50/50 tracking-widest flex items-center gap-2">
+                                      <Tag className="w-3 h-3" />{mainCat}
+                                    </SelectLabel>
+                                    {SUB_CATEGORIES[mainCat] && SUB_CATEGORIES[mainCat].length > 0 ? (
+                                      SUB_CATEGORIES[mainCat].map(sub => (
+                                        <SelectItem key={sub} value={sub} className="font-bold text-xs pl-6">
+                                          <span className="flex items-center gap-2">
+                                            <ChevronRight className="w-3 h-3 text-slate-300" />
+                                            {sub}
+                                          </span>
+                                        </SelectItem>
+                                      ))
+                                    ) : (
+                                      <SelectItem key={mainCat} value={mainCat} className="font-bold text-xs pl-6">
+                                        <span className="flex items-center gap-2">
+                                          <ChevronRight className="w-3 h-3 text-slate-300" />
+                                          {mainCat}
+                                        </span>
+                                      </SelectItem>
                                     )}
                                   </SelectGroup>
                                 ))
                               ) : (
                                 user?.business_category && SUB_CATEGORIES[user.business_category] ? (
                                   SUB_CATEGORIES[user.business_category].map(cat => (
-                                    <SelectItem key={cat} value={cat} className="font-bold text-xs">{cat}</SelectItem>
+                                    <SelectItem key={cat} value={cat} className="font-bold text-xs">
+                                      <span className="flex items-center gap-2">
+                                        <ChevronRight className="w-3 h-3 text-slate-300" />
+                                        {cat}
+                                      </span>
+                                    </SelectItem>
                                   ))
                                 ) : (
-                                  ["Electronics", "Fashion", "Home", "Beauty", "Sports", "Toys", "Health", "Grocery", "Office", "Automotive", "Books", "VideoGames", "PetSupplies", "Tools"].map(cat => (
-                                    <SelectItem key={cat} value={cat} className="font-bold text-xs">{cat}</SelectItem>
+                                  Object.keys(SUB_CATEGORIES).map(mainCat => (
+                                    <SelectGroup key={mainCat}>
+                                      <SelectLabel className="px-3 py-2 text-[9px] uppercase font-black text-violet-600 bg-violet-50/50 tracking-widest flex items-center gap-2">
+                                        <Tag className="w-3 h-3" />{mainCat}
+                                      </SelectLabel>
+                                      {SUB_CATEGORIES[mainCat].map(sub => (
+                                        <SelectItem key={sub} value={sub} className="font-bold text-xs pl-6">
+                                          <span className="flex items-center gap-2">
+                                            <ChevronRight className="w-3 h-3 text-slate-300" />
+                                            {sub}
+                                          </span>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectGroup>
                                   ))
                                 )
                               )}

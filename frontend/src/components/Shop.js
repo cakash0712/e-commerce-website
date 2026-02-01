@@ -26,7 +26,8 @@ import {
   Store,
   Home,
   AlertCircle,
-  RefreshCcw
+  RefreshCcw,
+  ArrowLeft
 } from "lucide-react";
 
 import Navigation from "./Navigation";
@@ -98,7 +99,7 @@ const ProductItem = ({
           </Link>
 
           <div className="flex-1 p-3 sm:p-2 sm:pt-3 flex flex-col min-w-0">
-            <span className="hidden sm:block text-[10px] text-violet-600 font-bold uppercase tracking-wider mb-0.5">{product.category}</span>
+            <span className="hidden sm:block text-[10px] text-violet-600 font-bold uppercase tracking-wider mb-0.5">{product.sub_category}</span>
             <Link to={`/product/${product.id}`} className="block">
               <h3 className="text-[14px] sm:text-[13px] font-semibold text-gray-900 leading-snug mb-1 line-clamp-2 group-hover:text-violet-600 transition-colors">
                 {product.name}
@@ -364,12 +365,16 @@ const Shop = () => {
   useEffect(() => {
     const urlSearch = searchParams.get("search");
     const urlCategory = searchParams.get("category");
+    const urlSubCategory = searchParams.get("subCategory");
     const urlVendor = searchParams.get("vendor");
     if (urlSearch) {
       setSearchQuery(urlSearch);
     }
     if (urlCategory) {
       setFilters(prev => ({ ...prev, category: urlCategory }));
+    }
+    if (urlSubCategory) {
+      setFilters(prev => ({ ...prev, subCategory: urlSubCategory }));
     }
     if (urlVendor) {
       setFilters(prev => ({ ...prev, vendor: urlVendor }));
@@ -439,22 +444,28 @@ const Shop = () => {
 
   const filteredProducts = useMemo(() => {
     let result = products.filter(product => {
-      const matchesSearch = product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.category?.toLowerCase().includes(searchQuery.toLowerCase());
       const normalize = (str) => str?.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      const matchesSearch = !searchQuery ||
+        product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.sub_category?.toLowerCase().includes(searchQuery.toLowerCase());
+
       const matchesCategory = !filters.category ||
-        (normalize(product.category) === normalize(filters.category)) ||
-        (filters.subCategory && normalize(product.category) === normalize(filters.subCategory));
+        (normalize(product.category) === normalize(filters.category));
+
+      const matchesSubCategory = !filters.subCategory ||
+        (normalize(product.sub_category) === normalize(filters.subCategory));
+
       const matchesPrice = product.price >= filters.priceRange[0] && product.price <= filters.priceRange[1];
       const matchesRating = filters.rating === 0 || product.rating >= filters.rating;
-
       const matchesBrand = filters.brands.length === 0 || filters.brands.includes(product.brand);
       const matchesDiscount = filters.discount === 0 || (product.discount && product.discount >= filters.discount);
       const matchesColor = filters.colors.length === 0 || (product.colors && product.colors.some(c => filters.colors.includes(c)));
       const matchesStock = !filters.inStockOnly || product.stock > 0;
       const matchesVendor = !filters.vendor || product.vendor_id === filters.vendor;
 
-      return matchesSearch && matchesCategory && matchesPrice && matchesRating && matchesBrand && matchesDiscount && matchesVendor && matchesColor && matchesStock;
+      return matchesSearch && matchesCategory && matchesSubCategory && matchesPrice && matchesRating && matchesBrand && matchesDiscount && matchesVendor && matchesColor && matchesStock;
     });
 
     switch (sortBy) {
@@ -495,14 +506,37 @@ const Shop = () => {
     filters.vendor
   ].filter(Boolean).length;
 
+  const handleBack = () => {
+    if (filters.subCategory) {
+      setFilters(prev => ({ ...prev, subCategory: "" }));
+      setSearchParams(prev => {
+        const params = new URLSearchParams(prev);
+        params.delete("subCategory");
+        return params;
+      });
+    } else if (filters.category || searchQuery || filters.vendor) {
+      clearFilters();
+    } else {
+      navigate(-1);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navigation />
 
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 pt-20">
+      <div className="bg-white border-b border-gray-200 pt-32 sm:pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <nav className="text-sm text-gray-500 mb-3">
+          <nav className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-1.5 hover:text-violet-600 transition-colors mr-2 group"
+            >
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+              <span className="font-medium">Back</span>
+            </button>
+            <div className="w-px h-4 bg-gray-200 mx-2 hidden sm:block" />
             <Link to="/" className="hover:text-violet-600">Home</Link>
             <span className="mx-2">›</span>
             <span className="text-gray-900 font-medium">Products</span>
@@ -726,6 +760,62 @@ const Shop = () => {
                       </div>
                     );
                   })}
+                </div>
+              ) : (filters.category && !filters.subCategory && !searchQuery && activeFilterCount === 1) ? (
+                <div className="space-y-16">
+                  {[...new Set(filteredProducts.map(p => p.sub_category).filter(Boolean))].length > 0 ? (
+                    [...new Set(filteredProducts.map(p => p.sub_category).filter(Boolean))].map((subCategory) => {
+                      const subCategoryProducts = filteredProducts.filter(p => p.sub_category === subCategory).slice(0, 4);
+                      if (subCategoryProducts.length === 0) return null;
+
+                      return (
+                        <div key={subCategory} className="space-y-6">
+                          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-1.5 h-8 bg-violet-600 rounded-full" />
+                              <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase italic">{subCategory}</h2>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              onClick={() => setFilters({ ...filters, subCategory: subCategory })}
+                              className="text-violet-600 hover:text-violet-700 font-black uppercase tracking-widest text-xs flex items-center gap-2 group hover:bg-violet-50 px-4 py-2 rounded-xl"
+                            >
+                              Explore All <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {subCategoryProducts.map(product => (
+                              <ProductItem
+                                key={product.id}
+                                product={product}
+                                viewMode="grid"
+                                getImageUrl={getImageUrl}
+                                addToCart={addToCart}
+                                isInWishlist={isInWishlist}
+                                addToWishlist={handleWishlistAction}
+                                removeFromWishlist={removeFromWishlist}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className={isMobile ? (viewMode === "grid" ? "grid grid-cols-1 gap-4" : "space-y-4") : "space-y-4"}>
+                      {filteredProducts.map((product) => (
+                        <ProductItem
+                          key={product.id}
+                          product={product}
+                          viewMode={isMobile ? viewMode : "list"}
+                          getImageUrl={getImageUrl}
+                          addToCart={addToCart}
+                          isInWishlist={isInWishlist}
+                          addToWishlist={handleWishlistAction}
+                          removeFromWishlist={removeFromWishlist}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className={isMobile ? (viewMode === "grid" ? "grid grid-cols-1 gap-4" : "space-y-4") : "space-y-4"}>

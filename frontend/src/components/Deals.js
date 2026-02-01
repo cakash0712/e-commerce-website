@@ -21,7 +21,8 @@ import {
   ArrowRight,
   BadgePercent,
   Timer,
-  ShoppingCart
+  ShoppingCart,
+  ArrowLeft
 } from "lucide-react";
 
 import Navigation from "./Navigation";
@@ -190,8 +191,16 @@ const Deals = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div className="flex-1">
-              <nav className="flex items-center gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-4 sm:mb-6">
-                <Link to="/" className="hover:text-white transition-colors">Home</Link>
+              <nav className="flex items-center gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-cyan-400 mb-4 sm:mb-6">
+                <button
+                  onClick={() => navigate(-1)}
+                  className="flex items-center gap-1.5 hover:text-white transition-colors mr-2 group"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+                  <span>Back</span>
+                </button>
+                <div className="w-px h-3 bg-white/20 mx-2" />
+                <Link to="/" className="hover:text-white transition-colors text-slate-500">Home</Link>
                 <ChevronRight className="w-3 h-3 opacity-30" />
                 <span className="text-slate-300">Today's Deals</span>
               </nav>
