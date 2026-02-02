@@ -714,15 +714,36 @@ class AboutMilestone(BaseModel):
     title: str
     desc: str
 
+class AboutHighlight(BaseModel):
+    title: str
+    desc: str
+
 class AboutData(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     hero_title: str
     hero_subtitle: str
     hero_description: str
+    hero_stat_number: str
+    hero_stat_label: str
+    hero_badge: str
+    reviews_title: str
+    reviews_subtitle: str
+    values_title: str
+    story_subtitle: str
     story_title: str
     story_description: str
     story_image: str
+    story_overlay_title: str
+    story_overlay_text: str
+    story_highlights: List[AboutHighlight]
+    values_intro: str
+    timeline_title: str
+    timeline_subtitle: str
+    timeline_intro: str
+    timeline_badge: str
+    cta_title: str
+    cta_description: str
     stats: List[AboutStat]
     values: List[AboutValue]
     milestones: List[AboutMilestone]
@@ -2323,38 +2344,66 @@ async def get_public_reviews():
 @api_router.get("/public/about", response_model=AboutData)
 async def get_about_data():
     about_data = await db.about.find_one({}, {"_id": 0})
+    
+    # Real dynamic counts from database
+    user_count = await db.users.count_documents({})
+    vendor_count = await db.vendors.count_documents({})
+    product_count = await db.products.count_documents({"status": "approved"})
+
+    narrative = {
+        "hero_title": "The Unified Multi-Vendor Commerce Ecosystem",
+        "hero_subtitle": "Marketplace Frontier",
+        "hero_description": "We are a collaborative platform where diverse vendors and independent creators converge to deliver excellence. Our marketplace is engineered to empower sellers while providing customers with an unprecedented variety of certified products.",
+        "hero_stat_number": f"{vendor_count}+" if vendor_count > 0 else "Live",
+        "hero_stat_label": "Global vendors onboarded and active",
+        "hero_badge": "Ecosystem Core",
+        "reviews_title": "Authentic Community Insights",
+        "reviews_subtitle": "Real-Time Feedback",
+        "values_title": "Foundational Ecosystem Pillars",
+        "story_subtitle": "Marketplace Roots",
+        "story_title": "Bridging the Gap Between Quality and Convenience.",
+        "story_description": "Our platform was born from a simple idea: to create a unified space where independent vendors can reach a global audience with zero friction. We are now the heartbeat of a growing multi-vendor community.",
+        "story_image": "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=1600&q=80",
+        "story_overlay_title": "Collective Synergy",
+        "story_overlay_text": "We don't just host vendors; we build success stories for every integrated partner on our grid.",
+        "story_highlights": [
+            {"title": "Seamless Integration", "desc": "Vendors can launch their digital storefronts in minutes with our automated grid."},
+            {"title": "Global Logistics", "desc": "Access to international shipping lanes for every product listed on the platform."},
+        ],
+        "values_intro": "Our marketplace is built on these foundational pillars, ensuring a fair, transparent, and high-performance environment for both vendors and buyers.",
+        "timeline_title": "The Genesis of Our Marketplace",
+        "timeline_subtitle": "Growth Roadmap",
+        "timeline_intro": "Trace the evolution from a conceptual multi-tenant engine to a thriving community of creators.",
+        "timeline_badge": "Ecosystem Journey",
+        "cta_title": "Join the Next-Gen Marketplace",
+        "cta_description": "Whether you're a discerning shopper or a visionary vendor, we invite you to experience a new standard of collaborative digital commerce.",
+        "milestones": [
+            {"year": "2025", "title": "Ecosystem Blueprint", "desc": "Designing the architecture for a multi-tenant commerce engine."},
+            {"year": "2026", "title": "Mainnet Deployment", "desc": "Opening our doors to certified brand partners and global vendors."},
+            {"year": "Growth", "title": "Category Dominance", "desc": "Expanding into 50+ specialized niches with local & global creators."},
+        ],
+        "stats": [
+            {"number": f"{user_count}+", "label": "Active Shoppers", "icon_name": "Users"},
+            {"number": f"{product_count}+", "label": "Product Verticals", "icon_name": "Package"},
+            {"number": f"{vendor_count}+", "label": "Certified Sellers", "icon_name": "Award"},
+            {"number": "24/7", "label": "Vendor Support", "icon_name": "Headphones"},
+        ],
+        "values": [
+            {"icon_name": "Briefcase", "title": "Seller Empowerment", "description": "Providing advanced analytics and growth tools for every independent vendor."},
+            {"icon_name": "CheckCircle", "title": "Universal Standards", "description": "Unified quality control protocols across all disparate vendor inventories."},
+            {"icon_name": "Globe", "title": "Cross-Border Trade", "description": "Enabling local artisans to reach a global market with a single click."},
+            {"icon_name": "Zap", "title": "Instant Settlement", "description": "High-velocity financial grid for rapid vendor payouts and secure buyer escrow."},
+        ],
+    }
+
     if not about_data:
-        # Fallback/Initial data
-        initial_about = {
-            "hero_title": "Elevating the Future of Digital Commerce",
-            "hero_subtitle": "Digital Commerce",
-            "hero_description": "We're dedicated to bridging the gap between quality products and conscious consumers through a seamless, brand-focused shopping experience.",
-            "story_title": "Driven by passion, defined by purpose.",
-            "story_description": "Founded in 2018, our journey began with a simple yet powerful goal: to create a platform where quality meets convenience. We believe that everyone deserves access to authentic, high-quality products without compromise.",
-            "story_image": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1600&q=80",
-            "stats": [
-                {"number": "50K+", "label": "Happy Customers", "icon_name": "Users"},
-                {"number": "125+", "label": "Brand Partners", "icon_name": "Award"},
-                {"number": "99.9%", "label": "Satisfaction Rate", "icon_name": "Star"},
-                {"number": "24/7", "label": "Customer Support", "icon_name": "Headphones"},
-            ],
-            "values": [
-                {"icon_name": "Shield", "title": "Quality Assurance", "description": "Every product undergoes rigorous quality checks before reaching you."},
-                {"icon_name": "Truck", "title": "Fast Delivery", "description": "Quick and reliable shipping to your doorstep across India."},
-                {"icon_name": "Heart", "title": "Customer First", "description": "Your satisfaction is our priority with hassle-free returns."},
-                {"icon_name": "Zap", "title": "Best Prices", "description": "We work directly with manufacturers for the best prices."},
-            ],
-            "milestones": [
-                {"year": "2018", "title": "Company Founded", "desc": "Started with a vision to make quality products accessible"},
-                {"year": "2020", "title": "10K+ Customers", "desc": "Reached our first major customer milestone"},
-                {"year": "2022", "title": "Pan-India Delivery", "desc": "Expanded delivery to all major cities"},
-                {"year": "2024", "title": "50K+ Customers", "desc": "Celebrating 50,000+ happy customers"},
-            ]
-        }
-        about_doc = {**initial_about, "id": str(uuid.uuid4()), "updated_at": datetime.now(timezone.utc)}
+        about_doc = {**narrative, "id": str(uuid.uuid4()), "updated_at": datetime.now(timezone.utc)}
         await db.about.insert_one(about_doc)
         del about_doc['_id']
         about_data = about_doc
+    else:
+        about_data.update(narrative)
+        await db.about.update_one({}, {"$set": about_data})
     
     return about_data
 

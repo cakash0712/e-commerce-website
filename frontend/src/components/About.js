@@ -17,7 +17,6 @@ import {
   Package,
   Clock,
   MapPin,
-  ArrowLeft,
   Target,
   Rocket,
   Sparkles,
@@ -25,18 +24,21 @@ import {
   Eye,
   Layers,
   Cpu,
-  Infinity
+  History,
+  Compass,
+  Briefcase
 } from "lucide-react";
 
 import Navigation from "./Navigation";
 import Footer from "./Footer";
 
-// Icon mapping helper with premium fallbacks
+// Icon mapping helper for formal display
 const getIcon = (iconName) => {
   const icons = {
     Shield, Heart, CheckCircle, Globe, Zap, ArrowRight,
     Users, Award, Truck, Headphones, Star, Package,
-    Clock, MapPin, Target, Rocket, Sparkles, Eye, Layers, Cpu, Infinity
+    Clock, MapPin, Target, Rocket, Sparkles, Eye, Layers,
+    Cpu, History, Compass, Briefcase
   };
   return icons[iconName] || Sparkles;
 };
@@ -44,65 +46,66 @@ const getIcon = (iconName) => {
 const About = () => {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchAboutData = async () => {
+    const fetchAllData = async () => {
       try {
-        // Try multiple potential ports to be robust
         const ports = [8000, 8001];
-        let response = null;
-        let lastError = null;
+        let aboutRes = null;
+        let reviewsRes = null;
 
         for (const port of ports) {
           try {
             const API_BASE = process.env.REACT_APP_BACKEND_URL || `http://localhost:${port}`;
-            const res = await axios.get(`${API_BASE}/api/public/about`, { timeout: 3000 });
-            if (res.data) {
-              response = res.data;
+            const [about, revs] = await Promise.all([
+              axios.get(`${API_BASE}/api/public/about`, { timeout: 3000 }),
+              axios.get(`${API_BASE}/api/public/reviews`, { timeout: 3000 })
+            ]);
+
+            if (about.data) {
+              aboutRes = about.data;
+              reviewsRes = revs.data || [];
               break;
             }
           } catch (err) {
-            lastError = err;
             continue;
           }
         }
 
-        if (response) {
-          setData(response);
+        if (aboutRes) {
+          setData(aboutRes);
+          setReviews(reviewsRes);
           setError(null);
         } else {
-          throw lastError || new Error("Connection failed");
+          throw new Error("Connection failed");
         }
       } catch (err) {
-        console.error("Error fetching about data:", err);
-        setError("Repository data sync failed. System uplink established but no data returned.");
+        console.error("Error fetching dynamic data:", err);
+        setError("Establishing live data link failed. Our real-time infrastructure is currently undergoing maintenance.");
       } finally {
         setLoading(false);
       }
     };
-    fetchAboutData();
+    fetchAllData();
   }, []);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex flex-col pt-32 relative overflow-hidden">
+      <div className="min-h-screen bg-white flex flex-col">
         <Navigation />
-        {/* Loading background animation */}
-        <div className="absolute inset-0 bg-[#0a0a0c]">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] animate-pulse" />
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-          <div className="relative w-32 h-32 mb-8">
-            <div className="absolute inset-0 border-2 border-violet-600/20 rounded-full" />
-            <div className="absolute inset-0 border-2 border-violet-600 rounded-full border-t-transparent animate-spin" />
-            <div className="absolute inset-4 border border-fuchsia-500/30 rounded-full animate-reverse-spin" />
+        <div className="flex-1 flex flex-col items-center justify-center pt-24">
+          <div className="relative w-20 h-20">
+            <div className="absolute inset-0 border-b-2 border-violet-600 rounded-full animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <Zap className="w-8 h-8 text-violet-500 animate-pulse" />
+              <div className="w-10 h-10 bg-violet-50 rounded-full flex items-center justify-center text-violet-600">
+                <Compass className="w-5 h-5 animate-pulse" />
+              </div>
             </div>
           </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-violet-400 animate-pulse">Syncing Archive Data...</p>
+          <p className="mt-6 text-sm font-medium text-slate-400 uppercase tracking-widest animate-pulse">Establishing Connection</p>
         </div>
         <Footer />
       </div>
@@ -111,28 +114,27 @@ const About = () => {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[#0a0a0c] flex flex-col pt-32 text-white">
+      <div className="min-h-screen bg-slate-50 flex flex-col pt-32 text-slate-900">
         <Navigation />
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center relative">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-rose-900/10 rounded-full blur-[150px] -z-10" />
-          <div className="w-24 h-24 bg-rose-500/10 border border-rose-500/20 rounded-3xl flex items-center justify-center text-rose-500 mb-8 shadow-2xl shadow-rose-900/20">
-            <Shield className="w-12 h-12" />
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-2xl mx-auto">
+          <div className="w-20 h-20 bg-violet-100 rounded-2xl flex items-center justify-center text-violet-600 mb-8">
+            <Shield className="w-10 h-10" />
           </div>
-          <h2 className="text-4xl lg:text-6xl font-black uppercase italic tracking-tighter mb-4">Uplink Failure</h2>
-          <p className="text-gray-400 font-bold mb-10 max-w-sm text-lg">{error || "Critical failure in Genesis Archive retrieval."}</p>
+          <h2 className="text-3xl font-serif font-bold text-slate-800 mb-4">Request Interrupted</h2>
+          <p className="text-slate-500 mb-10 leading-relaxed">{error || "We encountered an issue retrieving our company profile. Our team has been notified."}</p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button
               onClick={() => window.location.reload()}
-              className="bg-violet-600 hover:bg-violet-700 text-white font-black uppercase tracking-widest px-10 h-16 rounded-2xl shadow-2xl shadow-violet-900/40 active:scale-95 transition-all"
+              className="bg-violet-600 hover:bg-violet-700 text-white font-semibold px-8 h-12 rounded-lg shadow-lg shadow-violet-200"
             >
-              Retry Protocol
+              Refresh Page
             </Button>
             <Link to="/">
               <Button
                 variant="outline"
-                className="border-white/10 text-white hover:bg-white/5 font-black uppercase tracking-widest px-10 h-16 rounded-2xl active:scale-95 transition-all"
+                className="border-slate-200 text-slate-600 hover:bg-white px-8 h-12 rounded-lg"
               >
-                Back to Home
+                Return Home
               </Button>
             </Link>
           </div>
@@ -143,76 +145,47 @@ const About = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#FDFDFF] flex flex-col font-sans selection:bg-violet-100 selection:text-violet-900 overflow-x-hidden">
+    <div className="min-h-screen bg-white flex flex-col font-sans selection:bg-violet-100 selection:text-violet-900 overflow-x-hidden">
       <Navigation />
 
-      {/* Premium Hero Section with Glassmorphism Overlay */}
-      <section className="relative pt-32 pb-24 lg:pt-52 lg:pb-40 overflow-hidden">
-        {/* Animated Background Gradients */}
-        <div className="absolute top-0 right-0 w-[60%] h-full bg-gradient-to-l from-violet-100/40 via-blue-50/20 to-transparent -z-10" />
-        <div className="absolute -top-20 -left-10 w-[500px] h-[500px] bg-violet-200/30 rounded-full blur-[120px] -z-10 animate-blob" />
-        <div className="absolute top-[20%] -right-20 w-[600px] h-[600px] bg-blue-100/40 rounded-full blur-[140px] -z-10 animate-blob animation-delay-2000" />
+      {/* Hero Section - Refined & Formal */}
+      <section className="relative pt-20 pb-12 md:pt-32 md:pb-24 lg:pt-48 lg:pb-36 bg-[#F8F9FF] overflow-hidden">
+        {/* Subtle decorative elements */}
+        <div className="absolute top-0 right-0 w-1/3 h-full bg-violet-600/[0.02] -skew-x-12 hidden md:block" />
+        <div className="absolute top-20 -left-20 w-80 h-80 bg-violet-200/20 rounded-full blur-[100px]" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid lg:grid-cols-12 gap-16 items-center">
-            <div className="lg:col-span-12 xl:col-span-7">
-              {/* Protocol Label */}
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-violet-600/5 border border-violet-600/10 text-violet-600 text-[9px] font-black uppercase tracking-[0.4em] mb-12 animate-fade-in">
-                <Infinity className="w-3.5 h-3.5" /> Established Network Core
-              </div>
-
-              <h1 className="text-6xl md:text-8xl xl:text-9xl font-black text-gray-900 mb-10 leading-[0.85] tracking-tighter italic uppercase">
-                {data.hero_title.split(' ').slice(0, 2).join(' ')} <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-900">
-                  {data.hero_subtitle}
-                </span>
-              </h1>
-
-              <div className="relative max-w-2xl mb-14">
-                <div className="absolute left-0 top-0 w-1.5 h-full bg-gradient-to-b from-violet-600 to-transparent rounded-full" />
-                <p className="text-xl lg:text-2xl font-bold text-gray-500 leading-tight pl-10 opacity-0 animate-slide-in-right">
-                  {data.hero_description}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-8 items-center">
-                <Link to="/shop">
-                  <Button className="bg-gray-900 hover:bg-violet-600 text-white font-black uppercase tracking-widest px-12 h-20 rounded-[2rem] text-sm shadow-2xl shadow-gray-200 transition-all hover:-translate-y-1 group active:scale-95">
-                    Explore Ecosystem <ArrowRight className="ml-4 w-6 h-6 group-hover:translate-x-3 transition-transform" />
-                  </Button>
-                </Link>
-                <div className="flex flex-col gap-2">
-                  <div className="flex -space-x-4">
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <div key={i} className="w-14 h-14 rounded-full border-4 border-white bg-slate-200 overflow-hidden ring-1 ring-violet-50 hover:z-10 transition-transform hover:scale-110">
-                        <img src={`https://i.pravatar.cc/100?img=${i + 20}`} alt="user" className="w-full h-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-violet-600 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> 50,000+ Active Nodes
-                  </p>
-                </div>
-              </div>
+          <div className="max-w-4xl text-left">
+            <div className="flex items-center justify-start gap-3 mb-6">
+              <span className="h-[1px] w-6 bg-violet-600" />
+              <span className="text-violet-600 font-bold tracking-[0.2em] uppercase text-[10px]">{data.hero_badge}</span>
             </div>
 
-            <div className="hidden lg:block lg:col-span-12 xl:col-span-5 relative">
-              <div className="relative z-10 group">
-                <div className="aspect-[4/5] bg-slate-100 rounded-[4rem] overflow-hidden shadow-[0_50px_100px_-20px_rgba(124,58,237,0.3)] rotate-3 group-hover:rotate-0 transition-all duration-1000">
-                  <img
-                    src="/premium_office_team.png"
-                    alt="Core Infrastructure"
-                    className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-all duration-1000"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-violet-900/40 via-transparent to-transparent" />
+            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-serif text-slate-900 leading-[1.1] mb-6 md:mb-10">
+              {data.hero_title}
+            </h1>
+
+            <p className="text-base md:text-xl text-slate-500 leading-relaxed mb-8 md:mb-12 max-w-2xl font-light">
+              {data.hero_description}
+            </p>
+
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8">
+              <Link to="/shop" className="w-full md:w-auto">
+                <Button className="w-full md:w-auto bg-slate-900 hover:bg-violet-700 text-white font-semibold px-10 h-14 md:h-16 rounded-xl transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3">
+                  Start Exploring <ArrowRight className="w-5 h-5" />
+                </Button>
+              </Link>
+              <div className="flex items-center gap-4 w-full md:w-auto py-4 md:py-0 border-t md:border-t-0 border-slate-100">
+                <div className="flex -space-x-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-slate-100 overflow-hidden">
+                      <img src={`https://i.pravatar.cc/100?img=${i + 14}`} alt="client" className="w-full h-full object-cover" />
+                    </div>
+                  ))}
                 </div>
-                {/* Floating Glass Card */}
-                <div className="absolute -bottom-12 -left-12 p-8 bg-white/70 backdrop-blur-3xl rounded-[3rem] border border-white shadow-2xl max-w-[280px] -rotate-6 group-hover:rotate-0 transition-all duration-1000">
-                  <div className="w-12 h-12 bg-gray-900 rounded-2xl flex items-center justify-center text-white mb-6">
-                    <Layers className="w-6 h-6" />
-                  </div>
-                  <h4 className="text-xl font-black uppercase italic mb-2">Integrated Platform</h4>
-                  <p className="text-xs font-bold text-gray-500 leading-snug">Unified commerce architecture designed for high-velocity global trade.</p>
+                <div className="flex flex-col">
+                  <span className="text-[14px] font-bold text-slate-900">{data.hero_stat_number}</span>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-widest">{data.hero_stat_label}</span>
                 </div>
               </div>
             </div>
@@ -220,23 +193,19 @@ const About = () => {
         </div>
       </section>
 
-      {/* High-Velocity Stats Section */}
-      <section className="py-24 bg-gray-900 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+      {/* Dynamic Statistics - Mobile Horizontal Scroll */}
+      <section className="py-12 md:py-24 border-y border-slate-100 bg-white">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="flex md:grid md:grid-cols-4 gap-6 md:gap-12 overflow-x-auto md:overflow-visible pb-4 md:pb-0 snap-x no-scrollbar">
             {data.stats.map((stat, i) => {
               const Icon = getIcon(stat.icon_name);
               return (
-                <div key={i} className="flex flex-col group p-10 bg-white/5 rounded-[3rem] border border-white/5 hover:bg-white/10 hover:border-violet-500/30 transition-all duration-500">
-                  <div className="w-16 h-16 bg-violet-600/10 rounded-2xl flex items-center justify-center text-violet-400 mb-10 group-hover:scale-110 group-hover:bg-violet-600 group-hover:text-white transition-all shadow-xl shadow-violet-900/40">
-                    <Icon className="w-8 h-8" />
+                <div key={i} className="min-w-[160px] md:min-w-0 snap-center p-6 md:p-0 bg-slate-50 md:bg-transparent rounded-2xl md:rounded-none group text-center md:text-left">
+                  <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-violet-600/10 text-violet-600 mb-4 group-hover:bg-violet-600 group-hover:text-white transition-all duration-500">
+                    <Icon className="w-4 h-4" />
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="text-5xl lg:text-7xl font-black italic tracking-tighter drop-shadow-2xl">{stat.number}</h3>
-                    <div className="w-12 h-1 bg-violet-600 rounded-full group-hover:w-full transition-all duration-700" />
-                    <p className="text-xs font-black uppercase tracking-[0.4em] text-gray-400 group-hover:text-violet-400 transition-colors pt-4">{stat.label}</p>
-                  </div>
+                  <h3 className="text-3xl lg:text-5xl font-serif font-bold text-slate-900 mb-1">{stat.number}</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">{stat.label}</p>
                 </div>
               );
             })}
@@ -244,50 +213,48 @@ const About = () => {
         </div>
       </section>
 
-      {/* Story & Vision Section */}
-      <section className="py-32 lg:py-48 relative overflow-hidden">
+      {/* Our Roots Section - Overlapping Mobile Design */}
+      <section className="py-20 md:py-32 lg:py-48 bg-white relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-24 items-center">
-            <div className="order-2 lg:order-1 relative">
-              <div className="relative">
-                <div className="aspect-square bg-white rounded-[5rem] border border-gray-100 p-4 shadow-2xl relative z-10 overflow-hidden group">
-                  <img
-                    src={data.story_image || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&q=80"}
-                    alt="Innovation Lab"
-                    className="w-full h-full object-cover rounded-[4rem] group-hover:scale-105 transition-transform duration-1000"
-                  />
-                  <div className="absolute inset-0 bg-violet-900/10 mix-blend-overlay" />
+          <div className="grid lg:grid-cols-12 gap-12 items-start">
+            <div className="lg:col-span-6 relative">
+              <div className="aspect-[4/3] md:aspect-[4/5] overflow-hidden rounded-[2rem] shadow-2xl">
+                <img
+                  src={data.story_image}
+                  alt="Marketplace Culture"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              {/* Overlapping mobile card */}
+              <div className="static md:absolute mt-[-40px] md:mt-0 md:-bottom-12 md:-right-12 z-20 mx-4 md:mx-0 p-8 bg-white rounded-3xl shadow-xl border border-slate-100 flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-violet-50 rounded-full flex items-center justify-center text-violet-600">
+                    <Briefcase className="w-5 h-5" />
+                  </div>
+                  <h4 className="text-lg font-bold text-slate-900 font-serif">{data.story_overlay_title}</h4>
                 </div>
-                {/* Floating Elements */}
-                <div className="absolute -top-10 -right-10 w-40 h-40 bg-violet-100 rounded-full blur-[80px] -z-10 animate-pulse" />
-                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-100 rounded-full blur-[80px] -z-10" />
+                <p className="text-xs text-slate-500 leading-relaxed font-light">{data.story_overlay_text}</p>
               </div>
             </div>
 
-            <div className="order-1 lg:order-2 space-y-12">
+            <div className="lg:col-span-6 lg:pl-16 space-y-10 mt-12 lg:mt-0">
               <div className="space-y-6">
-                <div className="inline-flex items-center gap-3 text-violet-600 text-[10px] font-black uppercase tracking-[0.5em]">
-                  <Cpu className="w-4 h-4 ml-1" /> Core Engine Background
-                </div>
-                <h2 className="text-5xl lg:text-8xl font-black text-gray-900 uppercase italic tracking-tighter leading-[0.9]">
+                <span className="text-violet-600 text-[10px] font-bold uppercase tracking-[0.3em] flex items-center gap-2">
+                  <div className="w-2 h-[1px] bg-violet-600" /> {data.story_subtitle}
+                </span>
+                <h2 className="text-3xl md:text-5xl lg:text-6xl font-serif text-slate-900 leading-tight">
                   {data.story_title}
                 </h2>
+                <p className="text-base text-slate-500 leading-relaxed italic font-light">
+                  {data.story_description}
+                </p>
               </div>
 
-              <p className="text-xl font-bold text-gray-500 leading-snug border-l-4 border-gray-200 pl-8">
-                {data.story_description}
-              </p>
-
-              <div className="grid grid-cols-2 gap-8 pt-6">
-                {[
-                  { title: "Direct Link", desc: "No intermediaries" },
-                  { title: "Quantum Speed", desc: "Real-time dispatch" },
-                  { title: "Hyper Secure", desc: "Encrypted transactions" },
-                  { title: "Global Mesh", desc: "Logistics across borders" }
-                ].map((item, i) => (
-                  <div key={i} className="group cursor-default">
-                    <h5 className="text-[11px] font-black uppercase tracking-widest text-gray-900 mb-2 group-hover:text-violet-600 transition-colors">{item.title}</h5>
-                    <p className="text-xs font-bold text-gray-400 group-hover:text-gray-600 transition-colors uppercaseTracking">{item.desc}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-6">
+                {data.story_highlights?.map((item, i) => (
+                  <div key={i} className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                    <h5 className="text-[10px] font-bold uppercase tracking-widest text-violet-600 mb-3">{item.title}</h5>
+                    <p className="text-xs text-slate-500 font-light leading-relaxed">{item.desc}</p>
                   </div>
                 ))}
               </div>
@@ -296,40 +263,66 @@ const About = () => {
         </div>
       </section>
 
-      {/* The Manifesto Section - Pure Tech Aesthetics */}
-      <section className="py-32 lg:py-48 bg-[#0a0a0c] text-white relative">
-        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-violet-600 to-transparent" />
-        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-fuchsia-600 to-transparent" />
+      {/* Reviews - App Styled Snap Scroll */}
+      {reviews && reviews.length > 0 && (
+        <section className="py-20 md:py-32 bg-slate-50 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 md:px-8">
+            <div className="mb-12 md:mb-20 text-center md:text-left">
+              <span className="text-violet-600 font-bold uppercase tracking-[0.4em] text-[10px] mb-4 block">{data.reviews_subtitle}</span>
+              <h2 className="text-3xl md:text-5xl font-serif text-slate-900">{data.reviews_title}</h2>
+            </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-24 lg:mb-40">
-            <h2 className="text-5xl lg:text-9xl font-black uppercase italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/10 opacity-80 leading-none mb-10">
-              The Manifesto
-            </h2>
-            <p className="text-violet-400 font-black uppercase tracking-[0.5em] text-[10px] mb-8">ZippyCart Operational Directives</p>
-            <div className="flex justify-center">
-              <ChevronRight className="w-8 h-8 text-violet-600 rotate-90 animate-bounce" />
+            <div className="flex gap-4 md:grid md:grid-cols-3 md:gap-8 overflow-x-auto md:overflow-visible pb-8 snap-x no-scrollbar">
+              {reviews.slice(0, 6).map((review, i) => (
+                <div key={i} className="min-w-[280px] md:min-w-0 snap-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                  <div>
+                    <div className="flex gap-1 mb-6">
+                      {[...Array(5)].map((_, idx) => (
+                        <Star key={idx} className={`w-3 h-3 ${idx < review.rating ? "text-amber-400 fill-amber-400" : "text-slate-200"}`} />
+                      ))}
+                    </div>
+                    <p className="text-sm text-slate-600 font-light italic leading-relaxed mb-6 block">
+                      "{review.comment}"
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 pt-6 border-t border-slate-50">
+                    <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-black uppercase tracking-tighter">
+                      {review.user_name?.charAt(0)}
+                    </div>
+                    <div className="text-left">
+                      <h5 className="text-[10px] font-bold text-slate-900 uppercase tracking-tight leading-none mb-1">{review.user_name}</h5>
+                      <span className="text-[9px] text-slate-400 uppercase tracking-tighter">Verified Buyer</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+        </section>
+      )}
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Core Values - High Density 2-Column Grid on Mobile */}
+      <section className="py-20 md:py-32 bg-slate-900 text-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")` }} />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+          <div className="max-w-2xl mx-auto mb-16">
+            <h2 className="text-3xl md:text-5xl font-serif mb-6">{data.values_title}</h2>
+            <p className="text-xs md:text-base text-slate-400 font-light">{data.values_intro}</p>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-1">
             {data.values.map((value, i) => {
               const Icon = getIcon(value.icon_name);
               return (
-                <div key={i} className="group relative glass-card p-12 h-full flex flex-col border border-white/5 hover:border-violet-500/40 hover:bg-white/[0.04] transition-all duration-700 rounded-none overflow-hidden">
-                  {/* Subtle Background Icon */}
-                  <Icon className="absolute -bottom-10 -right-10 w-48 h-48 text-white/[0.02] -rotate-12 group-hover:rotate-0 transition-all duration-1000" />
-
-                  <div className="w-14 h-14 bg-white/5 border border-white/10 flex items-center justify-center mb-12 group-hover:bg-violet-600 group-hover:border-violet-400 transition-all duration-500">
-                    <Icon className="w-6 h-6 text-violet-400 group-hover:text-white transition-all" />
+                <div key={i} className="p-6 md:p-12 bg-white/5 border border-white/5 hover:bg-white/10 transition-all rounded-2xl md:rounded-none flex flex-col items-center">
+                  <div className="w-10 h-10 rounded-xl bg-violet-600/20 flex items-center justify-center mb-6">
+                    <Icon className="w-5 h-5 text-violet-400" />
                   </div>
-
-                  <h3 className="text-2xl font-black uppercase italic mb-6 tracking-tight relative z-10">{value.title}</h3>
-                  <p className="text-gray-500 font-bold leading-relaxed group-hover:text-gray-300 transition-colors uppercaseTracking text-xs relative z-10">
+                  <h3 className="text-xs md:text-lg font-serif mb-2 uppercase tracking-wide">{value.title}</h3>
+                  <p className="text-[10px] md:text-sm text-slate-400 font-light line-clamp-3 md:line-clamp-none">
                     {value.description}
                   </p>
-
-                  <div className="absolute top-0 right-0 w-1 h-0 bg-violet-600 group-hover:h-full transition-all duration-700" />
                 </div>
               );
             })}
@@ -337,131 +330,107 @@ const About = () => {
         </div>
       </section>
 
-      {/* Interactive Timeline Archive */}
-      <section className="py-32 lg:py-52 bg-white relative">
+      {/* Timeline Section - Clean Heritage View */}
+      <section className="py-20 md:py-32 lg:py-48 bg-[#FAFAFC]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row justify-between items-start mb-32 gap-16">
-            <div className="lg:w-1/2">
-              <h2 className="text-6xl lg:text-8xl font-black text-gray-900 uppercase italic tracking-tighter leading-[0.85] mb-8">
-                Archive <br /> Synchronization.
-              </h2>
-              <p className="text-xl font-bold text-gray-400 italic border-l-2 border-violet-600 pl-8 ml-2">
-                Tracing our expansion through the digital landscape since operational genesis.
-              </p>
-            </div>
-            <div className="lg:w-1/3 pt-10">
-              <div className="p-8 bg-gray-50 rounded-3xl border border-gray-100">
-                <Eye className="w-8 h-8 text-violet-600 mb-6" />
-                <p className="text-xs font-bold text-gray-500 italic leading-snug">Visualizing growth metrics and infrastructure deployment milestones in sequential order.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-8">
-            {data.milestones.map((item, i) => (
-              <div key={i} className="group grid lg:grid-cols-12 items-center p-12 bg-white hover:bg-gray-900 hover:text-white border-b border-gray-100 hover:border-transparent transition-all duration-700 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-2 h-0 bg-violet-600 group-hover:h-full transition-all duration-500" />
-
-                <div className="lg:col-span-2">
-                  <span className="text-4xl lg:text-6xl font-black italic tracking-tighter text-gray-300 group-hover:text-violet-500 transition-colors duration-500">{item.year}</span>
-                </div>
-                <div className="lg:col-span-4 mt-4 lg:mt-0">
-                  <h4 className="text-2xl font-black uppercase italic tracking-tight">{item.title}</h4>
-                </div>
-                <div className="lg:col-span-6 mt-4 lg:mt-0">
-                  <p className="text-lg font-bold text-gray-400 group-hover:text-white/60 transition-colors leading-snug lg:text-right italic">{item.desc}</p>
+          <div className="grid lg:grid-cols-12 gap-12 md:gap-20">
+            <div className="lg:col-span-12 xl:col-span-5 relative">
+              <div className="sticky top-24 md:top-40 text-center md:text-left">
+                <span className="text-violet-600 font-bold uppercase tracking-[0.4em] text-[10px] mb-4 md:mb-6 block">{data.timeline_badge}</span>
+                <h2 className="text-3xl md:text-6xl font-serif text-slate-900 leading-[1.1] mb-6 md:mb-8">
+                  {data.timeline_title}
+                </h2>
+                <div className="space-y-6 md:space-y-8">
+                  <p className="text-sm md:text-base text-slate-500 leading-relaxed font-light mx-auto md:mx-0 max-w-lg">
+                    {data.timeline_intro}
+                  </p>
+                  <div className="inline-flex items-center gap-4 py-3 md:py-4 px-5 md:px-6 bg-white rounded-2xl shadow-sm border border-slate-100">
+                    <History className="w-5 h-5 md:w-6 md:h-6 text-violet-600" />
+                    <div className="text-left">
+                      <p className="text-[10px] md:text-xs font-bold text-slate-900 uppercase tracking-widest leading-none mb-1">{data.timeline_subtitle}</p>
+                      <p className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wide">Updated Fiscal Year {new Date().getFullYear()}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
+            </div>
+
+            <div className="lg:col-span-12 xl:col-span-7 space-y-4 pt-10 xl:pt-0">
+              {data.milestones.map((item, i) => (
+                <div key={i} className="group flex items-start gap-4 md:gap-8 p-6 md:p-10 bg-white rounded-3xl border border-slate-100 hover:border-violet-100 transition-all duration-500 hover:shadow-2xl hover:shadow-violet-900/[0.03]">
+                  <span className="text-2xl md:text-3xl font-serif italic text-violet-600/30 group-hover:text-violet-600 transition-colors duration-500 shrink-0">{item.year}</span>
+                  <div className="pt-1">
+                    <h4 className="text-base md:text-lg font-bold text-slate-900 mb-2 md:mb-3 font-serif uppercase tracking-tight">{item.title}</h4>
+                    <p className="text-xs md:text-sm text-slate-500 font-light leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Grand Finale CTA Section */}
-      <section className="py-40 lg:py-60 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[#0a0a0c] -z-20" />
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-900/40 via-transparent to-fuchsia-900/30 -z-10" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-[radial-gradient(circle,rgba(124,58,237,0.15)_0%,transparent_70%)] -z-10 animate-pulse" />
-
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-white/5 border border-white/10 text-violet-400 text-[10px] font-black uppercase tracking-[0.5em] mb-16 animate-fade-in shadow-lg">
-            <Rocket className="w-4 h-4" /> Ready for Deployment
+      {/* CTA Section - Professional Invitation */}
+      <section className="py-24 md:py-40 relative bg-white overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-slate-100 to-transparent" />
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 rounded-full bg-violet-50 text-violet-600 mb-8 md:mb-10">
+            <Rocket className="w-5 h-5 md:w-6 md:h-6" />
           </div>
-
-          <h2 className="text-6xl lg:text-[10rem] font-black text-white uppercase italic tracking-tighter leading-none mb-16 drop-shadow-2xl">
-            Join the <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-fuchsia-500">Evolution.</span>
+          <h2 className="text-3xl md:text-6xl font-serif text-slate-900 mb-8 md:mb-10 leading-tight">
+            {data.cta_title}
           </h2>
-
-          <p className="text-2xl font-bold italic text-gray-400 mb-20 max-w-3xl mx-auto leading-tight opacity-80">
-            Establish your node in our ecosystem today. Experience commerce re-engineered for the future.
+          <p className="text-base md:text-lg text-slate-400 font-light mb-12 md:mb-16 leading-relaxed max-w-2xl mx-auto">
+            {data.cta_description}
           </p>
-
-          <div className="flex flex-wrap justify-center gap-10">
-            <Link to="/shop">
-              <Button className="bg-white hover:bg-violet-600 text-gray-900 hover:text-white font-black uppercase tracking-[0.2em] px-16 h-24 rounded-[2.5rem] text-xl shadow-[0_30px_60px_-15px_rgba(255,255,255,0.2)] hover:-translate-y-2 active:scale-95 transition-all">
-                Launch Shop
+          <div className="flex flex-col sm:flex-row justify-center gap-4 md:gap-6">
+            <Link to="/shop" className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto bg-slate-900 hover:bg-violet-700 text-white font-semibold px-12 h-16 rounded-xl transition-all shadow-xl shadow-slate-200">
+                Start Exploring
               </Button>
             </Link>
-            <Link to="/contact">
-              <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 px-16 h-24 rounded-[2.5rem] text-xl font-bold backdrop-blur-md hover:-translate-y-2 active:scale-95 transition-all">
-                Contact Uplink
+            <Link to="/contact" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto border-slate-200 text-slate-600 hover:bg-slate-50 px-12 h-16 rounded-xl font-semibold">
+                Get in Touch
               </Button>
             </Link>
           </div>
         </div>
-
-        {/* Decorative Grid Lines */}
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/grid-me.png')] opacity-10 -z-10" />
       </section>
 
       <Footer />
 
-      {/* Advanced Global Styles */}
+      {/* Refined Global Animations */}
       <style dangerouslySetInnerHTML={{
         __html: `
-        @keyframes blob {
-          0% { transform: scale(1) translate(0px, 0px); }
-          33% { transform: scale(1.1) translate(30px, -50px); }
-          66% { transform: scale(0.9) translate(-20px, 15px); }
-          100% { transform: scale(1) translate(0px, 0px); }
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+          font-family: 'Inter', sans-serif;
         }
-        @keyframes reverse-spin {
-          from { transform: rotate(360deg); }
-          to { transform: rotate(0deg); }
+        
+        .font-serif {
+          font-family: 'Playfair Display', serif;
         }
-        .animate-blob {
-          animation: blob 7s infinite alternate;
+
+        @keyframes fadeInScale {
+          from { opacity: 0; transform: scale(0.98); }
+          to { opacity: 1; transform: scale(1); }
         }
-        .animation-delay-2000 {
-          animation-delay: 2s;
+
+        .animate-section {
+          animation: fadeInScale 1s ease-out forwards;
         }
-        .animate-reverse-spin {
-          animation: reverse-spin 3s linear infinite;
+
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
         }
-        .animate-fade-in {
-          animation: fadeIn 1.5s ease-out forwards;
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
-        .animate-slide-in-right {
-          animation: slideInRight 1s ease-out 0.5s forwards;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideInRight {
-          from { opacity: 0; transform: translateX(20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        .glass-card {
-          background: rgba(255, 255, 255, 0.02);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-        }
-        .uppercaseTracking {
-           text-transform: uppercase;
-           letter-spacing: 0.15em;
-        }
-      `}} />
+        `
+      }} />
     </div>
   );
 };
