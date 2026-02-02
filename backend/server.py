@@ -403,7 +403,7 @@ class User(BaseModel):
     business_category: str = ""
     business_categories: List[str] = []
     owner_name: str = ""
-    user_type: str = "user"  # user, admin, vendor
+    user_type: str = "user"  # user, admin, vendor_ecommerce, vendor_food
     status: str = "active"   # active, pending, rejected
     rejection_reason: Optional[str] = None
     is_blocked: bool = False
@@ -857,7 +857,7 @@ async def get_status_checks(current_user: Annotated[dict, Depends(get_current_us
 @api_router.post("/users/signup", response_model=User)
 async def signup_user(user_data: UserCreate):
     # Determine collection based on user_type
-    collection = db.vendors if user_data.user_type == "vendor" else db.users
+    collection = db.vendors if user_data.user_type.startswith("vendor") else db.users
 
     # Check if user already exists
     existing_user = await collection.find_one({
@@ -874,7 +874,7 @@ async def signup_user(user_data: UserCreate):
     user_dict['password'] = get_password_hash(user_dict['password'])
     
     # Vendors start as pending
-    if user_data.user_type == "vendor":
+    if user_data.user_type.startswith("vendor"):
         user_dict['status'] = "pending"
     else:
         user_dict['status'] = "active"
@@ -910,7 +910,7 @@ async def login_user(login_data: UserLogin, request: Request):
         login_attempts[client_ip] = (now, 1)
 
     # Determine collection based on user_type
-    collection = db.vendors if login_data.user_type == "vendor" else db.users
+    collection = db.vendors if login_data.user_type.startswith("vendor") else db.users
 
     # Find user by email or phone
     user = await collection.find_one({
@@ -930,7 +930,7 @@ async def login_user(login_data: UserLogin, request: Request):
         raise HTTPException(status_code=403, detail="Account access suspended. Contact compliance.")
 
     # Check vendor status
-    if login_data.user_type == "vendor":
+    if login_data.user_type.startswith("vendor"):
         if user.get('status') == "pending":
             raise HTTPException(status_code=403, detail="Vendor account is pending administrative approval.")
         if user.get('status') == "rejected":
@@ -952,7 +952,7 @@ async def login_user(login_data: UserLogin, request: Request):
 
 @api_router.put("/vendor/profile")
 async def update_vendor_profile(profile_data: UserUpdate, current_user: Annotated[dict, Depends(get_current_user)]):
-    if current_user['user_type'] != 'vendor':
+    if not current_user['user_type'].startswith('vendor'):
         raise HTTPException(status_code=403, detail="Only vendors can update profile via this endpoint")
         
     update_data = profile_data.model_dump(exclude_unset=True)
@@ -998,20 +998,20 @@ async def force_logout(user_id: str, current_admin: Annotated[dict, Depends(get_
 @api_router.get("/users/sync")
 async def sync_user(current_user: Annotated[dict, Depends(get_current_user)]):
     # current_user is already fetched from get_current_user, but we want the freshest data
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
     user = await collection.find_one({"id": current_user['id']}, {"_id": 0, "password": 0})
     return user
 
 @api_router.put("/users/cart")
 async def update_cart(cart: List[CartItem], current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
     cart_data = [item.model_dump() for item in cart]
     await collection.update_one({"id": current_user['id']}, {"$set": {"cart": cart_data}})
     return {"message": "Cart synchronized"}
 
 @api_router.post("/users/cart/items")
 async def add_to_cart(item: CartItem, current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
     
     # Attempt to update quantity if item with same ID exists
     result = await collection.update_one(
@@ -1030,7 +1030,7 @@ async def add_to_cart(item: CartItem, current_user: Annotated[dict, Depends(get_
 
 @api_router.delete("/users/cart/items/{item_id}")
 async def remove_from_cart(item_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
     
     await collection.update_one(
         {"id": current_user['id']},
@@ -1041,14 +1041,14 @@ async def remove_from_cart(item_id: str, current_user: Annotated[dict, Depends(g
 
 @api_router.put("/users/wishlist")
 async def update_wishlist(wishlist: List[WishlistItem], current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
     wishlist_data = [item.model_dump() for item in wishlist]
     await collection.update_one({"id": current_user['id']}, {"$set": {"wishlist": wishlist_data}})
     return {"message": "Wishlist synchronized"}
 
 @api_router.post("/users/wishlist/items")
 async def add_to_wishlist(item: WishlistItem, current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
     
     # Attempt to update item if it exists (e.g. update price/image)
     result = await collection.update_one(
@@ -1067,7 +1067,7 @@ async def add_to_wishlist(item: WishlistItem, current_user: Annotated[dict, Depe
 
 @api_router.delete("/users/wishlist/items/{item_id}")
 async def remove_from_wishlist(item_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
     
     await collection.update_one(
         {"id": current_user['id']},
@@ -1079,7 +1079,7 @@ async def remove_from_wishlist(item_id: str, current_user: Annotated[dict, Depen
 @api_router.put("/users/recently-viewed")
 async def update_recently_viewed(product_ids: List[str], current_user: Annotated[dict, Depends(get_current_user)]):
     print(f"DEBUG: update_recently_viewed called with: {product_ids} for user {current_user['id']}")
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
     # Keep only last 20 items
     product_ids = product_ids[:20]
     result = await collection.update_one({"id": current_user['id']}, {"$set": {"recently_viewed": product_ids}})
@@ -1088,7 +1088,7 @@ async def update_recently_viewed(product_ids: List[str], current_user: Annotated
 
 @api_router.get("/users/recently-viewed")
 async def get_recently_viewed(current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
     user = await collection.find_one({"id": current_user['id']}, {"recently_viewed": 1})
     product_ids = user.get('recently_viewed', [])
     

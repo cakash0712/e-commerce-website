@@ -18,17 +18,21 @@ const ProtectedRoute = ({ children, requiredRole }) => {
         // Redirect to appropriate auth page based on required role
         let authPath = "/auth";
         if (requiredRole === "admin") authPath = "/auth/admin";
-        if (requiredRole === "vendor") authPath = "/auth/vendor";
+        if (requiredRole === "vendor") authPath = "/auth"; // Force user to choose or go back to generic
 
         // Redirect to auth page but save the attempted location
         return <Navigate to={authPath} state={{ from: location }} replace />;
     }
 
-    if (requiredRole && user.user_type !== requiredRole) {
+    const isAuthorized = !requiredRole ||
+        user.user_type === requiredRole ||
+        (requiredRole === "vendor" && user.user_type?.startsWith("vendor"));
+
+    if (!isAuthorized) {
         // Redirect to appropriate dashboard based on user type
         const redirectPath = user.user_type === "admin"
             ? "/admin"
-            : (user.user_type === "vendor" ? "/vendor" : "/profile");
+            : (user.user_type?.startsWith("vendor") ? "/vendor" : "/profile");
 
         return <Navigate to={redirectPath} replace />;
     }

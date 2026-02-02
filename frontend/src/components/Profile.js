@@ -15,6 +15,12 @@ import Footer from "./Footer";
 const Profile = () => {
   const navigate = useNavigate();
   const { user, login, logout, register, updateUser, loading, setUser } = useAuth();
+
+  // If we are in food mode, redirect to the food-specific profile
+  const appMode = localStorage.getItem('DACH_app_mode');
+  if (appMode === 'food') {
+    return <Navigate to="/food/profile" replace />;
+  }
   const { orders } = useOrders();
   const [activeView, setActiveView] = useState("overview");
   const [isLoading, setIsLoading] = useState(false);

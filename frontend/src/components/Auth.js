@@ -22,9 +22,11 @@ const Auth = () => {
   const [userType, setUserType] = useState(() => {
     const path = location.pathname;
     if (path.includes('/admin')) return "admin";
-    if (path.includes('/vendor')) return "vendor";
+    if (path.includes('/vendor/ecommerce')) return "vendor_ecommerce";
+    if (path.includes('/vendor/food')) return "vendor_food";
+    if (path.includes('/vendor')) return "vendor"; // Fallback
     return "user";
-  }); // user, vendor, or admin
+  }); // user, vendor_ecommerce, vendor_food, or admin
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,7 +55,12 @@ const Auth = () => {
   // Listen for location changes to update userType if re-using component
   useEffect(() => {
     const path = location.pathname;
-    const type = path.includes('/admin') ? "admin" : (path.includes('/vendor') ? "vendor" : "user");
+    let type = "user";
+    if (path.includes('/admin')) type = "admin";
+    else if (path.includes('/vendor/ecommerce')) type = "vendor_ecommerce";
+    else if (path.includes('/vendor/food')) type = "vendor_food";
+    else if (path.includes('/vendor')) type = "vendor";
+
     setUserType(type);
 
     // Reset to login mode if switching to admin
@@ -86,10 +93,10 @@ const Auth = () => {
       const currentPath = location.pathname;
       const type = currentPath.includes('/admin') ? "admin" : (currentPath.includes('/vendor') ? "vendor" : "user");
 
-      const userData = await login(identifier, password, type);
+      const userData = await login(identifier, password, userType);
       const redirectPath = userData.user_type === "admin"
         ? "/admin/dashboard"
-        : (userData.user_type === "vendor" ? "/vendor/dashboard" : "/profile");
+        : (userData.user_type.startsWith("vendor") ? "/vendor/dashboard" : "/profile");
       navigate(redirectPath);
     } catch (err) {
       // Special case for local admin demo login if backend is not available
@@ -178,7 +185,7 @@ const Auth = () => {
       localStorage.setItem('signup_data', JSON.stringify(signupProfileData));
 
       await login(loginMethod === "phone" ? signupData.email : email, signupData.password, userType);
-      const redirectPath = userType === "vendor" ? "/vendor/dashboard" : "/profile";
+      const redirectPath = userType.startsWith("vendor") ? "/vendor/dashboard" : "/profile";
       navigate(redirectPath);
     } catch (err) {
       // Show specific error message from backend
@@ -234,10 +241,16 @@ const Auth = () => {
                 {userType === "admin" ? <Settings className="w-8 h-8" /> : userType === "vendor" ? <Package className="w-8 h-8" /> : (authMode === "login" ? <LogIn className="w-8 h-8" /> : <UserPlus className="w-8 h-8" />)}
               </div>
               <h2 className="text-2xl font-bold mb-1">
-                {userType === "admin" ? "Admin Panel" : userType === "vendor" ? "Vendor Portal" : (authMode === "login" ? "Welcome Back" : "Create Account")}
+                {userType === "admin" ? "Admin Panel" :
+                  userType === "vendor_ecommerce" ? "E-commerce Vendor" :
+                    userType === "vendor_food" ? "Food Vendor Portal" :
+                      userType === "vendor" ? "Vendor Portal" :
+                        (authMode === "login" ? "Welcome Back" : "Create Account")}
               </h2>
               <p className="text-violet-200 text-sm">
                 {userType === "admin" && "Access admin dashboard"}
+                {userType === "vendor_ecommerce" && "Manage your shop and inventory"}
+                {userType === "vendor_food" && "Manage your kitchen and deliveries"}
                 {userType === "vendor" && "Manage your products"}
                 {userType === "user" && authStep === "credentials" && "Enter your login details"}
                 {userType === "user" && authStep === "details" && (authMode === "signup" ? "Complete your profile information" : "Complete your profile")}
@@ -259,7 +272,7 @@ const Auth = () => {
               </div>
             )}
 
-            {userType === "vendor" ? (
+            {userType.startsWith("vendor") ? (
               /* VENDOR CONTENT */
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {authMode === "signup" && (
@@ -375,7 +388,7 @@ const Auth = () => {
                         navigate("/vendor");
                       } else {
                         try {
-                          await login(email, password, "vendor");
+                          await login(email, password, userType);
                           navigate("/vendor");
                         } catch (err) {
                           setError(err.response?.data?.detail || "Invalid vendor credentials");
@@ -399,7 +412,7 @@ const Auth = () => {
                           business_category: signupData.business_category,
                           business_categories: signupData.business_categories,
                           owner_name: signupData.owner_name,
-                          user_type: "vendor"
+                          user_type: userType
                         };
                         const registeredUser = await register(userData);
 
@@ -414,7 +427,7 @@ const Auth = () => {
                           return;
                         }
 
-                        await login(email, password, "vendor");
+                        await login(email, password, userType);
                         navigate("/vendor");
                       } catch (err) {
                         if (err.response?.data?.status === "pending") {
@@ -630,10 +643,16 @@ const Auth = () => {
 
             <div className="flex flex-col items-center gap-3 border-t border-gray-50 pt-4">
               <p className="text-xs text-gray-400 font-medium">
-                {userType === "user" ? "Are you a vendor? " : "Are you a customer? "}
-                <Link to={userType === "user" ? "/auth/vendor" : "/auth"} className="text-indigo-600 font-bold hover:underline">
-                  {userType === "user" ? "Go to Vendor Portal" : "Go to Customer Login"}
-                </Link>
+                {userType === "user" ? (
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <span>Are you a vendor?</span>
+                    <Link to="/auth/vendor/ecommerce" className="text-indigo-600 font-bold hover:underline">E-commerce Portal</Link>
+                    <span className="text-gray-300">|</span>
+                    <Link to="/auth/vendor/food" className="text-orange-600 font-bold hover:underline">Food Portal</Link>
+                  </div>
+                ) : (
+                  <Link to="/auth" className="text-indigo-600 font-bold hover:underline">Go to Customer Login</Link>
+                )}
               </p>
               {userType !== "admin" && (
                 <Link to="/auth/admin" className="text-[10px] text-gray-300 hover:text-gray-500 font-medium transition-colors">

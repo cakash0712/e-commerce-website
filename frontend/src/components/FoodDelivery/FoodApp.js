@@ -8,6 +8,7 @@ import {
     ArrowRight, Gift, Percent, TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../../App';
+import FoodProfile from './FoodProfile';
 
 // Food Cart Context
 const FoodCartContext = createContext();
@@ -219,6 +220,7 @@ const FoodNavigation = ({ onSwitchApp }) => {
         { path: '/food', label: 'Home', icon: Home },
         { path: '/food/restaurants', label: 'Restaurants', icon: Utensils },
         { path: '/food/orders', label: 'My Orders', icon: Timer },
+        { path: '/food/profile', label: 'Profile', icon: User },
     ];
 
     return (
@@ -242,8 +244,8 @@ const FoodNavigation = ({ onSwitchApp }) => {
                                 key={link.path}
                                 to={link.path}
                                 className={`flex items-center gap-2 text-sm font-medium transition-colors ${location.pathname === link.path
-                                        ? 'text-orange-600'
-                                        : 'text-gray-600 hover:text-orange-600'
+                                    ? 'text-orange-600'
+                                    : 'text-gray-600 hover:text-orange-600'
                                     }`}
                             >
                                 <link.icon className="w-4 h-4" />
@@ -296,8 +298,8 @@ const FoodNavigation = ({ onSwitchApp }) => {
                                 to={link.path}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-lg ${location.pathname === link.path
-                                        ? 'bg-orange-50 text-orange-600'
-                                        : 'text-gray-600'
+                                    ? 'bg-orange-50 text-orange-600'
+                                    : 'text-gray-600'
                                     }`}
                             >
                                 <link.icon className="w-5 h-5" />
@@ -810,8 +812,8 @@ const RestaurantsList = () => {
                         <button
                             onClick={() => setSelectedCuisine(null)}
                             className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${!selectedCuisine
-                                    ? 'bg-orange-500 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-orange-500 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             All
@@ -821,8 +823,8 @@ const RestaurantsList = () => {
                                 key={cuisine.id}
                                 onClick={() => setSelectedCuisine(cuisine.name.toLowerCase())}
                                 className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedCuisine === cuisine.name.toLowerCase()
-                                        ? 'bg-orange-500 text-white'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-orange-500 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                     }`}
                             >
                                 {cuisine.name}
@@ -1008,8 +1010,8 @@ const FoodOrders = () => {
                                         <p className="text-sm text-gray-500">Order #{order.id}</p>
                                     </div>
                                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${order.status === 'delivered'
-                                            ? 'bg-green-100 text-green-700'
-                                            : 'bg-orange-100 text-orange-700'
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-orange-100 text-orange-700'
                                         }`}>
                                         {order.status === 'delivered' ? 'Delivered' : 'In Progress'}
                                     </span>
@@ -1046,6 +1048,7 @@ const FoodApp = ({ onSwitchApp }) => {
                     <Route path="/restaurant/:id" element={<RestaurantDetail />} />
                     <Route path="/cart" element={<FoodCart />} />
                     <Route path="/orders" element={<FoodOrders />} />
+                    <Route path="/profile" element={<FoodProfile />} />
                 </Routes>
             </div>
         </FoodCartProvider>

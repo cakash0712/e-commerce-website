@@ -2329,7 +2329,7 @@ const Vendor = () => {
           </div>
           <CardContent className="pt-18 px-8 pb-8">
             <h2 className="text-2xl font-black text-gray-900">{user?.name}</h2>
-            <p className="text-sm font-medium text-violet-600 mb-6">{user?.user_type === 'vendor' ? 'Verified Merchant' : 'User'}</p>
+            <p className="text-sm font-medium text-violet-600 mb-6">{user?.user_type?.startsWith('vendor') ? 'Verified Merchant' : 'User'}</p>
 
             <div className="space-y-4">
               <div className="flex items-center gap-3 text-sm text-gray-600">
