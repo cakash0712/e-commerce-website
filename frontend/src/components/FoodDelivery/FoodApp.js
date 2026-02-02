@@ -23,7 +23,7 @@ export const useFoodCart = () => {
 const FoodCartProvider = ({ children }) => {
     const [cartItems, setCartItems] = useState(() => {
         try {
-            const saved = localStorage.getItem('ZippyBites_cart');
+            const saved = localStorage.getItem('DACHBites_cart');
             return saved ? JSON.parse(saved) : [];
         } catch (e) {
             return [];
@@ -31,7 +31,7 @@ const FoodCartProvider = ({ children }) => {
     });
 
     useEffect(() => {
-        localStorage.setItem('ZippyBites_cart', JSON.stringify(cartItems));
+        localStorage.setItem('DACHBites_cart', JSON.stringify(cartItems));
     }, [cartItems]);
 
     const addToCart = (item, restaurantId, restaurantName) => {
@@ -231,7 +231,7 @@ const FoodNavigation = ({ onSwitchApp }) => {
                             <Utensils className="w-5 h-5 text-white" />
                         </div>
                         <span className="text-xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                            ZippyBites
+                            DACHBites
                         </span>
                     </Link>
 
@@ -488,7 +488,7 @@ const FoodHome = () => {
                                     <span className="text-white text-sm font-medium">Limited Time</span>
                                 </div>
                                 <h3 className="text-3xl font-bold text-white mb-2">First Order? Get 50% OFF!</h3>
-                                <p className="text-white/80">Use code ZIPPYFIRST at checkout</p>
+                                <p className="text-white/80">Use code DACHFIRST at checkout</p>
                             </div>
                             <Link
                                 to="/food/restaurants"
@@ -510,7 +510,7 @@ const FoodHome = () => {
                                 <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center">
                                     <Utensils className="w-5 h-5 text-white" />
                                 </div>
-                                <span className="text-xl font-bold text-white">ZippyBites</span>
+                                <span className="text-xl font-bold text-white">DACHBites</span>
                             </div>
                             <p className="text-gray-400 text-sm">
                                 Delivering delicious food from the best restaurants near you.
@@ -539,13 +539,13 @@ const FoodHome = () => {
                                     <Phone className="w-4 h-4" /> +91 1234567890
                                 </li>
                                 <li className="flex items-center gap-2 text-gray-400 text-sm">
-                                    <Mail className="w-4 h-4" /> support@zippybites.com
+                                    <Mail className="w-4 h-4" /> support@DACHbites.com
                                 </li>
                             </ul>
                         </div>
                     </div>
                     <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500 text-sm">
-                        © 2024 ZippyBites. All rights reserved.
+                        © 2024 DACHBites. All rights reserved.
                     </div>
                 </div>
             </footer>

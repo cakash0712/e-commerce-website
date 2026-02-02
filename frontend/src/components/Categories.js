@@ -231,11 +231,11 @@ const Categories = () => {
                     onClick={() => navigate(`/shop?category=${encodeURIComponent(cat.name.toLowerCase())}`)}
                     className="hidden lg:flex group rounded-3xl border border-gray-200/60 p-10 flex-col items-center justify-center text-center hover:bg-white hover:shadow-2xl hover:border-violet-100 transition-all duration-500 min-h-[250px] cursor-pointer bg-white"
                   >
-                    <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm group-hover:shadow-xl group-hover:scale-110 transition-all duration-300 relative overflow-hidden border border-gray-100">
+                    <div className="w-40 h-40 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm group-hover:shadow-xl group-hover:scale-110 transition-all duration-300 relative overflow-hidden border border-gray-100">
                       {firstProduct?.image ? (
                         <img src={firstProduct.image} alt={cat.name} className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-700" />
                       ) : (
-                        <IconComponent className="w-12 h-12 text-violet-600" />
+                        <IconComponent className="w-16 h-16 text-violet-600" />
                       )}
                     </div>
                     <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-violet-600 transition-colors uppercase tracking-tight">

@@ -17,7 +17,6 @@ import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
 import Payment from "./components/Payment";
 import Contact from "./components/Contact";
-import FAQ from "./components/FAQ";
 import ShippingInfo from "./components/ShippingInfo";
 import Returns from "./components/Returns";
 import TrackOrder from "./components/TrackOrder";
@@ -251,13 +250,13 @@ const RecentlyViewedProvider = ({ children }) => {
   const [recentProducts, setRecentProducts] = useState([]);
   const [pickupProducts, setPickupProducts] = useState([]);
   const recentLoaded = useRef(false);
-  const userKey = user?.id ? `ZippyCart_recent_${user.id}` : 'ZippyCart_recent_guest';
-  const pickupKey = user?.id ? `ZippyCart_pickup_${user.id}` : 'ZippyCart_pickup_guest';
+  const userKey = user?.id ? `DACHCart_recent_${user.id}` : 'DACHCart_recent_guest';
+  const pickupKey = user?.id ? `DACHCart_pickup_${user.id}` : 'DACHCart_pickup_guest';
 
   useEffect(() => {
     const fetchRecent = async () => {
       recentLoaded.current = false;
-      const guestKey = 'ZippyCart_recent_guest';
+      const guestKey = 'DACHCart_recent_guest';
       const guestItems = JSON.parse(localStorage.getItem(guestKey) || '[]');
 
       if (user?.id) {
@@ -308,7 +307,7 @@ const RecentlyViewedProvider = ({ children }) => {
     };
 
     const fetchPickup = async () => {
-      const guestKey = 'ZippyCart_pickup_guest';
+      const guestKey = 'DACHCart_pickup_guest';
       const guestItems = JSON.parse(localStorage.getItem(guestKey) || '[]');
 
       if (user?.id) {
@@ -405,13 +404,13 @@ const CartProvider = ({ children }) => {
   const { user } = useAuth();
   const [cartItems, setCartItems] = useState([]);
   const cartLoaded = useRef(false);
-  const userKey = user?.id ? `ZippyCart_cart_${user.id}` : 'ZippyCart_cart_guest';
+  const userKey = user?.id ? `DACHCart_cart_${user.id}` : 'DACHCart_cart_guest';
 
   // Load cart when user changes
   useEffect(() => {
     const fetchCart = async () => {
       cartLoaded.current = false;
-      const guestItems = JSON.parse(localStorage.getItem('ZippyCart_cart_guest') || '[]');
+      const guestItems = JSON.parse(localStorage.getItem('DACHCart_cart_guest') || '[]');
 
       if (user?.id) {
         try {
@@ -441,7 +440,7 @@ const CartProvider = ({ children }) => {
                 updatedCart = refetch.data.cart;
 
                 // Clean up guest cart after merging
-                localStorage.removeItem('ZippyCart_cart_guest');
+                localStorage.removeItem('DACHCart_cart_guest');
               }
             }
             setCartItems(updatedCart);
@@ -629,13 +628,13 @@ const WishlistProvider = ({ children }) => {
   const { user } = useAuth();
   const [wishlistItems, setWishlistItems] = useState([]);
   const wishlistLoaded = useRef(false);
-  const userKey = user?.id ? `ZippyCart_wishlist_${user.id}` : 'ZippyCart_wishlist_guest';
+  const userKey = user?.id ? `DACHCart_wishlist_${user.id}` : 'DACHCart_wishlist_guest';
 
   // Load wishlist when user changes
   useEffect(() => {
     const fetchWishlist = async () => {
       wishlistLoaded.current = false;
-      const guestItems = JSON.parse(localStorage.getItem('ZippyCart_wishlist_guest') || '[]');
+      const guestItems = JSON.parse(localStorage.getItem('DACHCart_wishlist_guest') || '[]');
 
       if (user?.id) {
         try {
@@ -660,7 +659,7 @@ const WishlistProvider = ({ children }) => {
                 });
                 updatedWishlist = refetch.data.wishlist;
 
-                localStorage.removeItem('ZippyCart_wishlist_guest');
+                localStorage.removeItem('DACHCart_wishlist_guest');
               }
             }
             setWishlistItems(updatedWishlist);
@@ -787,7 +786,7 @@ const OrderProvider = ({ children }) => {
 
 const CouponProvider = ({ children }) => {
   const [availableCoupons, setAvailableCoupons] = useState([
-    { id: 1, code: 'ZIPPY20', value: 20, type: 'percentage', target: 'global', minOrder: 1000, expiry: '2026-12-31', limit: 100, used: 45 },
+    { id: 1, code: 'DACH20', value: 20, type: 'percentage', target: 'global', minOrder: 1000, expiry: '2026-12-31', limit: 100, used: 45 },
     { id: 2, code: 'TECH500', value: 500, type: 'fixed', target: 'category', category: 'electronics', minOrder: 5000, expiry: '2026-02-15', limit: 50, used: 12 },
     { id: 3, code: 'VEND99', value: 15, type: 'percentage', target: 'vendor', vendorId: 'Global Partners', minOrder: 0, expiry: '2026-06-01', limit: 200, used: 8 },
   ]);
@@ -2350,7 +2349,6 @@ const EcommerceRoutes = ({ onSwitchApp }) => {
       <Route path="/deals" element={<Deals />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
-      <Route path="/faq" element={<FAQ />} />
       <Route path="/shipping" element={<ShippingInfo />} />
       <Route path="/returns" element={<Returns />} />
       <Route path="/track-order" element={<TrackOrder />} />
@@ -2373,13 +2371,13 @@ const EcommerceRoutes = ({ onSwitchApp }) => {
 const AppRouter = () => {
   const [appMode, setAppMode] = useState(() => {
     // Check localStorage for saved preference
-    return localStorage.getItem('zippy_app_mode') || null;
+    return localStorage.getItem('DACH_app_mode') || null;
   });
   const navigate = useNavigate();
 
   const handleSelectApp = (mode) => {
     setAppMode(mode);
-    localStorage.setItem('zippy_app_mode', mode);
+    localStorage.setItem('DACH_app_mode', mode);
     if (mode === 'ecommerce') {
       navigate('/');
     } else if (mode === 'food') {
@@ -2389,19 +2387,19 @@ const AppRouter = () => {
 
   const switchToLanding = () => {
     setAppMode(null);
-    localStorage.removeItem('zippy_app_mode');
+    localStorage.removeItem('DACH_app_mode');
     navigate('/');
   };
 
   const switchToEcommerce = () => {
     setAppMode('ecommerce');
-    localStorage.setItem('zippy_app_mode', 'ecommerce');
+    localStorage.setItem('DACH_app_mode', 'ecommerce');
     navigate('/');
   };
 
   const switchToFood = () => {
     setAppMode('food');
-    localStorage.setItem('zippy_app_mode', 'food');
+    localStorage.setItem('DACH_app_mode', 'food');
     navigate('/food');
   };
 
@@ -2456,7 +2454,7 @@ const AppRouter = () => {
     );
   }
 
-  // Default: E-commerce mode (ZippyCart)
+  // Default: E-commerce mode (DACHCart)
   return (
     <Routes>
       <Route path="/food/*" element={<FoodApp onSwitchApp={switchToEcommerce} />} />

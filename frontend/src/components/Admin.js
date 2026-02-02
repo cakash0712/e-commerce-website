@@ -1671,7 +1671,7 @@ const Admin = () => {
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-3xl font-black italic">Restaurant <span className="text-purple-600">Registry.</span></h3>
-          <p className="text-gray-500 font-medium mt-1">Manage all registered restaurants on ZippyBites.</p>
+          <p className="text-gray-500 font-medium mt-1">Manage all registered restaurants on DACHBites.</p>
         </div>
         <Button className="h-14 bg-purple-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest px-8 shadow-xl hover:bg-purple-700 transition-all">
           <Plus className="w-4 h-4 mr-2" /> Add Restaurant

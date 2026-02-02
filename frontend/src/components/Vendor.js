@@ -1557,7 +1557,7 @@ const Vendor = () => {
                           <div className="flex gap-4">
                             <Input
                               required={!newProduct.image}
-                              placeholder="https://cdn.zippycart.com/products/master-node.jpg"
+                              placeholder="https://cdn.DACHcart.com/products/master-node.jpg"
                               value={newProduct.image}
                               onChange={(e) => {
                                 setNewProduct({ ...newProduct, image: e.target.value });
@@ -2259,7 +2259,7 @@ const Vendor = () => {
             </div>
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest">Safe Withdrawal</p>
-              <p className="text-[10px] text-violet-200 uppercase font-bold opacity-60">Verified by ZippyCart</p>
+              <p className="text-[10px] text-violet-200 uppercase font-bold opacity-60">Verified by DACHCart</p>
             </div>
           </div>
         </Card>

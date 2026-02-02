@@ -206,7 +206,7 @@ const Payment = () => {
                         <Link to="/" className="flex items-center gap-2">
                             <img
                                 src="/assets/zlogo1.png"
-                                alt="ZippyCart Logo"
+                                alt="DACHCart Logo"
                                 className="w-32 h-10 object-contain"
                             />
                         </Link>
@@ -345,7 +345,7 @@ const Payment = () => {
                         <Link to="/" className="flex items-center gap-2">
                             <img
                                 src="/assets/zlogo1.png"
-                                alt="ZippyCart Logo"
+                                alt="DACHCart Logo"
                                 className="w-32 h-10 object-contain"
                             />
                         </Link>
@@ -427,7 +427,7 @@ const Payment = () => {
                                                 <div className="relative">
                                                     <Smartphone className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400" />
                                                     <Input
-                                                        placeholder="e.g. nexus@zippy.com"
+                                                        placeholder="e.g. nexus@DACH.com"
                                                         value={address.email}
                                                         onChange={e => setAddress({ ...address, email: e.target.value })}
                                                         className="h-16 pl-14 rounded-2xl border-gray-100 bg-gray-50/50 focus:bg-white focus:border-violet-600 focus:ring-4 focus:ring-violet-50 transition-all font-bold text-gray-900"
@@ -805,7 +805,7 @@ const Payment = () => {
                                     </div>
                                     <div className="flex items-center gap-5 p-6 bg-gray-50/50 rounded-3xl border border-gray-100">
                                         <Info className="w-5 h-5 text-gray-300 shrink-0" />
-                                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] leading-relaxed">By authorizing procurement, you acknowledge the ZippyCart framework and protocol mandates.</span>
+                                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] leading-relaxed">By authorizing procurement, you acknowledge the DACHCart framework and protocol mandates.</span>
                                     </div>
                                 </div>
                             </div>

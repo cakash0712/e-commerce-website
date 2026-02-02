@@ -466,7 +466,7 @@ const Navigation = () => {
           <Link to="/" className="flex items-center space-x-0 shrink-0">
             <img
               src="/assets/zlogo1.png"
-              alt="ZippyCart Logo"
+              alt="DACHCart Logo"
               className="w-40 h-40 object-contain"
             />
 
@@ -526,7 +526,6 @@ const Navigation = () => {
               <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                 {[
                   { label: "Contact Us", to: "/contact" },
-                  { label: "FAQs", to: "/faq" },
                   { label: "Shipping", to: "/shipping" },
                   { label: "Returns", to: "/returns" },
                   { label: "Track Order", to: "/track-order" },
@@ -632,7 +631,7 @@ const Navigation = () => {
             {/* Switch to Food App */}
             <button
               onClick={() => {
-                localStorage.setItem('zippy_app_mode', 'food');
+                localStorage.setItem('DACH_app_mode', 'food');
                 window.location.href = '/food';
               }}
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-orange-600 bg-orange-50 rounded-full hover:bg-orange-100 transition-colors"
@@ -790,7 +789,7 @@ const Navigation = () => {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search ZippyCart..."
+                    placeholder="Search DACHCart..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => setShowSuggestions(true)}
@@ -881,13 +880,13 @@ const Navigation = () => {
                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">App Mode</h3>
                 <button
                   onClick={() => {
-                    localStorage.setItem('zippy_app_mode', 'food');
+                    localStorage.setItem('DACH_app_mode', 'food');
                     window.location.href = '/food';
                   }}
                   className="w-full flex items-center justify-between p-3 bg-orange-50 text-orange-600 rounded-xl transition-colors border border-orange-100"
                 >
                   <span className="font-bold flex items-center gap-2">
-                    <Utensils className="w-5 h-5" /> Switch to ZippyFood
+                    <Utensils className="w-5 h-5" /> Switch to DACHFood
                   </span>
                   <ChevronDown className="w-4 h-4 -rotate-90" />
                 </button>
@@ -896,7 +895,7 @@ const Navigation = () => {
               <div>
                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Help & Settings</h3>
                 <div className="grid grid-cols-1 gap-1">
-                  {["About", "Contact", "FAQ", "Shipping", "Returns"].map((item) => (
+                  {["About", "Contact", "Shipping", "Returns"].map((item) => (
                     <Link
                       key={item}
                       to={`/${item.toLowerCase()}`}

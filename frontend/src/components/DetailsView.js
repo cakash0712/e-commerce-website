@@ -116,7 +116,7 @@ const DetailsView = () => {
             "name": product.name,
             "image": product.images,
             "description": product.description,
-            "brand": { "@type": "Brand", "name": "ZippyCart" },
+            "brand": { "@type": "Brand", "name": "DACHCart" },
             "offers": {
                 "@type": "Offer",
                 "url": window.location.href,

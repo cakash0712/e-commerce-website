@@ -151,7 +151,7 @@ const TrackOrder = () => {
                                                 {[
                                                     { status: "Departure Authorized", loc: "Regional Logistic Center, Bangalore", date: "Jan 19, 2026 • 14:32", active: true },
                                                     { status: "Package Processed", loc: "Main Distribution Center", date: "Jan 18, 2026 • 11:20", active: false },
-                                                    { status: "Order Confirmed", loc: "Zippy Fulfillment Hub", date: "Jan 18, 2026 • 09:15", active: false }
+                                                    { status: "Order Confirmed", loc: "DACH Fulfillment Hub", date: "Jan 18, 2026 • 09:15", active: false }
                                                 ].map((log, i) => (
                                                     <div key={i} className="flex gap-8 items-start relative pl-4">
                                                         {i < 2 && <div className="absolute left-[31px] top-8 bottom-[-48px] w-[2px] border-l-2 border-dashed border-gray-200" />}
@@ -196,7 +196,7 @@ const TrackOrder = () => {
                                     </div>
                                     <div>
                                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Carrier Information</p>
-                                        <h4 className="font-bold text-gray-900 text-sm">Zippy Logistics Express</h4>
+                                        <h4 className="font-bold text-gray-900 text-sm">DACH Logistics Express</h4>
                                         <button className="text-violet-600 font-bold text-[10px] uppercase tracking-widest mt-2 hover:underline">Track on Carrier Site</button>
                                     </div>
                                 </div>

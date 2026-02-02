@@ -26,7 +26,7 @@ async def create_admin():
     client = AsyncIOMotorClient(mongo_url)
     db = client[db_name]
     
-    admin_email = "admin@zippy.com"
+    admin_email = "admin@DACH.com"
     admin_password = "admin_password"
     
     # Check if admin already exists in users (admin stored in users collection with user_type='admin')

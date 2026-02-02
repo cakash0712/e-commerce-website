@@ -224,7 +224,7 @@ export const useCoupons = () => {
 
 const CouponProvider = ({ children }) => {
   const [availableCoupons, setAvailableCoupons] = useState([
-    { id: 1, code: 'ZIPPY20', value: 20, type: 'percentage', target: 'global', minOrder: 1000, expiry: '2026-12-31', limit: 100, used: 45 },
+    { id: 1, code: 'DACH20', value: 20, type: 'percentage', target: 'global', minOrder: 1000, expiry: '2026-12-31', limit: 100, used: 45 },
     { id: 2, code: 'TECH500', value: 500, type: 'fixed', target: 'category', category: 'electronics', minOrder: 5000, expiry: '2026-02-15', limit: 50, used: 12 },
     { id: 3, code: 'VEND99', value: 15, type: 'percentage', target: 'vendor', vendorId: 'Global Partners', minOrder: 0, expiry: '2026-06-01', limit: 200, used: 8 },
   ]);
@@ -278,7 +278,7 @@ export const useOrders = () => {
 const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState(() => {
     try {
-      const savedCart = localStorage.getItem('ZippyCart_cart');
+      const savedCart = localStorage.getItem('DACHCart_cart');
       return savedCart ? JSON.parse(savedCart) : [];
     } catch (e) {
       return [];
@@ -286,7 +286,7 @@ const CartProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    localStorage.setItem('ZippyCart_cart', JSON.stringify(cartItems));
+    localStorage.setItem('DACHCart_cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
   const addToCart = (product) => {
@@ -1406,10 +1406,10 @@ function App() {
     <div className="App selection:bg-violet-600/20 selection:text-violet-900">
       <HelmetProvider>
         <Helmet>
-          <title>ZippyCart | Premium E-Commerce Intelligence</title>
-          <meta name="description" content="Shop the future with ZippyCart. Premium products, secure payments, and lightning-fast logistics." />
+          <title>DACHCart | Premium E-Commerce Intelligence</title>
+          <meta name="description" content="Shop the future with DACHCart. Premium products, secure payments, and lightning-fast logistics." />
           <meta name="keywords" content="e-commerce, shopping, premium products, fast delivery, secure checkout" />
-          <meta property="og:site_name" content="ZippyCart" />
+          <meta property="og:site_name" content="DACHCart" />
           <meta property="og:type" content="website" />
         </Helmet>
         <AuthProvider>

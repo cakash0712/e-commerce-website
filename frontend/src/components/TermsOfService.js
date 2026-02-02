@@ -37,7 +37,7 @@ const TermsOfService = () => {
                                 <span className="text-violet-600">Service.</span>
                             </h1>
                             <p className="text-gray-500 text-lg lg:text-xl font-medium leading-relaxed italicLeading uppercaseTracking">
-                                The foundational agreement governing your interaction with the ZippyCart digital marketplace and logistics network.
+                                The foundational agreement governing your interaction with the DACHCart digital marketplace and logistics network.
                             </p>
                         </div>
                     </div>
@@ -55,7 +55,7 @@ const TermsOfService = () => {
                                     <h2 className="text-xl font-black text-gray-900 tracking-tight uppercase tracking-widest text-[11px]">01. Protocol Acceptance</h2>
                                 </div>
                                 <p className="text-gray-600 leading-relaxed font-medium pl-lg-16">
-                                    By accessing and utilizing this interface, you acknowledge and agree to be contractually bound by the provisions of this agreement. Interaction with our services implies full consent to the prevailing guidelines and operational protocols established by ZippyCart.
+                                    By accessing and utilizing this interface, you acknowledge and agree to be contractually bound by the provisions of this agreement. Interaction with our services implies full consent to the prevailing guidelines and operational protocols established by DACHCart.
                                 </p>
                             </section>
 
@@ -97,7 +97,7 @@ const TermsOfService = () => {
                                     <h2 className="text-xl font-black text-gray-900 tracking-tight uppercase tracking-widest text-[11px]">03. Proprietary Heritage</h2>
                                 </div>
                                 <p className="text-gray-600 leading-relaxed font-medium pl-lg-16">
-                                    All digital artifacts, branding assets, and interface architectures are the exclusive property of ZippyCart. They are guarded by international intellectual property statutes. Unauthorized replication or distribution of this proprietary heritage is strictly actionable under global law.
+                                    All digital artifacts, branding assets, and interface architectures are the exclusive property of DACHCart. They are guarded by international intellectual property statutes. Unauthorized replication or distribution of this proprietary heritage is strictly actionable under global law.
                                 </p>
                             </section>
 

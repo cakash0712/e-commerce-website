@@ -13,7 +13,7 @@ const LandingSelector = ({ onSelect }) => {
     const options = [
         {
             id: 'ecommerce',
-            title: 'ZippyCart',
+            title: 'DACHCart',
             subtitle: 'E-Commerce Store',
             description: 'Discover fashion, electronics, home décor & more. Shop premium products with lightning-fast delivery.',
             icon: ShoppingBag,
@@ -26,7 +26,7 @@ const LandingSelector = ({ onSelect }) => {
         },
         {
             id: 'food',
-            title: 'ZippyBites',
+            title: 'DACHBites',
             subtitle: 'Food Delivery',
             description: 'Craving something delicious? Order from your favorite restaurants and get food delivered in minutes.',
             icon: Utensils,
@@ -79,7 +79,7 @@ const LandingSelector = ({ onSelect }) => {
                 <div className={`text-center mb-16 transition-all duration-1000 ${animationComplete ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-6 backdrop-blur-sm">
                         <Sparkles className="w-4 h-4 text-amber-400" />
-                        <span className="text-sm text-gray-300 font-medium">Welcome to Zippy</span>
+                        <span className="text-sm text-gray-300 font-medium">Welcome to DACH</span>
                     </div>
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-4 tracking-tight">
                         What are you

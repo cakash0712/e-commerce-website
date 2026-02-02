@@ -59,7 +59,7 @@ const PrivacyPolicy = () => {
                                     <h2 className="text-xl font-black text-gray-900 tracking-tight uppercase tracking-widest text-[11px]">01. Strategic Context</h2>
                                 </div>
                                 <p className="text-gray-600 leading-relaxed font-medium pl-lg-16">
-                                    Welcome to ZippyCart. At our core, we prioritize the sanctity of your personal data. This protocol outlines how we manage and protect your digital assets across our logistical and informational networks, ensuring compliance with global data protection mandates.
+                                    Welcome to DACHCart. At our core, we prioritize the sanctity of your personal data. This protocol outlines how we manage and protect your digital assets across our logistical and informational networks, ensuring compliance with global data protection mandates.
                                 </p>
                             </section>
 

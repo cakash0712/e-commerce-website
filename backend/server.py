@@ -19,6 +19,9 @@ import shutil
 import requests
 from fastapi.responses import StreamingResponse
 import io
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 
 ROOT_DIR = Path(__file__).parent
@@ -699,6 +702,50 @@ class NewsletterSubscription(BaseModel):
 class NewsletterCreate(BaseModel):
     email: str
 
+class ContactMessage(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    email: str
+    subject: str
+    message: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ContactCreate(BaseModel):
+    name: str
+    email: str
+    subject: str
+    message: str
+
+def send_email(to_email: str, subject: str, body: str):
+    """Send an email using SMTP configuration from environment variables."""
+    smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+    smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+    smtp_user = os.environ.get('SMTP_USER')
+    smtp_pass = os.environ.get('SMTP_PASS')
+    from_email = os.environ.get('FROM_EMAIL', smtp_user)
+    
+    if not smtp_user or not smtp_pass:
+        logging.warning("SMTP credentials not configured, email will not be sent")
+        return False
+    
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = from_email
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+        
+        server = smtplib.SMTP(smtp_host, smtp_port)
+        server.starttls()
+        server.login(smtp_user, smtp_pass)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        logging.error(f"Failed to send email: {e}")
+        return False
+
 class AboutStat(BaseModel):
     number: str
     label: str
@@ -1226,6 +1273,43 @@ async def subscribe_newsletter(data: NewsletterCreate):
     
     await db.newsletter_subscriptions.insert_one(doc)
     return {"message": "Successfully synchronized with our newsletter protocol."}
+
+@api_router.post("/contact")
+async def submit_contact_form(data: ContactCreate):
+    """
+    Handle contact form submissions.
+    Saves message to MongoDB and sends email notification.
+    """
+    # Save message to database
+    contact_obj = ContactMessage(**data.model_dump())
+    doc = contact_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    
+    await db.contact_messages.insert_one(doc)
+    
+    # Send email notification to the configured recipient
+    recipient_email = os.environ.get('CONTACT_EMAIL', 'dachcart@gmail.com')
+    email_subject = f"Contact Form: {data.subject}"
+    email_body = f"""
+You have received a new contact form submission:
+
+Name: {data.name}
+Email: {data.email}
+Subject: {data.subject}
+
+Message:
+{data.message}
+    """
+    
+    # Try to send email, but don't fail if SMTP is not configured
+    email_sent = send_email(recipient_email, email_subject, email_body)
+    
+    if email_sent:
+        logging.info(f"Contact form email sent to {recipient_email}")
+    else:
+        logging.warning("Contact form email could not be sent (SMTP not configured)")
+    
+    return {"message": "Message sent successfully. We'll get back to you soon!"}
 
 # --- Product Endpoints ---
 

@@ -8,7 +8,7 @@ load_dotenv()
 
 BASE_URL = "http://localhost:8000"
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
-DB_NAME = os.getenv("DB_NAME", "zippycart")
+DB_NAME = os.getenv("DB_NAME", "DACHcart")
 
 client = MongoClient(MONGO_URL)
 db = client[DB_NAME]
