@@ -16,7 +16,7 @@ import {
   Plus, MoreVertical, MessageSquare, FileText, Bell,
   ShieldCheck, Languages, Truck, Globe, Mail,
   Megaphone, Star, ChevronRight, ChevronDown, Box, Trash2, Zap, History, RotateCcw,
-  Utensils, Bike, ChefHat, MapPin, Clock
+  Utensils, Bike, ChefHat, MapPin, Clock, Lock, LifeBuoy, FileTerminal
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -417,10 +417,23 @@ const Admin = () => {
       label: 'Vendors',
       icon: Store,
       subItems: [
+        { id: 'all-vendors', label: 'All Vendors' },
         { id: 'vendor-onboarding', label: 'Onboarding' },
         { id: 'vendor-kyc', label: 'KYC Verification' },
         { id: 'commission-settings', label: 'Commission' },
-        { id: 'vendor-payouts', label: 'Payouts' }
+        { id: 'vendor-payouts', label: 'Payouts' },
+        { id: 'vendor-roles', label: 'Vendor Roles & Access' },
+        { id: 'vendor-performance', label: 'Performance' }
+      ]
+    },
+    {
+      id: 'access-control',
+      label: 'Access Control',
+      icon: Lock,
+      subItems: [
+        { id: 'roles', label: 'Roles' },
+        { id: 'permissions', label: 'Permissions' },
+        { id: 'role-assignment', label: 'Role Assignment' }
       ]
     },
     {
@@ -496,6 +509,24 @@ const Admin = () => {
       subItems: [
         { id: 'coupons', label: 'Coupons' },
         { id: 'banners', label: 'Banners' }
+      ]
+    },
+    {
+      id: 'support',
+      label: 'Support & Disputes',
+      icon: LifeBuoy,
+      subItems: [
+        { id: 'tickets', label: 'Tickets' },
+        { id: 'disputes', label: 'Disputes' }
+      ]
+    },
+    {
+      id: 'system-logs',
+      label: 'System Logs',
+      icon: FileTerminal,
+      subItems: [
+        { id: 'audit-logs', label: 'Audit Logs' },
+        { id: 'error-logs', label: 'Error Logs' }
       ]
     },
     {
@@ -1928,6 +1959,20 @@ const Admin = () => {
     if (activeMenu === 'dashboard' && activeSubMenu === 'overview') return renderDashboard();
     if (activeSubMenu === 'revenue-charts') return renderPlaceholder('Revenue Analytics', 'Detailed financial graphs and revenue breakdowns will appear here once sufficient data is collected.', BarChart3);
     if (activeSubMenu === 'recent-activity') return renderPlaceholder('System Activity', 'Real-time logs of system-wide actions and security events.', History);
+
+    // Access Control (NEW)
+    if (['roles', 'permissions', 'role-assignment'].includes(activeSubMenu)) {
+      return renderPlaceholder('Access Control', 'Granular permission settings and role assignment matrix.', Lock);
+    }
+
+    // System Logs (NEW)
+    if (['audit-logs', 'error-logs'].includes(activeSubMenu)) {
+      return renderPlaceholder('System Logs', 'Comprehensive system activity and error tracking logs.', FileTerminal);
+    }
+
+    // Vendor Updates
+    if (activeSubMenu === 'all-vendors') return renderEntityManagement('vendor'); // Logic matched to previous vendor-list
+    if (activeSubMenu === 'vendor-roles') return renderPlaceholder('Vendor Roles', 'Manage vendor access levels and permissions.', Lock);
 
     // User Management
     if (activeSubMenu === 'all-users') return renderEntityManagement('user');

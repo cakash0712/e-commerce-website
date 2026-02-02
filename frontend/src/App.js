@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "re
 import axios from "axios";
 import LandingSelector from "./components/LandingSelector";
 import FoodApp from "./components/FoodDelivery/FoodApp";
+import FoodVendorLogin from "./components/FoodDelivery/FoodVendorLogin";
+import FoodVendor from "./components/FoodDelivery/FoodVendor";
 import Shop from "./components/Shop";
 import Categories from "./components/Categories";
 import Deals from "./components/Deals";
@@ -2416,6 +2418,18 @@ const AppRouter = () => {
           <Vendor />
         </ProtectedRoute>
       } />
+      {/* Food Vendor Routes */}
+      <Route path="/food/vendor/login" element={<FoodVendorLogin />} />
+      <Route path="/food/vendor/dashboard" element={
+        <ProtectedRoute requiredRole="food_vendor">
+          <FoodVendor />
+        </ProtectedRoute>
+      } />
+      <Route path="/food/vendor/*" element={
+        <ProtectedRoute requiredRole="food_vendor">
+          <FoodVendor />
+        </ProtectedRoute>
+      } />
       <Route path="/auth/*" element={<Auth />} />
       <Route path="/profile" element={
         <ProtectedRoute>
@@ -2446,8 +2460,8 @@ const AppRouter = () => {
   if (appMode === 'food') {
     return (
       <Routes>
-        <Route path="/food/*" element={<FoodApp onSwitchApp={switchToEcommerce} />} />
         {commonRoutes}
+        <Route path="/food/*" element={<FoodApp onSwitchApp={switchToEcommerce} />} />
         {/* If we are in food mode but land on any other page, go to FoodApp */}
         <Route path="*" element={<FoodApp onSwitchApp={switchToEcommerce} />} />
       </Routes>
@@ -2457,8 +2471,8 @@ const AppRouter = () => {
   // Default: E-commerce mode (DACHCart)
   return (
     <Routes>
-      <Route path="/food/*" element={<FoodApp onSwitchApp={switchToEcommerce} />} />
       {commonRoutes}
+      <Route path="/food/*" element={<FoodApp onSwitchApp={switchToEcommerce} />} />
       {/* All other e-commerce pages are handled within EcommerceRoutes */}
       <Route path="*" element={<EcommerceRoutes onSwitchApp={switchToFood} />} />
     </Routes>

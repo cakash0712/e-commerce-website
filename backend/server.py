@@ -27,10 +27,13 @@ from email.mime.multipart import MIMEMultipart
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+import certifi
+
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(mongo_url, tlsCAFile=certifi.where())
 db = client[os.environ['DB_NAME']]
+food_db = client["food_delivery"]
 
 # Comprehensive E-commerce Categories Structure
 initial_categories = [
@@ -437,6 +440,33 @@ class UserCreate(BaseModel):
     recent_searches: List[str] = []
     pickup_items: List[str] = []
 
+class BankDetails(BaseModel):
+    account_name: str = ""
+    account_number: str = ""
+    ifsc: str = ""
+    upi_id: str = ""
+
+class FoodVendorCreate(BaseModel):
+    name: str
+    email: str
+    phone: str
+    password: str
+    restaurant_name: str
+    owner_name: str
+    restaurant_type: str
+    cuisine_type: str
+    fssai_license: str = ""
+    gst_number: str = ""
+    address: str
+    city: str
+    pincode: str
+    opening_time: str
+    closing_time: str
+    delivery_radius: str
+    avg_delivery_time: str
+    bank_details: Optional[BankDetails] = None
+    user_type: str = "food_vendor"
+
 class UserLogin(BaseModel):
     identifier: str  # phone or email
     password: str
@@ -810,7 +840,9 @@ async def get_current_user(authorization: Annotated[Optional[str], Header()] = N
         version: int = payload.get("version")
 
         # Verify user in DB and check block status/version
-        user = await db.users.find_one({"id": user_id}) or await db.vendors.find_one({"id": user_id})
+        user = await db.users.find_one({"id": user_id}) or \
+               await db.vendors.find_one({"id": user_id}) or \
+               await food_db.food_vendors.find_one({"id": user_id})
 
         if not user:
             raise HTTPException(status_code=401, detail="Invalid identity.")
@@ -892,6 +924,45 @@ async def signup_user(user_data: UserCreate):
 
     return {**User(**doc).model_dump(), "token": token}
 
+@api_router.post("/food/vendors/register")
+async def register_food_vendor(vendor_data: FoodVendorCreate):
+    collection = food_db.food_vendors
+
+    # Check if vendor already exists
+    existing_vendor = await collection.find_one({
+        "$or": [
+            {"email": vendor_data.email},
+            {"phone": vendor_data.phone}
+        ]
+    })
+
+    if existing_vendor:
+        raise HTTPException(status_code=400, detail="Vendor with this email or phone already exists")
+
+    vendor_dict = vendor_data.model_dump()
+    vendor_dict['password'] = get_password_hash(vendor_dict['password'])
+    vendor_dict['status'] = "active" # Auto-approve for testing
+    vendor_dict['id'] = str(uuid.uuid4())
+    vendor_dict['created_at'] = datetime.now(timezone.utc).isoformat()
+    
+    # Insert properly into MongoDB
+    result = await collection.insert_one(vendor_dict)
+    
+    # Return created vendor data (excluding sensitive fields if needed)
+    created_vendor = await collection.find_one({"_id": result.inserted_id})
+    if created_vendor:
+        created_vendor["_id"] = str(created_vendor["_id"])
+        
+    # Generate Token so they can login immediately (or wait for approval if strict)
+    # We allow login but dashboard might show "Pending Approval"
+    token = create_access_token({
+        "sub": vendor_dict['id'], 
+        "user_type": "food_vendor",
+        "version": 1
+    })
+    
+    return {**created_vendor, "token": token}
+
 @api_router.post("/users/login")
 async def login_user(login_data: UserLogin, request: Request):
     # Rate Limiting Logic
@@ -910,15 +981,32 @@ async def login_user(login_data: UserLogin, request: Request):
         login_attempts[client_ip] = (now, 1)
 
     # Determine collection based on user_type
-    collection = db.vendors if login_data.user_type.startswith("vendor") else db.users
-
-    # Find user by email or phone
-    user = await collection.find_one({
-        "$or": [
-            {"email": login_data.identifier},
-            {"phone": login_data.identifier}
-        ]
-    })
+    # Food vendors are stored in a separate database
+    if login_data.user_type == "food_vendor":
+        # Food vendor - check food_delivery database
+        food_db_login = client["food_delivery"]
+        user = await food_db_login.food_vendors.find_one({
+            "$or": [
+                {"email": login_data.identifier},
+                {"phone": login_data.identifier}
+            ]
+        })
+    elif login_data.user_type.startswith("vendor"):
+        collection = db.vendors
+        user = await collection.find_one({
+            "$or": [
+                {"email": login_data.identifier},
+                {"phone": login_data.identifier}
+            ]
+        })
+    else:
+        collection = db.users
+        user = await collection.find_one({
+            "$or": [
+                {"email": login_data.identifier},
+                {"phone": login_data.identifier}
+            ]
+        })
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -2647,6 +2735,387 @@ async def update_user(user_id: str, update_data: dict, current_user: Annotated[d
         raise HTTPException(status_code=404, detail="User not found")
 
     return {"message": "User updated successfully"}
+
+# =============================================================================
+# FOOD DELIVERY API ENDPOINTS
+# =============================================================================
+
+# Connect to Food Delivery Database (separate from e-commerce)
+food_db = client["food_delivery"]
+
+# Food Vendor Models
+class FoodVendorCreate(BaseModel):
+    name: str
+    email: str
+    phone: Optional[str] = None
+    password: str
+    restaurant_name: str
+    owner_name: str
+    address: Optional[str] = None
+    cuisine_type: Optional[str] = None
+    user_type: str = "food_vendor"
+
+class MenuItemCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: float
+    category: str
+    image: Optional[str] = None
+    is_veg: bool = True
+    is_available: bool = True
+    prep_time: Optional[str] = "15-20"
+    spice_level: Optional[str] = "medium"
+
+class FoodOrderStatusUpdate(BaseModel):
+    status: str
+
+class MenuItemAvailability(BaseModel):
+    is_available: bool
+
+# Food Vendor Registration
+@api_router.post("/food/vendors/register")
+async def register_food_vendor(vendor_data: FoodVendorCreate):
+    # Check if vendor already exists
+    existing = await food_db.food_vendors.find_one({
+        "$or": [
+            {"email": vendor_data.email},
+            {"phone": vendor_data.phone}
+        ]
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Restaurant already registered with this email or phone")
+    
+    vendor_id = str(uuid.uuid4())
+    restaurant_id = str(uuid.uuid4())
+    
+    # Create vendor document
+    vendor_doc = {
+        "id": vendor_id,
+        "name": vendor_data.owner_name,
+        "email": vendor_data.email,
+        "phone": vendor_data.phone,
+        "password": get_password_hash(vendor_data.password),
+        "restaurant_name": vendor_data.restaurant_name,
+        "owner_name": vendor_data.owner_name,
+        "address": vendor_data.address,
+        "cuisine_type": vendor_data.cuisine_type,
+        "user_type": "food_vendor",
+        "status": "pending",
+        "token_version": 1,
+        "restaurant_id": restaurant_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await food_db.food_vendors.insert_one(vendor_doc)
+    
+    # Create restaurant document
+    restaurant_doc = {
+        "id": restaurant_id,
+        "vendor_id": vendor_id,
+        "name": vendor_data.restaurant_name,
+        "address": vendor_data.address,
+        "cuisine_type": vendor_data.cuisine_type,
+        "phone": vendor_data.phone,
+        "is_open": True,
+        "rating": 0,
+        "reviews_count": 0,
+        "delivery_time": "30-45",
+        "minimum_order": 100,
+        "delivery_fee": 30,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await food_db.restaurants.insert_one(restaurant_doc)
+    
+    # Generate token
+    token = create_access_token({
+        "sub": vendor_id,
+        "user_type": "food_vendor",
+        "version": 1
+    })
+    
+    vendor_doc.pop('password', None)
+    vendor_doc.pop('_id', None)
+    
+    return {**vendor_doc, "token": token}
+
+# Food Vendor Login (uses the general login endpoint with user_type=food_vendor)
+# The login endpoint already handles this through collection determination
+
+# Helper function for food vendor auth
+async def get_current_food_vendor(authorization: Annotated[Optional[str], Header()] = None):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header missing.")
+    
+    try:
+        token = authorization.split(" ")[1]
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        version: int = payload.get("version")
+        
+        vendor = await food_db.food_vendors.find_one({"id": user_id})
+        
+        if not vendor:
+            raise HTTPException(status_code=401, detail="Invalid food vendor identity.")
+        
+        if vendor.get('token_version', 1) != version:
+            raise HTTPException(status_code=401, detail="Session expired.")
+        
+        return vendor
+    except Exception:
+        raise HTTPException(status_code=401, detail="Authentication failed.")
+
+# Get Food Vendor's Restaurant
+@api_router.get("/food/vendor/restaurant")
+async def get_food_vendor_restaurant(current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+    restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if restaurant and '_id' in restaurant:
+        del restaurant['_id']
+    return restaurant or {}
+
+# Get Food Vendor Stats
+@api_router.get("/food/vendor/stats")
+async def get_food_vendor_stats(current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+    restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant:
+        return {
+            "totalOrders": 0,
+            "pendingOrders": 0,
+            "totalRevenue": 0,
+            "avgRating": 0,
+            "todayOrders": 0,
+            "menuItemsCount": 0
+        }
+    
+    restaurant_id = restaurant['id']
+    
+    # Count orders
+    total_orders = await food_db.food_orders.count_documents({"restaurant_id": restaurant_id})
+    pending_orders = await food_db.food_orders.count_documents({
+        "restaurant_id": restaurant_id,
+        "status": {"$in": ["pending", "preparing"]}
+    })
+    
+    # Today's orders
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_orders = await food_db.food_orders.count_documents({
+        "restaurant_id": restaurant_id,
+        "created_at": {"$gte": today_start.isoformat()}
+    })
+    
+    # Total revenue
+    pipeline = [
+        {"$match": {"restaurant_id": restaurant_id, "status": "delivered"}},
+        {"$group": {"_id": None, "total": {"$sum": "$total"}}}
+    ]
+    revenue_result = await food_db.food_orders.aggregate(pipeline).to_list(1)
+    total_revenue = revenue_result[0]['total'] if revenue_result else 0
+    
+    # Menu items count
+    menu_count = await food_db.menu_items.count_documents({"restaurant_id": restaurant_id})
+    
+    return {
+        "totalOrders": total_orders,
+        "pendingOrders": pending_orders,
+        "totalRevenue": total_revenue,
+        "avgRating": restaurant.get('rating', 0),
+        "todayOrders": today_orders,
+        "menuItemsCount": menu_count
+    }
+
+# Menu Item CRUD
+@api_router.get("/food/vendor/menu")
+async def get_food_vendor_menu(current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+    restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant:
+        return []
+    
+    items = await food_db.menu_items.find({"restaurant_id": restaurant['id']}).to_list(None)
+    for item in items:
+        if '_id' in item:
+            del item['_id']
+    return items
+
+@api_router.post("/food/vendor/menu")
+async def add_menu_item(item_data: MenuItemCreate, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+    restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    
+    item_doc = {
+        "id": str(uuid.uuid4()),
+        "restaurant_id": restaurant['id'],
+        **item_data.model_dump(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await food_db.menu_items.insert_one(item_doc)
+    item_doc.pop('_id', None)
+    return item_doc
+
+@api_router.put("/food/vendor/menu/{item_id}")
+async def update_menu_item(item_id: str, item_data: MenuItemCreate, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+    restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    
+    result = await food_db.menu_items.update_one(
+        {"id": item_id, "restaurant_id": restaurant['id']},
+        {"$set": item_data.model_dump()}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+    
+    return {"message": "Menu item updated"}
+
+@api_router.delete("/food/vendor/menu/{item_id}")
+async def delete_menu_item(item_id: str, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+    restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    
+    result = await food_db.menu_items.delete_one({"id": item_id, "restaurant_id": restaurant['id']})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+    
+    return {"message": "Menu item deleted"}
+
+@api_router.patch("/food/vendor/menu/{item_id}/availability")
+async def toggle_menu_availability(item_id: str, data: MenuItemAvailability, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+    restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    
+    await food_db.menu_items.update_one(
+        {"id": item_id, "restaurant_id": restaurant['id']},
+        {"$set": {"is_available": data.is_available}}
+    )
+    
+    return {"message": "Availability updated"}
+
+# Food Orders for Vendor
+@api_router.get("/food/vendor/orders")
+async def get_food_vendor_orders(current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+    restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant:
+        return []
+    
+    orders = await food_db.food_orders.find(
+        {"restaurant_id": restaurant['id']}
+    ).sort("created_at", -1).to_list(100)
+    
+    for order in orders:
+        if '_id' in order:
+            del order['_id']
+    
+    return orders
+
+@api_router.patch("/food/vendor/orders/{order_id}/status")
+async def update_food_order_status(order_id: str, data: FoodOrderStatusUpdate, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+    restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    
+    valid_statuses = ["pending", "preparing", "ready", "picked_up", "delivered", "cancelled"]
+    if data.status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
+    
+    result = await food_db.food_orders.update_one(
+        {"id": order_id, "restaurant_id": restaurant['id']},
+        {"$set": {"status": data.status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    return {"message": f"Order status updated to {data.status}"}
+
+# Public Food Endpoints (for customers)
+@api_router.get("/food/categories")
+async def get_food_categories():
+    categories = await food_db.food_categories.find({}).to_list(None)
+    for cat in categories:
+        if '_id' in cat:
+            del cat['_id']
+    return categories
+
+@api_router.get("/food/restaurants")
+async def get_restaurants(
+    category: Optional[str] = None,
+    cuisine: Optional[str] = None,
+    limit: int = 50
+):
+    query = {"is_open": True}
+    if category:
+        query["categories"] = category
+    if cuisine:
+        query["cuisine_type"] = {"$regex": cuisine, "$options": "i"}
+    
+    restaurants = await food_db.restaurants.find(query).limit(limit).to_list(None)
+    for r in restaurants:
+        if '_id' in r:
+            del r['_id']
+    return restaurants
+
+@api_router.get("/food/restaurants/{restaurant_id}")
+async def get_restaurant_detail(restaurant_id: str):
+    restaurant = await food_db.restaurants.find_one({"id": restaurant_id})
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    
+    if '_id' in restaurant:
+        del restaurant['_id']
+    
+    # Get menu items
+    menu = await food_db.menu_items.find({"restaurant_id": restaurant_id, "is_available": True}).to_list(None)
+    for item in menu:
+        if '_id' in item:
+            del item['_id']
+    
+    restaurant['menu'] = menu
+    return restaurant
+
+# =============================================================================
+
+# Food Vendor Dashboard Endpoints
+@api_router.get("/food/vendor/restaurant")
+async def get_vendor_restaurant(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user.get('user_type') != 'food_vendor':
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    if '_id' in current_user:
+        current_user['_id'] = str(current_user['_id'])
+    return current_user
+
+@api_router.get("/food/vendor/stats")
+async def get_vendor_stats(current_user: Annotated[dict, Depends(get_current_user)]):
+    # Mock data for now, replace with real aggregation later
+    return {
+        "todayOrders": 0,
+        "pendingOrders": 0,
+        "totalRevenue": 0,
+        "avgRating": 4.5
+    }
+
+@api_router.get("/food/vendor/menu")
+async def get_vendor_menu(current_user: Annotated[dict, Depends(get_current_user)]):
+    # Fetch menu items for this vendor
+    # We don't have a menu_items collection yet populated properly linked to vendor
+    # But usually we store it in food_db.menu_items with vendor_id or restaurant_id
+    # For now return empty list to prevent crash
+    return []
+
+@api_router.post("/food/vendor/menu")
+async def add_vendor_menu_item(item: dict, current_user: Annotated[dict, Depends(get_current_user)]):
+    # Placeholder for adding menu item
+    return item
+
+@api_router.get("/food/vendor/orders")
+async def get_vendor_orders(current_user: Annotated[dict, Depends(get_current_user)]):
+    return []
 
 app.include_router(api_router)
 

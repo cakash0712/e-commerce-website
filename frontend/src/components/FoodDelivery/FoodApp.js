@@ -211,7 +211,9 @@ const restaurants = [
 // Food Navigation Component
 const FoodNavigation = ({ onSwitchApp }) => {
     const { getItemCount } = useFoodCart();
+    const { user, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [showUserMenu, setShowUserMenu] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
     const itemCount = getItemCount();
@@ -220,8 +222,13 @@ const FoodNavigation = ({ onSwitchApp }) => {
         { path: '/food', label: 'Home', icon: Home },
         { path: '/food/restaurants', label: 'Restaurants', icon: Utensils },
         { path: '/food/orders', label: 'My Orders', icon: Timer },
-        { path: '/food/profile', label: 'Profile', icon: User },
     ];
+
+    const handleLogout = () => {
+        logout();
+        setShowUserMenu(false);
+        navigate('/food');
+    };
 
     return (
         <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-100 shadow-sm">
@@ -255,7 +262,7 @@ const FoodNavigation = ({ onSwitchApp }) => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                         {/* Switch to E-commerce */}
                         <button
                             onClick={onSwitchApp}
@@ -278,6 +285,58 @@ const FoodNavigation = ({ onSwitchApp }) => {
                                 </span>
                             )}
                         </button>
+
+                        {/* User Login/Profile */}
+                        {user ? (
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowUserMenu(!showUserMenu)}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-gray-100 transition-colors"
+                                >
+                                    <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                                        <User className="w-4 h-4 text-orange-600" />
+                                    </div>
+                                    <span className="hidden sm:inline text-sm font-medium text-gray-700">{user.name?.split(' ')[0]}</span>
+                                </button>
+
+                                {showUserMenu && (
+                                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
+                                        <Link
+                                            to="/food/profile"
+                                            onClick={() => setShowUserMenu(false)}
+                                            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-orange-50 hover:text-orange-600"
+                                        >
+                                            <User className="w-4 h-4" />
+                                            My Profile
+                                        </Link>
+                                        <Link
+                                            to="/food/orders"
+                                            onClick={() => setShowUserMenu(false)}
+                                            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-orange-50 hover:text-orange-600"
+                                        >
+                                            <Timer className="w-4 h-4" />
+                                            My Orders
+                                        </Link>
+                                        <div className="border-t border-gray-100 my-1" />
+                                        <button
+                                            onClick={handleLogout}
+                                            className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 w-full text-left"
+                                        >
+                                            <ArrowLeft className="w-4 h-4" />
+                                            Logout
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <Link
+                                to="/auth"
+                                className="flex items-center gap-2 px-4 py-2 text-orange-600 bg-orange-50 rounded-full font-medium hover:bg-orange-100 transition-colors"
+                            >
+                                <User className="w-4 h-4" />
+                                <span className="hidden sm:inline">Login</span>
+                            </Link>
+                        )}
 
                         {/* Mobile Menu */}
                         <button
@@ -306,9 +365,52 @@ const FoodNavigation = ({ onSwitchApp }) => {
                                 {link.label}
                             </Link>
                         ))}
+
+                        {/* User section in mobile */}
+                        <div className="border-t border-gray-100 my-2 pt-2">
+                            {user ? (
+                                <>
+                                    <Link
+                                        to="/food/profile"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="flex items-center gap-3 px-4 py-3 text-gray-600"
+                                    >
+                                        <User className="w-5 h-5" />
+                                        My Profile ({user.name?.split(' ')[0]})
+                                    </Link>
+                                    <button
+                                        onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                                        className="flex items-center gap-3 px-4 py-3 text-red-600 w-full"
+                                    >
+                                        <ArrowLeft className="w-5 h-5" />
+                                        Logout
+                                    </button>
+                                </>
+                            ) : (
+                                <Link
+                                    to="/auth"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="flex items-center gap-3 px-4 py-3 text-orange-600"
+                                >
+                                    <User className="w-5 h-5" />
+                                    Login / Sign Up
+                                </Link>
+                            )}
+                        </div>
+
+                        {/* Partner link in mobile */}
+                        <Link
+                            to="/food/vendor/login"
+                            onClick={() => setIsMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-3 text-amber-600 bg-amber-50 rounded-lg mx-2"
+                        >
+                            <ChefHat className="w-5 h-5" />
+                            Partner with us (Restaurant Login)
+                        </Link>
+
                         <button
                             onClick={() => { onSwitchApp(); setIsMenuOpen(false); }}
-                            className="flex items-center gap-3 px-4 py-3 text-violet-600 w-full"
+                            className="flex items-center gap-3 px-4 py-3 text-violet-600 w-full mt-2"
                         >
                             <ShoppingBag className="w-5 h-5" />
                             Switch to E-Commerce
@@ -319,6 +421,7 @@ const FoodNavigation = ({ onSwitchApp }) => {
         </nav>
     );
 };
+
 
 // Food Home Page
 const FoodHome = () => {
@@ -524,6 +627,7 @@ const FoodHome = () => {
                                 <li><Link to="/food" className="text-gray-400 hover:text-white text-sm">Home</Link></li>
                                 <li><Link to="/food/restaurants" className="text-gray-400 hover:text-white text-sm">Restaurants</Link></li>
                                 <li><Link to="/food/orders" className="text-gray-400 hover:text-white text-sm">My Orders</Link></li>
+                                <li><Link to="/food/vendor/login" className="text-gray-400 hover:text-orange-400 text-sm">Partner with us 🍽️</Link></li>
                             </ul>
                         </div>
                         <div>

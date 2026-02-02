@@ -648,7 +648,7 @@ const Auth = () => {
                     <span>Are you a vendor?</span>
                     <Link to="/auth/vendor/ecommerce" className="text-indigo-600 font-bold hover:underline">E-commerce Portal</Link>
                     <span className="text-gray-300">|</span>
-                    <Link to="/auth/vendor/food" className="text-orange-600 font-bold hover:underline">Food Portal</Link>
+                    <Link to="/food/vendor/login" className="text-orange-600 font-bold hover:underline">Food Portal</Link>
                   </div>
                 ) : (
                   <Link to="/auth" className="text-indigo-600 font-bold hover:underline">Go to Customer Login</Link>

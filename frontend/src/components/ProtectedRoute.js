@@ -19,6 +19,7 @@ const ProtectedRoute = ({ children, requiredRole }) => {
         let authPath = "/auth";
         if (requiredRole === "admin") authPath = "/auth/admin";
         if (requiredRole === "vendor") authPath = "/auth"; // Force user to choose or go back to generic
+        if (requiredRole === "food_vendor") authPath = "/food/vendor/login";
 
         // Redirect to auth page but save the attempted location
         return <Navigate to={authPath} state={{ from: location }} replace />;
@@ -26,13 +27,15 @@ const ProtectedRoute = ({ children, requiredRole }) => {
 
     const isAuthorized = !requiredRole ||
         user.user_type === requiredRole ||
-        (requiredRole === "vendor" && user.user_type?.startsWith("vendor"));
+        (requiredRole === "vendor" && user.user_type?.startsWith("vendor") && user.user_type !== "food_vendor") ||
+        (requiredRole === "food_vendor" && user.user_type === "food_vendor");
 
     if (!isAuthorized) {
         // Redirect to appropriate dashboard based on user type
-        const redirectPath = user.user_type === "admin"
-            ? "/admin"
-            : (user.user_type?.startsWith("vendor") ? "/vendor" : "/profile");
+        let redirectPath = "/profile";
+        if (user.user_type === "admin") redirectPath = "/admin";
+        else if (user.user_type === "food_vendor") redirectPath = "/food/vendor/dashboard";
+        else if (user.user_type?.startsWith("vendor")) redirectPath = "/vendor";
 
         return <Navigate to={redirectPath} replace />;
     }
