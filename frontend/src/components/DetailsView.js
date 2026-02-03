@@ -25,7 +25,8 @@ import {
     Clock,
     Award,
     ArrowRight,
-    ArrowLeft
+    ArrowLeft,
+    Search
 } from "lucide-react";
 import { useAuth, useCart, useWishlist, useRecentlyViewed } from "../App";
 import Navigation from "./Navigation";

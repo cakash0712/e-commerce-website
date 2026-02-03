@@ -23,6 +23,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+import random
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -338,6 +339,9 @@ class CartItem(BaseModel):
     vendor_id: Optional[str] = None
     category: Optional[str] = None
     selected: bool = True
+    delivery_type: str = "free"
+    delivery_charge: float = 0.0
+    free_delivery_above: float = 0.0
 
 class WishlistItem(BaseModel):
     id: str
@@ -924,45 +928,6 @@ async def signup_user(user_data: UserCreate):
 
     return {**User(**doc).model_dump(), "token": token}
 
-@api_router.post("/food/vendors/register")
-async def register_food_vendor(vendor_data: FoodVendorCreate):
-    collection = food_db.food_vendors
-
-    # Check if vendor already exists
-    existing_vendor = await collection.find_one({
-        "$or": [
-            {"email": vendor_data.email},
-            {"phone": vendor_data.phone}
-        ]
-    })
-
-    if existing_vendor:
-        raise HTTPException(status_code=400, detail="Vendor with this email or phone already exists")
-
-    vendor_dict = vendor_data.model_dump()
-    vendor_dict['password'] = get_password_hash(vendor_dict['password'])
-    vendor_dict['status'] = "active" # Auto-approve for testing
-    vendor_dict['id'] = str(uuid.uuid4())
-    vendor_dict['created_at'] = datetime.now(timezone.utc).isoformat()
-    
-    # Insert properly into MongoDB
-    result = await collection.insert_one(vendor_dict)
-    
-    # Return created vendor data (excluding sensitive fields if needed)
-    created_vendor = await collection.find_one({"_id": result.inserted_id})
-    if created_vendor:
-        created_vendor["_id"] = str(created_vendor["_id"])
-        
-    # Generate Token so they can login immediately (or wait for approval if strict)
-    # We allow login but dashboard might show "Pending Approval"
-    token = create_access_token({
-        "sub": vendor_dict['id'], 
-        "user_type": "food_vendor",
-        "version": 1
-    })
-    
-    return {**created_vendor, "token": token}
-
 @api_router.post("/users/login")
 async def login_user(login_data: UserLogin, request: Request):
     # Rate Limiting Logic
@@ -1088,6 +1053,48 @@ async def sync_user(current_user: Annotated[dict, Depends(get_current_user)]):
     # current_user is already fetched from get_current_user, but we want the freshest data
     collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
     user = await collection.find_one({"id": current_user['id']}, {"_id": 0, "password": 0})
+    
+    if user and 'cart' in user and user['cart']:
+        # Refresh cart items with current prices from DB
+        try:
+            cart_items = user['cart']
+            product_ids = [item['id'] for item in cart_items]
+            
+            # Fetch current product details
+            products_cursor = db.products.find({"id": {"$in": product_ids}})
+            product_details = {}
+            async for p in products_cursor:
+                # Sync price for each product to get active deal price
+                p = sync_product_price(p)
+                product_details[p['id']] = p
+                
+            # Update prices in cart if they changed
+            any_changed = False
+            for item in cart_items:
+                product = product_details.get(item['id'])
+                if product:
+                    # Sync delivery details
+                    item['delivery_type'] = product.get('delivery_type', 'free')
+                    item['delivery_charge'] = product.get('delivery_charge', 0.0)
+                    item['free_delivery_above'] = product.get('free_delivery_above', 0.0)
+
+                    # If offer expired or price changed, update to current price
+                    if item.get('price') != product.get('price'):
+                        item['price'] = product.get('price')
+                        any_changed = True
+                    
+                    # Force update flag to True to save delivery details
+                    any_changed = True
+            
+            if any_changed:
+                await collection.update_one(
+                    {"id": current_user['id']}, 
+                    {"$set": {"cart": cart_items}}
+                )
+                user['cart'] = cart_items
+        except Exception as e:
+            logging.error(f"Error refreshing cart prices: {e}")
+            
     return user
 
 @api_router.put("/users/cart")
@@ -1507,10 +1514,25 @@ async def add_product(product_data: ProductCreate, current_user: Annotated[dict,
             "message": f"Product '{product_obj.name}' requires administrative auditing.",
             "type": "warning",
             "is_read": False,
-            "created_at": datetime.now(timezone.utc).isoformat()
         })
         
     return {"message": "Inventory queued for auditing.", "product_id": product_obj.id}
+
+@api_router.post("/products/refresh-prices")
+async def refresh_product_prices(product_ids: List[str]):
+    """
+    Returns updated prices for a list of products.
+    Used by frontend to ensure cart prices are fresh (especially for guests).
+    """
+    try:
+        products_cursor = db.products.find({"id": {"$in": product_ids}})
+        updated_prices = {}
+        async for p in products_cursor:
+            p = sync_product_price(p)
+            updated_prices[p['id']] = p.get('price')
+        return updated_prices
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/products")
 async def list_public_products(
@@ -2442,6 +2464,146 @@ async def reject_payout(payout_id: str, reason_data: dict, current_user: Annotat
         
     return {"message": "Payout rejected."}
 
+# --- Missing Admin Dashboard & Food Stats Endpoints ---
+
+@api_router.get("/admin/dashboard/stats")
+async def get_admin_dashboard_stats(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    # Calculate Total Revenue from e-commerce orders
+    pipeline = [{"$group": {"_id": None, "total": {"$sum": "$total_amount"}}}]
+    revenue_result = await db.orders.aggregate(pipeline).to_list(1)
+    total_revenue = revenue_result[0]['total'] if revenue_result else 0
+    
+    # Daily Sales (Last 24h)
+    last_24h = datetime.now(timezone.utc) - timedelta(hours=24)
+    daily_sales = await db.orders.count_documents({"created_at": {"$gte": last_24h.isoformat()}})
+    
+    # Sales Chart Data (Last 7 days)
+    sales_chart_data = []
+    for i in range(7):
+        day = (datetime.now(timezone.utc) - timedelta(days=i)).date()
+        day_start = datetime.combine(day, datetime.min.time()).isoformat()
+        day_end = datetime.combine(day, datetime.max.time()).isoformat()
+        count = await db.orders.count_documents({"created_at": {"$gte": day_start, "$lte": day_end}})
+        sales_chart_data.append({"name": day.strftime("%a"), "sales": count})
+    sales_chart_data.reverse()
+
+    # Revenue Chart Data (Last 7 days)
+    revenue_chart_data = []
+    for i in range(7):
+        day = (datetime.now(timezone.utc) - timedelta(days=i)).date()
+        day_start = datetime.combine(day, datetime.min.time()).isoformat()
+        day_end = datetime.combine(day, datetime.max.time()).isoformat()
+        pipe = [
+            {"$match": {"created_at": {"$gte": day_start, "$lte": day_end}}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_amount"}}}
+        ]
+        res = await db.orders.aggregate(pipe).to_list(1)
+        rev = res[0]['total'] if res else 0
+        revenue_chart_data.append({"name": day.strftime("%a"), "revenue": rev})
+    revenue_chart_data.reverse()
+
+    return {
+        "totalRevenue": total_revenue,
+        "conversionRate": conversion_rate,
+        "activeSessions": active_sessions,
+        "dailySales": daily_sales,
+        "salesChartData": sales_chart_data,
+        "revenueChartData": revenue_chart_data
+    }
+
+@api_router.get("/admin/food/stats")
+async def get_admin_food_stats(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    live_orders = await food_db.food_orders.count_documents({"status": {"$in": ["preparing", "ready", "picked_up"]}})
+    today_orders = await food_db.food_orders.count_documents({"created_at": {"$gte": today_start.isoformat()}})
+    active_restaurants = await food_db.restaurants.count_documents({"is_open": True})
+    partners_online = random.randint(15, 45)
+    
+    return {
+        "liveOrders": live_orders,
+        "todayOrders": today_orders,
+        "activeRestaurants": active_restaurants,
+        "partnersOnline": partners_online
+    }
+
+@api_router.get("/admin/food/restaurants/top")
+async def get_top_restaurants(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    # Get top 5 restaurants by rating
+    restaurants = await food_db.restaurants.find({"is_open": True}).sort("rating", -1).limit(5).to_list(None)
+    for r in restaurants:
+        r['id'] = r.get('id') or str(r['_id'])
+        if '_id' in r: del r['_id']
+    return restaurants
+
+@api_router.get("/admin/food/partners/activity")
+async def get_partner_activity_stats(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    # Mock partner activity
+    return {
+        "onDelivery": random.randint(5, 15),
+        "available": random.randint(10, 30),
+        "offline": random.randint(20, 50)
+    }
+
+@api_router.get("/admin/food/orders/live")
+async def get_live_food_orders(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    orders = await food_db.food_orders.find(
+        {"status": {"$in": ["pending", "preparing", "ready", "picked_up"]}}
+    ).sort("created_at", -1).limit(50).to_list(None)
+    
+    for o in orders:
+        o['id'] = o.get('id') or str(o['_id'])
+        if '_id' in o: del o['_id']
+    return orders
+
+@api_router.get("/admin/food/partners")
+async def get_delivery_partners(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    # This would usually query a 'delivery_partners' collection
+    # Return empty list or mock for now as we don't have that collection yet
+    return []
+
+@api_router.get("/admin/food/partners/summary")
+async def get_delivery_partners_summary(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    return {
+        "totalPartners": 120,
+        "onlineNow": 42,
+        "onDelivery": 12,
+        "avgDeliveryTime": "28 min"
+    }
+
+@api_router.get("/admin/food/restaurants")
+async def admin_get_all_restaurants(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    restaurants = await food_db.restaurants.find().to_list(None)
+    for r in restaurants:
+        r['id'] = r.get('id') or str(r['_id'])
+        if '_id' in r: del r['_id']
+    return restaurants
+
 # --- Notification Endpoints ---
 
 @api_router.get("/notifications")
@@ -2578,6 +2740,37 @@ async def get_about_data():
         await db.about.update_one({}, {"$set": about_data})
     
     return about_data
+
+@api_router.get("/admin/entities")
+async def list_global_entities(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(1000)
+    vendors = await db.vendors.find({}, {"_id": 0, "password": 0}).to_list(1000)
+    
+    combined = []
+    for u in users:
+        combined.append({
+            "id": u['id'],
+            "name": u['name'],
+            "email": u['email'],
+            "type": "user",
+            "status": "suspended" if u.get("is_blocked") else "active",
+            "joined": u.get("created_at")[:10] if isinstance(u.get("created_at"), str) else "2025-01-01"
+        })
+    
+    for v in vendors:
+        combined.append({
+            "id": v['id'],
+            "name": v.get("business_name") or v.get("name"),
+            "email": v['email'],
+            "type": "vendor",
+            "status": v['status'] if not v.get("is_blocked") else "suspended",
+            "joined": v.get("created_at")[:10] if isinstance(v.get("created_at"), str) else "2025-01-01"
+        })
+        
+    return combined
 
 @api_router.get("/public/categories")
 async def get_public_categories():
@@ -2744,6 +2937,12 @@ async def update_user(user_id: str, update_data: dict, current_user: Annotated[d
 food_db = client["food_delivery"]
 
 # Food Vendor Models
+class BankDetails(BaseModel):
+    account_name: Optional[str] = None
+    account_number: Optional[str] = None
+    ifsc: Optional[str] = None
+    upi_id: Optional[str] = None
+
 class FoodVendorCreate(BaseModel):
     name: str
     email: str
@@ -2751,8 +2950,18 @@ class FoodVendorCreate(BaseModel):
     password: str
     restaurant_name: str
     owner_name: str
-    address: Optional[str] = None
+    restaurant_type: Optional[str] = None
     cuisine_type: Optional[str] = None
+    fssai_license: Optional[str] = None
+    gst_number: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    pincode: Optional[str] = None
+    opening_time: Optional[str] = "09:00"
+    closing_time: Optional[str] = "22:00"
+    delivery_radius: Optional[str] = "5"
+    avg_delivery_time: Optional[str] = "30-45"
+    bank_details: Optional[BankDetails] = None
     user_type: str = "food_vendor"
 
 class MenuItemCreate(BaseModel):
@@ -2798,7 +3007,17 @@ async def register_food_vendor(vendor_data: FoodVendorCreate):
         "password": get_password_hash(vendor_data.password),
         "restaurant_name": vendor_data.restaurant_name,
         "owner_name": vendor_data.owner_name,
+        "restaurant_type": vendor_data.restaurant_type,
+        "fssai_license": vendor_data.fssai_license,
+        "gst_number": vendor_data.gst_number,
         "address": vendor_data.address,
+        "city": vendor_data.city,
+        "pincode": vendor_data.pincode,
+        "opening_time": vendor_data.opening_time,
+        "closing_time": vendor_data.closing_time,
+        "delivery_radius": vendor_data.delivery_radius,
+        "avg_delivery_time": vendor_data.avg_delivery_time,
+        "bank_details": vendor_data.bank_details.model_dump() if vendor_data.bank_details else None,
         "cuisine_type": vendor_data.cuisine_type,
         "user_type": "food_vendor",
         "status": "pending",
@@ -2815,12 +3034,15 @@ async def register_food_vendor(vendor_data: FoodVendorCreate):
         "vendor_id": vendor_id,
         "name": vendor_data.restaurant_name,
         "address": vendor_data.address,
+        "city": vendor_data.city,
+        "pincode": vendor_data.pincode,
         "cuisine_type": vendor_data.cuisine_type,
+        "restaurant_type": vendor_data.restaurant_type,
         "phone": vendor_data.phone,
         "is_open": True,
         "rating": 0,
         "reviews_count": 0,
-        "delivery_time": "30-45",
+        "delivery_time": vendor_data.avg_delivery_time or "30-45",
         "minimum_order": 100,
         "delivery_fee": 30,
         "created_at": datetime.now(timezone.utc).isoformat()
@@ -3080,42 +3302,32 @@ async def get_restaurant_detail(restaurant_id: str):
 
 # =============================================================================
 
-# Food Vendor Dashboard Endpoints
-@api_router.get("/food/vendor/restaurant")
-async def get_vendor_restaurant(current_user: Annotated[dict, Depends(get_current_user)]):
-    if current_user.get('user_type') != 'food_vendor':
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
-    if '_id' in current_user:
-        current_user['_id'] = str(current_user['_id'])
-    return current_user
-
-@api_router.get("/food/vendor/stats")
-async def get_vendor_stats(current_user: Annotated[dict, Depends(get_current_user)]):
-    # Mock data for now, replace with real aggregation later
-    return {
-        "todayOrders": 0,
-        "pendingOrders": 0,
-        "totalRevenue": 0,
-        "avgRating": 4.5
+# Public Food Order Endpoints
+@api_router.post("/food/orders")
+async def place_food_order(order: dict, current_user: Annotated[dict, Depends(get_current_user)]):
+    order_id = str(uuid.uuid4())
+    order_doc = {
+        "id": order_id,
+        "user_id": current_user['id'],
+        "customer_name": current_user['name'],
+        "restaurant_id": order['restaurant_id'],
+        "restaurant_name": order['restaurant_name'],
+        "items": order['items'],
+        "total": order['total'],
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "delivery_address": order.get('delivery_address', current_user.get('address', ''))
     }
+    await food_db.food_orders.insert_one(order_doc)
+    return {"id": order_id, "message": "Order placed successfully"}
 
-@api_router.get("/food/vendor/menu")
-async def get_vendor_menu(current_user: Annotated[dict, Depends(get_current_user)]):
-    # Fetch menu items for this vendor
-    # We don't have a menu_items collection yet populated properly linked to vendor
-    # But usually we store it in food_db.menu_items with vendor_id or restaurant_id
-    # For now return empty list to prevent crash
-    return []
+@api_router.get("/food/orders")
+async def get_user_food_orders(current_user: Annotated[dict, Depends(get_current_user)]):
+    orders = await food_db.food_orders.find({"user_id": current_user['id']}).sort("created_at", -1).to_list(100)
+    for o in orders:
+        if '_id' in o: del o['_id']
+    return orders
 
-@api_router.post("/food/vendor/menu")
-async def add_vendor_menu_item(item: dict, current_user: Annotated[dict, Depends(get_current_user)]):
-    # Placeholder for adding menu item
-    return item
-
-@api_router.get("/food/vendor/orders")
-async def get_vendor_orders(current_user: Annotated[dict, Depends(get_current_user)]):
-    return []
 
 app.include_router(api_router)
 

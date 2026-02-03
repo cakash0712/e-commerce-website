@@ -171,7 +171,7 @@ const CartDrawer = ({ children }) => {
                         <Button
                             onClick={handleCheckout}
                             disabled={selectedCount === 0}
-                            className={`w-full h-20 rounded-[2.5rem] font-black uppercase text-xs tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 shadow-2xl ${selectedCount === 0 ? 'bg-gray-100 text-gray-400' : 'bg-violet-600 hover:bg-violet-700 text-white shadow-violet-100'}`}
+                            className={`w-full h-14 rounded-[2.5rem] font-black uppercase text-xs tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 shadow-2xl ${selectedCount === 0 ? 'bg-gray-100 text-gray-400' : 'bg-violet-600 hover:bg-violet-700 text-white shadow-violet-100'}`}
                         >
                             Proceed to Checkout
                             <ChevronRight className="w-4 h-4" />

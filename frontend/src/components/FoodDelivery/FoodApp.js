@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
+import axios from 'axios';
 import {
     Utensils, ShoppingBag, MapPin, Clock, Star, Search, ChevronRight,
     Heart, Plus, Minus, X, ArrowLeft, Filter, Sparkles, Flame, Zap,
@@ -427,7 +428,25 @@ const FoodNavigation = ({ onSwitchApp }) => {
 const FoodHome = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const navigate = useNavigate();
-    const featuredRestaurants = restaurants.filter(r => r.featured);
+    const [restaurantsList, setRestaurantsList] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchRestaurants = async () => {
+            try {
+                const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                const response = await axios.get(`${API_BASE}/api/food/restaurants`);
+                setRestaurantsList(response.data);
+            } catch (e) {
+                console.error("Failed to fetch restaurants:", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchRestaurants();
+    }, []);
+
+    const featuredRestaurants = restaurantsList.filter(r => r.featured);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -574,7 +593,7 @@ const FoodHome = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <h2 className="text-2xl font-bold text-gray-900 mb-8">All Restaurants</h2>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {restaurants.map(restaurant => (
+                        {restaurantsList.map(restaurant => (
                             <RestaurantCard key={restaurant.id} restaurant={restaurant} />
                         ))}
                     </div>
@@ -714,11 +733,32 @@ const RestaurantCard = ({ restaurant }) => {
 
 // Restaurant Detail Page
 const RestaurantDetail = () => {
-    const { id } = useLocation().pathname.split('/').pop();
-    const restaurantId = parseInt(useLocation().pathname.split('/').pop());
-    const restaurant = restaurants.find(r => r.id === restaurantId);
+    const { id } = useParams();
+    const [restaurant, setRestaurant] = useState(null);
+    const [loading, setLoading] = useState(true);
     const { addToCart, cartItems, updateQuantity } = useFoodCart();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const fetchRestaurant = async () => {
+            try {
+                const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                const response = await axios.get(`${API_BASE}/api/food/restaurants/${id}`);
+                setRestaurant(response.data);
+            } catch (e) {
+                console.error("Failed to fetch restaurant:", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchRestaurant();
+    }, [id]);
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    );
 
     if (!restaurant) {
         return (
@@ -820,8 +860,8 @@ const RestaurantDetail = () => {
                                 {/* Content */}
                                 <div className="flex-grow">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className={`w-4 h-4 rounded border-2 flex items-center justify-center ${item.veg ? 'border-green-500' : 'border-red-500'}`}>
-                                            <span className={`w-2 h-2 rounded-full ${item.veg ? 'bg-green-500' : 'bg-red-500'}`} />
+                                        <span className={`w-4 h-4 rounded border-2 flex items-center justify-center ${item.is_veg ? 'border-green-500' : 'border-red-500'}`}>
+                                            <span className={`w-2 h-2 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
                                         </span>
                                         <h3 className="font-semibold text-gray-900">{item.name}</h3>
                                     </div>
@@ -869,6 +909,8 @@ const RestaurantDetail = () => {
 const RestaurantsList = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCuisine, setSelectedCuisine] = useState(null);
+    const [restaurantsList, setRestaurantsList] = useState([]);
+    const [loading, setLoading] = useState(true);
     const location = useLocation();
 
     useEffect(() => {
@@ -877,12 +919,25 @@ const RestaurantsList = () => {
         const search = params.get('search');
         if (cuisine) setSelectedCuisine(cuisine);
         if (search) setSearchQuery(search);
+
+        const fetchRestaurants = async () => {
+            try {
+                const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                const response = await axios.get(`${API_BASE}/api/food/restaurants`);
+                setRestaurantsList(response.data);
+            } catch (e) {
+                console.error("Failed to fetch restaurants:", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchRestaurants();
     }, [location.search]);
 
-    const filteredRestaurants = restaurants.filter(r => {
+    const filteredRestaurants = restaurantsList.filter(r => {
         const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            r.cuisine.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCuisine = !selectedCuisine || r.cuisine.toLowerCase() === selectedCuisine.toLowerCase();
+            (r.cuisine_type || "").toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesCuisine = !selectedCuisine || (r.cuisine_type || "").toLowerCase() === selectedCuisine.toLowerCase();
         return matchesSearch && matchesCuisine;
     });
 
@@ -1063,12 +1118,35 @@ const FoodCart = () => {
                     </div>
 
                     <button
-                        onClick={() => {
-                            alert('Order placed successfully! (Demo)');
-                            clearCart();
-                            navigate('/food');
+                        onClick={async () => {
+                            try {
+                                const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                                const token = localStorage.getItem('token');
+                                if (!token) {
+                                    alert("Please login to place an order");
+                                    navigate('/auth');
+                                    return;
+                                }
+
+                                await axios.post(`${API_BASE}/api/food/orders`, {
+                                    restaurant_id: cartItems[0].restaurantId,
+                                    restaurant_name: cartItems[0].restaurantName,
+                                    items: cartItems,
+                                    total: total,
+                                    delivery_address: "" // Backend will use user profile address if empty
+                                }, {
+                                    headers: { Authorization: `Bearer ${token}` }
+                                });
+
+                                alert('Order placed successfully!');
+                                clearCart();
+                                navigate('/food/orders');
+                            } catch (e) {
+                                console.error(e);
+                                alert("Failed to place order. Please try again.");
+                            }
                         }}
-                        className="w-full mt-6 py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded-xl hover:shadow-lg transition-all"
+                        className="w-full mt-6 py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold rounded-xl hover:shadow-lg transition-all"
                     >
                         Place Order • ₹{total.toFixed(2)}
                     </button>
@@ -1080,24 +1158,28 @@ const FoodCart = () => {
 
 // Orders Page
 const FoodOrders = () => {
-    const [orders] = useState([
-        {
-            id: 'ZB123456',
-            restaurant: 'Pizza Paradise',
-            items: ['Margherita Pizza', 'Garlic Bread'],
-            total: 448,
-            status: 'delivered',
-            date: '2024-01-25'
-        },
-        {
-            id: 'ZB123455',
-            restaurant: 'Spice Garden',
-            items: ['Butter Chicken', 'Naan Basket'],
-            total: 440,
-            status: 'delivered',
-            date: '2024-01-23'
-        }
-    ]);
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchOrders = async () => {
+            try {
+                const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                const token = localStorage.getItem('token');
+                if (!token) return;
+
+                const response = await axios.get(`${API_BASE}/api/food/orders`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setOrders(response.data);
+            } catch (e) {
+                console.error("Failed to fetch orders:", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchOrders();
+    }, []);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -1110,19 +1192,23 @@ const FoodOrders = () => {
                             <div key={order.id} className="bg-white rounded-2xl shadow-sm p-6">
                                 <div className="flex items-center justify-between mb-4">
                                     <div>
-                                        <h3 className="font-bold text-gray-900">{order.restaurant}</h3>
+                                        <h3 className="font-bold text-gray-900">{order.restaurant_name}</h3>
                                         <p className="text-sm text-gray-500">Order #{order.id}</p>
                                     </div>
                                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${order.status === 'delivered'
                                         ? 'bg-green-100 text-green-700'
                                         : 'bg-orange-100 text-orange-700'
                                         }`}>
-                                        {order.status === 'delivered' ? 'Delivered' : 'In Progress'}
+                                        {order.status === 'delivered' ? 'Delivered' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                                     </span>
                                 </div>
-                                <p className="text-gray-600 text-sm mb-3">{order.items.join(', ')}</p>
+                                <p className="text-gray-600 text-sm mb-3">
+                                    {order.items.map(i => i.name).join(', ')}
+                                </p>
                                 <div className="flex items-center justify-between border-t border-gray-100 pt-4">
-                                    <span className="text-gray-500 text-sm">{order.date}</span>
+                                    <span className="text-gray-500 text-sm">
+                                        {new Date(order.created_at).toLocaleDateString()}
+                                    </span>
                                     <span className="font-bold text-gray-900">₹{order.total}</span>
                                 </div>
                             </div>

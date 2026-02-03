@@ -138,6 +138,68 @@ async def setup_food_database():
     
     print("Indexes created successfully.")
     
+    # 3. Seed Sample Restaurants if empty
+    rest_count = await food_db.restaurants.count_documents({})
+    if rest_count == 0:
+        print("Seeding sample restaurants...")
+        sample_restaurants = [
+            {
+                "id": "rest-1",
+                "name": "Spice Garden",
+                "cuisine_type": "Indian",
+                "rating": 4.5,
+                "reviews_count": 234,
+                "delivery_time": "25-35",
+                "delivery_fee": 40,
+                "minimum_order": 200,
+                "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=400&fit=crop",
+                "is_open": True,
+                "featured": True,
+                "offers": ["20% OFF on orders above ₹500"],
+                "created_at": datetime.now(timezone.utc).isoformat()
+            },
+            {
+                "id": "rest-2",
+                "name": "Pizza Paradise",
+                "cuisine_type": "Italian",
+                "rating": 4.7,
+                "reviews_count": 567,
+                "delivery_time": "20-30",
+                "delivery_fee": 30,
+                "minimum_order": 250,
+                "image": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&h=400&fit=crop",
+                "is_open": True,
+                "featured": True,
+                "offers": ["Free Garlic Bread on orders above ₹600"],
+                "created_at": datetime.now(timezone.utc).isoformat()
+            },
+            {
+                "id": "rest-3",
+                "name": "Dragon Wok",
+                "cuisine_type": "Chinese",
+                "rating": 4.3,
+                "reviews_count": 189,
+                "delivery_time": "30-40",
+                "delivery_fee": 50,
+                "minimum_order": 300,
+                "image": "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=600&h=400&fit=crop",
+                "is_open": True,
+                "featured": False,
+                "offers": [],
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+        ]
+        await food_db.restaurants.insert_many(sample_restaurants)
+        
+        # Seed Menu Items for Spice Garden
+        sample_menu = [
+            {"id": "item-101", "restaurant_id": "rest-1", "name": "Butter Chicken", "price": 320, "description": "Creamy tomato-based curry with tender chicken", "image": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=300&h=200&fit=crop", "category": "Main Course", "is_veg": False, "is_available": True, "bestseller": True},
+            {"id": "item-102", "restaurant_id": "rest-1", "name": "Paneer Tikka", "price": 280, "description": "Grilled cottage cheese with spices", "image": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=300&h=200&fit=crop", "category": "Starters", "is_veg": True, "is_available": True, "bestseller": True},
+            {"id": "item-103", "restaurant_id": "rest-2", "name": "Margherita Pizza", "price": 299, "description": "Classic tomato, mozzarella & basil", "image": "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=300&h=200&fit=crop", "category": "Pizza", "is_veg": True, "is_available": True, "bestseller": True}
+        ]
+        await food_db.menu_items.insert_many(sample_menu)
+        print(f"  Created {len(sample_restaurants)} restaurants and their menu items.")
+    
     # 3. List all collections
     collections = await food_db.list_collection_names()
     print(f"\nCollections in food_delivery database: {collections}")

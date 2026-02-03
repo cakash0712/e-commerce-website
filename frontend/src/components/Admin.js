@@ -84,6 +84,9 @@ const Admin = () => {
       fetchDeliveryPartnersSummary();
     }
 
+    // Moderation & Entity Management
+    if (activeSubMenu === 'customer-list' || activeSubMenu === 'all-vendors') fetchEntities();
+
     // Main Dashboard Data
     if (activeSubMenu === 'overview') fetchDashboardStats();
   }, [activeSubMenu]);
@@ -371,6 +374,18 @@ const Admin = () => {
     }
   };
 
+  const fetchEntities = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/entities`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setEntities(response.data);
+    } catch (e) {
+      console.error("Failed to fetch global entity directory:", e);
+    }
+  };
+
   const handleMenuClick = (menuId) => {
     setActiveMenu(menuId);
     if (expandedMenus.includes(menuId)) {
@@ -542,8 +557,8 @@ const Admin = () => {
   ];
 
   // Placeholder Chart Data (to be replaced with API data)
-  const salesData = [];
-  const revenueData = [];
+  const salesData = dashboardStats.salesChartData || [];
+  const revenueData = dashboardStats.revenueChartData || [];
   const topProducts = [];
   const vendorData = [];
 

@@ -772,250 +772,254 @@ const Navigation = () => {
         </div>
 
         {/* Amazon-style Mobile Search Row */}
-        <div className="lg:hidden px-4 pb-3 flex flex-col gap-2">
-          <div className="relative" ref={searchRef}>
-            <form onSubmit={handleSearch}>
-              <div className="flex items-center gap-2">
-                {showSuggestions && (
-                  <button
-                    type="button"
-                    onClick={() => setShowSuggestions(false)}
-                    className="p-2 -ml-2 text-gray-400 hover:text-violet-600 transition-colors animate-in slide-in-from-left-2"
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </button>
-                )}
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search DACHCart..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onFocus={() => setShowSuggestions(true)}
-                    className="w-full h-11 pl-10 pr-4 rounded-xl bg-gray-50 border-gray-200 border text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all shadow-sm"
-                  />
+        {location.pathname !== '/profile' && (
+          <div className="lg:hidden px-4 pb-3 flex flex-col gap-2">
+            <div className="relative" ref={searchRef}>
+              <form onSubmit={handleSearch}>
+                <div className="flex items-center gap-2">
+                  {showSuggestions && (
+                    <button
+                      type="button"
+                      onClick={() => setShowSuggestions(false)}
+                      className="p-2 -ml-2 text-gray-400 hover:text-violet-600 transition-colors animate-in slide-in-from-left-2"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </button>
+                  )}
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search DACHCart..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={() => setShowSuggestions(true)}
+                      className="w-full h-11 pl-10 pr-4 rounded-xl bg-gray-50 border-gray-200 border text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all shadow-sm"
+                    />
+                  </div>
+                </div>
+              </form>
+
+              {/* Mobile Search Suggestions */}
+              {showSuggestions && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[70] max-h-[60vh] overflow-y-auto">
+                  {searchQuery && suggestions.length > 0 && (
+                    <div className="py-2">
+                      {suggestions.map((product) => (
+                        <div
+                          key={product.id}
+                          onClick={() => handleSuggestionClick(product.name)}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-0"
+                        >
+                          <Search className="w-4 h-4 text-gray-300 shrink-0" />
+                          <span className="text-sm text-gray-700 truncate">{product.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Location / Welcome Bar - Only show on Home Page for Mobile */}
+            {location.pathname === '/' && (
+              <div
+                className="flex items-center gap-2 py-0.5 px-1 overflow-hidden cursor-pointer hover:bg-gray-50 rounded transition-colors active:scale-95 transform"
+                onClick={handleLocationClick}
+              >
+                <MapPin className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+                <p className="text-[11px] font-medium text-gray-600 truncate">
+                  Deliver to {user?.name?.split(' ')[0] || "Guest"} - {selectedLocation}
+                </p>
+                <ChevronDown className="w-3 h-3 text-gray-400" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-[60] bg-white animate-in slide-in-from-right duration-300">
+            <div className="flex items-center justify-between px-4 h-16 border-b border-gray-100">
+              <h2 className="text-lg font-bold">Menu</h2>
+              <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
+                <X className="w-6 h-6" />
+              </Button>
+            </div>
+            <div className="px-4 py-4 space-y-6 overflow-y-auto h-[calc(100vh-64px)] pb-24">
+              {/* User Info */}
+              <div className="bg-violet-50 rounded-2xl p-4 flex items-center gap-4">
+                <Avatar className="w-12 h-12 shadow-md">
+                  <AvatarImage src={user?.avatar} />
+                  <AvatarFallback className="bg-violet-600 text-white font-bold">
+                    {user?.name?.charAt(0)?.toUpperCase() || <User />}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm text-gray-500 font-medium">Hello,</p>
+                  <p className="text-lg font-bold text-gray-900">{user?.name || "Sign In"}</p>
                 </div>
               </div>
-            </form>
 
-            {/* Mobile Search Suggestions */}
-            {showSuggestions && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[70] max-h-[60vh] overflow-y-auto">
-                {searchQuery && suggestions.length > 0 && (
-                  <div className="py-2">
-                    {suggestions.map((product) => (
-                      <div
-                        key={product.id}
-                        onClick={() => handleSuggestionClick(product.name)}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-0"
+              {/* Navigation Links */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Shop By Department</h3>
+                  <div className="grid grid-cols-1 gap-2">
+                    <Link to="/shop" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors border border-gray-50">
+                      <span className="font-medium">All Products</span>
+                      <ChevronDown className="w-4 h-4 -rotate-90 text-gray-400" />
+                    </Link>
+                    <Link to="/deals" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors border border-gray-50">
+                      <span className="font-medium text-rose-600">Flash Deals</span>
+                      <TrendingUp className="w-4 h-4 text-rose-600" />
+                    </Link>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">App Mode</h3>
+                  <button
+                    onClick={() => {
+                      localStorage.setItem('DACH_app_mode', 'food');
+                      window.location.href = '/food';
+                    }}
+                    className="w-full flex items-center justify-between p-3 bg-orange-50 text-orange-600 rounded-xl transition-colors border border-orange-100"
+                  >
+                    <span className="font-bold flex items-center gap-2">
+                      <Utensils className="w-5 h-5" /> Switch to DACHFood
+                    </span>
+                    <ChevronDown className="w-4 h-4 -rotate-90" />
+                  </button>
+                </div>
+
+                <div>
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Help & Settings</h3>
+                  <div className="grid grid-cols-1 gap-1">
+                    {["About", "Contact", "Shipping", "Returns"].map((item) => (
+                      <Link
+                        key={item}
+                        to={`/${item.toLowerCase()}`}
+                        className="block py-2 text-gray-600 font-medium"
+                        onClick={() => setIsMobileMenuOpen(false)}
                       >
-                        <Search className="w-4 h-4 text-gray-300 shrink-0" />
-                        <span className="text-sm text-gray-700 truncate">{product.name}</span>
+                        {item}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {user && (
+                <Button
+                  variant="outline"
+                  className="w-full h-12 rounded-xl text-rose-600 border-rose-100 hover:bg-rose-50"
+                  onClick={() => {
+                    /* Logout logic */
+                    setIsMobileMenuOpen(false);
+                  }}
+                >
+                  Sign Out
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Bottom Navigation - Mobile Only */}
+        {location.pathname !== '/profile' && (
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-gray-100 px-2 pb-safe-area-inset-bottom shadow-[0_-8px_30px_rgb(0,0,0,0.04)]">
+            <div className="flex items-center justify-around h-16">
+              <Link to="/" className={`flex flex-col items-center gap-1 transition-all ${window.location.pathname === '/' ? 'text-violet-600' : 'text-gray-400'}`}>
+                <Home className={`w-6 h-6 ${window.location.pathname === '/' ? 'fill-violet-50' : ''}`} />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Home</span>
+              </Link>
+              <Link to="/shop" className={`flex flex-col items-center gap-1 transition-all ${window.location.pathname === '/shop' ? 'text-violet-600' : 'text-gray-400'}`}>
+                <Package className="w-6 h-6" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Shop</span>
+              </Link>
+              <div className="relative -mt-8">
+                <CartDrawer>
+                  <button className="w-14 h-14 bg-gray-900 rounded-full flex items-center justify-center text-white shadow-xl shadow-gray-900/40 relative active:scale-90 transition-transform">
+                    <ShoppingCart className="w-6 h-6" />
+                    {cartCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-violet-600 text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                        {cartCount}
+                      </span>
+                    )}
+                  </button>
+                </CartDrawer>
+              </div>
+              <Link to="/wishlist" className={`flex flex-col items-center gap-1 transition-all ${window.location.pathname === '/wishlist' ? 'text-violet-600' : 'text-gray-400'}`}>
+                <Heart className={`w-6 h-6 ${window.location.pathname === '/wishlist' ? 'fill-violet-50' : ''}`} />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Saved</span>
+              </Link>
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className={`flex flex-col items-center gap-1 transition-all ${isMobileMenuOpen ? 'text-violet-600' : 'text-gray-400'}`}
+              >
+                <Menu className="w-6 h-6" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Menu</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Location Dialog */}
+        <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Choose your location</DialogTitle>
+              <DialogDescription>
+                Select a delivery location to see product availability and delivery options
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              {savedAddresses.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Saved Addresses</p>
+                  <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                    {savedAddresses.map((addr) => (
+                      <div key={addr.id} className="p-3 border rounded-lg hover:border-violet-500 hover:bg-violet-50 cursor-pointer transition-all" onClick={() => handleSelectAddress(addr)}>
+                        <p className="font-bold text-sm text-gray-900">{addr.name}</p>
+                        <p className="text-xs text-gray-600 truncate">{addr.addr}</p>
+                        <p className="text-xs text-gray-400 mt-1">{addr.phone}</p>
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+                </div>
+              )}
 
-          {/* Location / Welcome Bar - Only show on Home Page for Mobile */}
-          {location.pathname === '/' && (
-            <div
-              className="flex items-center gap-2 py-0.5 px-1 overflow-hidden cursor-pointer hover:bg-gray-50 rounded transition-colors active:scale-95 transform"
-              onClick={handleLocationClick}
-            >
-              <MapPin className="w-3.5 h-3.5 text-violet-600 shrink-0" />
-              <p className="text-[11px] font-medium text-gray-600 truncate">
-                Deliver to {user?.name?.split(' ')[0] || "Guest"} - {selectedLocation}
-              </p>
-              <ChevronDown className="w-3 h-3 text-gray-400" />
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">Or enter pincode</span>
+                </div>
+              </div>
+
+              <form onSubmit={handlePincodeSubmit} className="flex gap-2">
+                <div className="grid w-full items-center gap-1.5">
+                  <Input
+                    id="pincode"
+                    placeholder="Enter 6-digit Pincode"
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    maxLength={6}
+                  />
+                </div>
+                <Button type="submit" disabled={pincode.length !== 6}>Apply</Button>
+              </form>
             </div>
-          )}
-        </div>
+            <DialogFooter className="sm:justify-start">
+              <Link to="/profile" onClick={() => setIsLocationDialogOpen(false)} className="text-xs text-violet-600 hover:underline">
+                Manage address book
+              </Link>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-[60] bg-white animate-in slide-in-from-right duration-300">
-          <div className="flex items-center justify-between px-4 h-16 border-b border-gray-100">
-            <h2 className="text-lg font-bold">Menu</h2>
-            <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
-              <X className="w-6 h-6" />
-            </Button>
-          </div>
-          <div className="px-4 py-4 space-y-6 overflow-y-auto h-[calc(100vh-64px)] pb-24">
-            {/* User Info */}
-            <div className="bg-violet-50 rounded-2xl p-4 flex items-center gap-4">
-              <Avatar className="w-12 h-12 shadow-md">
-                <AvatarImage src={user?.avatar} />
-                <AvatarFallback className="bg-violet-600 text-white font-bold">
-                  {user?.name?.charAt(0)?.toUpperCase() || <User />}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm text-gray-500 font-medium">Hello,</p>
-                <p className="text-lg font-bold text-gray-900">{user?.name || "Sign In"}</p>
-              </div>
-            </div>
-
-            {/* Navigation Links */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Shop By Department</h3>
-                <div className="grid grid-cols-1 gap-2">
-                  <Link to="/shop" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors border border-gray-50">
-                    <span className="font-medium">All Products</span>
-                    <ChevronDown className="w-4 h-4 -rotate-90 text-gray-400" />
-                  </Link>
-                  <Link to="/deals" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors border border-gray-50">
-                    <span className="font-medium text-rose-600">Flash Deals</span>
-                    <TrendingUp className="w-4 h-4 text-rose-600" />
-                  </Link>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">App Mode</h3>
-                <button
-                  onClick={() => {
-                    localStorage.setItem('DACH_app_mode', 'food');
-                    window.location.href = '/food';
-                  }}
-                  className="w-full flex items-center justify-between p-3 bg-orange-50 text-orange-600 rounded-xl transition-colors border border-orange-100"
-                >
-                  <span className="font-bold flex items-center gap-2">
-                    <Utensils className="w-5 h-5" /> Switch to DACHFood
-                  </span>
-                  <ChevronDown className="w-4 h-4 -rotate-90" />
-                </button>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Help & Settings</h3>
-                <div className="grid grid-cols-1 gap-1">
-                  {["About", "Contact", "Shipping", "Returns"].map((item) => (
-                    <Link
-                      key={item}
-                      to={`/${item.toLowerCase()}`}
-                      className="block py-2 text-gray-600 font-medium"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      {item}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {user && (
-              <Button
-                variant="outline"
-                className="w-full h-12 rounded-xl text-rose-600 border-rose-100 hover:bg-rose-50"
-                onClick={() => {
-                  /* Logout logic */
-                  setIsMobileMenuOpen(false);
-                }}
-              >
-                Sign Out
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Bottom Navigation - Mobile Only */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-gray-100 px-2 pb-safe-area-inset-bottom shadow-[0_-8px_30px_rgb(0,0,0,0.04)]">
-        <div className="flex items-center justify-around h-16">
-          <Link to="/" className={`flex flex-col items-center gap-1 transition-all ${window.location.pathname === '/' ? 'text-violet-600' : 'text-gray-400'}`}>
-            <Home className={`w-6 h-6 ${window.location.pathname === '/' ? 'fill-violet-50' : ''}`} />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Home</span>
-          </Link>
-          <Link to="/shop" className={`flex flex-col items-center gap-1 transition-all ${window.location.pathname === '/shop' ? 'text-violet-600' : 'text-gray-400'}`}>
-            <Package className="w-6 h-6" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Shop</span>
-          </Link>
-          <div className="relative -mt-8">
-            <CartDrawer>
-              <button className="w-14 h-14 bg-gray-900 rounded-full flex items-center justify-center text-white shadow-xl shadow-gray-900/40 relative active:scale-90 transition-transform">
-                <ShoppingCart className="w-6 h-6" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-violet-600 text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
-            </CartDrawer>
-          </div>
-          <Link to="/wishlist" className={`flex flex-col items-center gap-1 transition-all ${window.location.pathname === '/wishlist' ? 'text-violet-600' : 'text-gray-400'}`}>
-            <Heart className={`w-6 h-6 ${window.location.pathname === '/wishlist' ? 'fill-violet-50' : ''}`} />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Saved</span>
-          </Link>
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className={`flex flex-col items-center gap-1 transition-all ${isMobileMenuOpen ? 'text-violet-600' : 'text-gray-400'}`}
-          >
-            <Menu className="w-6 h-6" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Menu</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Location Dialog */}
-      <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Choose your location</DialogTitle>
-            <DialogDescription>
-              Select a delivery location to see product availability and delivery options
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            {savedAddresses.length > 0 && (
-              <div className="space-y-3">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Saved Addresses</p>
-                <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
-                  {savedAddresses.map((addr) => (
-                    <div key={addr.id} className="p-3 border rounded-lg hover:border-violet-500 hover:bg-violet-50 cursor-pointer transition-all" onClick={() => handleSelectAddress(addr)}>
-                      <p className="font-bold text-sm text-gray-900">{addr.name}</p>
-                      <p className="text-xs text-gray-600 truncate">{addr.addr}</p>
-                      <p className="text-xs text-gray-400 mt-1">{addr.phone}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-500">Or enter pincode</span>
-              </div>
-            </div>
-
-            <form onSubmit={handlePincodeSubmit} className="flex gap-2">
-              <div className="grid w-full items-center gap-1.5">
-                <Input
-                  id="pincode"
-                  placeholder="Enter 6-digit Pincode"
-                  value={pincode}
-                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  maxLength={6}
-                />
-              </div>
-              <Button type="submit" disabled={pincode.length !== 6}>Apply</Button>
-            </form>
-          </div>
-          <DialogFooter className="sm:justify-start">
-            <Link to="/profile" onClick={() => setIsLocationDialogOpen(false)} className="text-xs text-violet-600 hover:underline">
-              Manage address book
-            </Link>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </nav>
   );
 };

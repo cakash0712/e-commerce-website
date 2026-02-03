@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Settings, ShoppingBag, Bell, Shield, CreditCard, LogIn, UserPlus, LogOut, Mail, Lock, Camera, Heart, Star, MapPin, Package, ChevronRight, Wallet, Box, Plus, Trash2, Phone, CheckCircle, FileText, Upload, Gift, Clock, Smartphone, ArrowLeft } from "lucide-react";
-import { useAuth, useOrders } from "../App";
+import { User, Settings, ShoppingBag, Bell, Shield, CreditCard, LogIn, UserPlus, LogOut, Mail, Lock, Camera, Heart, Star, MapPin, Package, ChevronRight, Wallet, Box, Plus, Trash2, Phone, CheckCircle, FileText, Upload, Clock, Smartphone, ArrowLeft, LayoutDashboard, Laptop } from "lucide-react";
+import { useAuth, useOrders, useCart } from "../App";
 
 import Navigation from "./Navigation";
 import Footer from "./Footer";
@@ -22,6 +22,7 @@ const Profile = () => {
     return <Navigate to="/food/profile" replace />;
   }
   const { orders } = useOrders();
+  const { addToCart } = useCart();
   const [activeView, setActiveView] = useState("overview");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -31,7 +32,9 @@ const Profile = () => {
   const [addresses, setAddresses] = useState([]);
   const [savedCards, setSavedCards] = useState([]);
   const [savedUPIs, setSavedUPIs] = useState([]);
-  const [activeGiftCards, setActiveGiftCards] = useState([]);
+
+  const [contentLibrary, setContentLibrary] = useState([]);
+  const [devices, setDevices] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
   const profileLoaded = useRef(false);
@@ -65,7 +68,9 @@ const Profile = () => {
             setAddresses(fetchedAddresses);
             if (response.data.saved_cards) setSavedCards(response.data.saved_cards);
             if (response.data.saved_upis) setSavedUPIs(response.data.saved_upis);
-            if (response.data.active_gift_cards) setActiveGiftCards(response.data.active_gift_cards);
+
+            if (response.data.content_library) setContentLibrary(response.data.content_library);
+            if (response.data.devices) setDevices(response.data.devices);
             profileLoaded.current = true;
             return;
           }
@@ -90,7 +95,7 @@ const Profile = () => {
         const savedAddr = localStorage.getItem(`user_addresses_${userId}`);
         const savedCardsLocal = localStorage.getItem(`user_cards_${userId}`);
         const savedUPIsLocal = localStorage.getItem(`user_upis_${userId}`);
-        const savedGiftLocal = localStorage.getItem(`user_giftcards_${userId}`);
+
 
         if (savedAddr) {
           setAddresses(JSON.parse(savedAddr));
@@ -117,8 +122,7 @@ const Profile = () => {
           { id: 'akash@paytm', bank: 'Paytm Payments Bank', verified: true }
         ]);
 
-        if (savedGiftLocal) setActiveGiftCards(JSON.parse(savedGiftLocal));
-        else setActiveGiftCards([]);
+
 
         profileLoaded.current = true;
       }
@@ -135,7 +139,7 @@ const Profile = () => {
         localStorage.setItem(`user_addresses_${user.id}`, JSON.stringify(addresses));
         localStorage.setItem(`user_cards_${user.id}`, JSON.stringify(savedCards));
         localStorage.setItem(`user_upis_${user.id}`, JSON.stringify(savedUPIs));
-        localStorage.setItem(`user_giftcards_${user.id}`, JSON.stringify(activeGiftCards));
+
 
         // Backend persistence
         try {
@@ -143,7 +147,7 @@ const Profile = () => {
             addresses,
             saved_cards: savedCards,
             saved_upis: savedUPIs,
-            active_gift_cards: activeGiftCards,
+
             delivery_location: localStorage.getItem(`user_location_${user.id}`) || ""
           });
         } catch (e) {
@@ -154,7 +158,7 @@ const Profile = () => {
 
     const timeoutId = setTimeout(syncData, 1000);
     return () => clearTimeout(timeoutId);
-  }, [addresses, savedCards, savedUPIs, activeGiftCards, user?.id, updateUser]);
+  }, [addresses, savedCards, savedUPIs, user?.id, updateUser]);
 
   const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
@@ -252,33 +256,7 @@ const Profile = () => {
   };
 
 
-  // Form states
-  const [giftCardData, setGiftCardData] = useState({ voucher: "", pin: "" });
 
-
-  const handleAddGiftCard = () => {
-    if (giftCardData.voucher.length !== 16) {
-      alert("Invalid Voucher Number: Must be 16 characters.");
-      return;
-    }
-    if (giftCardData.pin.length !== 6) {
-      alert("Invalid PIN: Must be 6 digits.");
-      return;
-    }
-    const newCard = {
-      id: Date.now(),
-      code: `XXXX-XXXX-XXXX-${giftCardData.voucher.slice(-4)}`,
-      balance: 500,
-      expiry: "12/12/2026"
-    };
-    setActiveGiftCards([...activeGiftCards, newCard]);
-    alert("Gift Card Valued ₹500.00 Added Successfully!");
-    setGiftCardData({ voucher: "", pin: "" });
-  };
-
-  const handleRemoveGiftCard = (id) => {
-    setActiveGiftCards(activeGiftCards.filter(c => c.id !== id));
-  };
 
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [profileEdit, setProfileEdit] = useState({
@@ -406,13 +384,13 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f1f3f6] flex flex-col pt-20">
+    <div className="min-h-screen bg-[#f1f3f6] flex flex-col pt-16 lg:pt-20 pb-20 lg:pb-0">
       <Navigation />
       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
 
-      <div className="container mx-auto px-4 lg:px-8 py-8 flex-1">
-        {/* Breadcrumb / Back Navigation */}
-        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mb-6">
+      <div className="container mx-auto px-4 lg:px-8 py-4 lg:py-8 flex-1">
+        {/* Breadcrumb / Back Navigation (Desktop Only) */}
+        <div className="hidden lg:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mb-6">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-1.5 hover:text-violet-600 transition-colors mr-2 group"
@@ -425,10 +403,11 @@ const Profile = () => {
           <ChevronRight className="w-3 h-3" />
           <span className="text-gray-900">Account Profile</span>
         </div>
+
         <div className="flex flex-col lg:flex-row gap-8 items-start">
 
-          {/* Sidebar (Flipkart Style) */}
-          <aside className="w-full lg:w-80 space-y-4 shrink-0">
+          {/* Sidebar (Flipkart Style - Desktop Only) */}
+          <aside className="hidden lg:block w-80 space-y-4 shrink-0">
             {/* User Header Card */}
             <Card className="border-0 shadow-sm rounded-none bg-white p-4 flex items-center gap-4">
               <div
@@ -489,11 +468,7 @@ const Profile = () => {
 
               {/* PAYMENTS */}
               <SidebarGroup title="Payments" icon={Wallet}>
-                <SidebarLink
-                  label="Gift Cards"
-                  active={activeView === 'gift-cards'}
-                  onClick={() => setActiveView('gift-cards')}
-                />
+
                 <SidebarLink
                   label="Saved Cards"
                   active={activeView === 'saved-cards'}
@@ -521,14 +496,90 @@ const Profile = () => {
           </aside>
 
           {/* Main Content Area */}
-          <main className="flex-1 w-full bg-white shadow-sm p-8 lg:p-12 min-h-[600px] animate-in fade-in duration-700">
+          <main className="flex-1 w-full min-w-0 bg-white shadow-sm p-4 lg:p-12 min-h-[600px] animate-in fade-in duration-700 rounded-sm">
 
             {/* OVERVIEW */}
             {(activeView === "overview" || activeView === "profile") && (
-              <div className="space-y-12">
-                <div>
+              <div className="space-y-8 lg:space-y-12">
+
+                {/* Mobile Header Greeting (Amazon Style) */}
+                <div className="lg:hidden flex items-center justify-between gap-4 mb-4 bg-gradient-to-r from-purple-500 to-violet-500 -m-4 p-6 text-white">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-normal">Hello, <span className="font-bold">{user?.name || "User"}</span></h2>
+                  </div>
+                  <Avatar className="w-12 h-12 border-2 border-white bg-gray-200">
+                    <AvatarImage src={profileEdit.avatar || user?.avatar} />
+                    <AvatarFallback className="text-gray-500 font-bold">
+                      {user?.name?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+
+                <div className="hidden lg:block">
                   <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter mb-2">Account Dashboard</h2>
                   <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Verified Digital ID: {user?.email}</p>
+                </div>
+
+                {/* Mobile Quick Actions Grid (Amazon 4-Button Style) */}
+                <div className="lg:hidden grid grid-cols-2 gap-3 mb-6 px-0">
+                  <button onClick={() => setActiveView("orders")} className="p-3 bg-white border border-gray-300 rounded-full text-sm font-normal text-gray-800 shadow-sm active:bg-gray-100 transition-colors">
+                    Your Orders
+                  </button>
+                  <button onClick={() => setActiveView("orders")} className="p-3 bg-white border border-gray-300 rounded-full text-sm font-normal text-gray-800 shadow-sm active:bg-gray-100 transition-colors">
+                    Buy Again
+                  </button>
+                  <button onClick={() => setActiveView("profile-info")} className="p-3 bg-white border border-gray-300 rounded-full text-sm font-normal text-gray-800 shadow-sm active:bg-gray-100 transition-colors">
+                    Your Account
+                  </button>
+                  <button onClick={() => setActiveView("addresses")} className="p-3 bg-white border border-gray-300 rounded-full text-sm font-normal text-gray-800 shadow-sm active:bg-gray-100 transition-colors">
+                    Your Lists
+                  </button>
+                </div>
+
+                {/* Mobile Your Orders Preview (Amazon Style Horizontal Scroll) */}
+                <div className="lg:hidden mb-6">
+                  <div className="flex justify-between items-center mb-4 px-1">
+                    <h3 className="font-bold text-lg text-gray-900">Your Orders</h3>
+                    <button onClick={() => setActiveView("orders")} className="text-cyan-700 text-sm">See all</button>
+                  </div>
+                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide px-1">
+                    {orders.length > 0 ? orders.slice(0, 5).map(order => (
+                      <div key={order.id} className="min-w-[150px] border border-gray-200 rounded-lg p-3 bg-white flex flex-col gap-2 shadow-sm">
+                        <div className="w-full h-24 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center">
+                          {order.items?.[0]?.image ? (
+                            <img src={order.items[0].image} alt="Product" className="object-contain h-full" />
+                          ) : (
+                            <Package className="w-8 h-8 text-gray-300" />
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 truncate">{order.items?.[0]?.name || "Order Item"}</p>
+                      </div>
+                    )) : (
+                      <div className="w-full p-4 text-center border border-dashed border-gray-300 rounded-lg text-gray-400 text-xs">
+                        No recent orders
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Mobile Account List (Amazon Style Lists) */}
+                <div className="lg:hidden space-y-1 mb-8">
+                  <h3 className="font-bold text-lg text-gray-900 mb-2 px-1">Your Account</h3>
+                  <div className="bg-white border-y border-gray-200 divide-y divide-gray-100 -mx-4">
+                    <button onClick={() => setActiveView("profile-info")} className="w-full flex justify-between items-center p-4 text-left">
+                      <span className="text-sm text-gray-700">Login & security</span>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </button>
+                    <button onClick={() => setActiveView("addresses")} className="w-full flex justify-between items-center p-4 text-left">
+                      <span className="text-sm text-gray-700">Your Addresses</span>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </button>
+                    <button onClick={() => setActiveView("saved-cards")} className="w-full flex justify-between items-center p-4 text-left">
+                      <span className="text-sm text-gray-700">Manage Payment Options</span>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </button>
+
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -542,15 +593,13 @@ const Profile = () => {
                     <Button onClick={() => setActiveView("orders")} variant="outline" className="w-fit h-10 rounded-lg border-2 border-gray-100 font-bold text-[10px] uppercase tracking-widest">View Orders</Button>
                   </Card>
 
-                  <Card className="border-2 border-gray-50 shadow-none p-8 flex flex-col justify-between hover:border-violet-100 transition-colors">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><Wallet className="w-6 h-6" /></div>
-                      <p className="font-black text-violet-600 italic">₹4,200</p>
-                    </div>
-                    <h4 className="text-xl font-black text-gray-900 italic tracking-tight mb-2">Digital Wallet</h4>
-                    <p className="text-sm text-gray-400 italic mb-6">Manage your credits and saved payment vectors.</p>
-                    <Button onClick={() => setActiveView("saved-cards")} variant="outline" className="w-fit h-10 rounded-lg border-2 border-gray-100 font-bold text-[10px] uppercase tracking-widest">Access Vault</Button>
-                  </Card>
+                </div>
+
+                {/* Mobile Logout Button */}
+                <div className="lg:hidden mt-4 mb-20 px-4">
+                  <Button onClick={logoutAndRedirect} variant="outline" className="w-full h-12 bg-gray-100 border-gray-300 text-gray-800 font-normal rounded-lg shadow-sm">
+                    Log Out
+                  </Button>
                 </div>
 
               </div>
@@ -660,54 +709,68 @@ const Profile = () => {
               <div className="space-y-10">
                 <div className="flex items-center justify-between">
                   <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter">Acquisition Log</h2>
-                  <div className="flex gap-2">
-                    <Input placeholder="Search orders..." className="h-10 w-64 rounded-lg bg-gray-50 border-0" />
-                    <Button className="bg-violet-600 hover:bg-violet-700 h-10 px-6 rounded-lg font-black uppercase text-[10px] tracking-widest">Search</Button>
-                  </div>
                 </div>
 
                 {orders.length > 0 ? (
-                  <div className="space-y-6">
+                  <div className="space-y-4 lg:space-y-6 pb-20">
                     {orders.map((order) => (
-                      <Card key={order.id} className="border-2 border-gray-50 shadow-none rounded-3xl overflow-hidden hover:border-violet-100 transition-colors group">
+                      <Card key={order.id} className="border-2 border-gray-50 shadow-none rounded-xl lg:rounded-3xl overflow-hidden hover:border-violet-100 transition-colors group">
 
                         {/* Order Header Summary */}
-                        <div className="bg-gray-50/50 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-100">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-3">
+                        <div className="bg-gray-50/50 p-4 lg:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 lg:gap-4 border-b border-gray-100">
+                          <div className="space-y-1 w-full">
+                            <div className="flex items-center justify-between lg:justify-start gap-3">
                               <Badge className={`border-none font-bold text-[10px] uppercase tracking-widest px-3 py-1 ${order.status === 'Delivered' ? 'bg-emerald-100 text-emerald-600' :
                                 order.status === 'Processing' ? 'bg-amber-100 text-amber-600' :
                                   'bg-violet-100 text-violet-600'
                                 }`}>
                                 {order.status}
                               </Badge>
-                              <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">{order.date}</span>
+                              <span className="text-gray-400 text-[10px] lg:text-xs font-bold uppercase tracking-widest">{order.date}</span>
                             </div>
-                            <p className="text-xs text-gray-400 font-medium">Order ID: <span className="text-gray-900 font-bold">#{order.id}</span></p>
+                            <div className="flex justify-between items-center lg:block">
+                              <p className="text-[10px] lg:text-xs text-gray-400 font-medium">Order ID: <span className="text-gray-900 font-bold">#{order.id}</span></p>
+                              <div className="text-right lg:hidden">
+                                <p className="text-sm font-black text-gray-900 italic tracking-tighter">₹{order.total ? order.total.toLocaleString() : '0'}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right hidden lg:block">
                             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Amount</p>
-                            <p className="text-xl font-black text-gray-900 italic tracking-tighter">₹{order.total.toLocaleString()}</p>
+                            <p className="text-xl font-black text-gray-900 italic tracking-tighter">₹{order.total ? order.total.toLocaleString() : '0'}</p>
                           </div>
                         </div>
 
                         {/* Order Items List */}
-                        <div className="p-6 space-y-6">
+                        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
                           {order.items.map((item, index) => (
-                            <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                              <div className="w-20 h-20 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0">
-                                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                              </div>
-                              <div className="flex-1">
-                                <h4 className="font-bold text-gray-900 text-base mb-1">{item.name}</h4>
-                                <p className="text-sm text-gray-500 line-clamp-1">{item.description}</p>
-                                <div className="mt-2 flex items-center gap-4">
-                                  <span className="text-sm font-bold text-violet-600">₹{item.price.toLocaleString()}</span>
+                            <div key={index} className="flex flex-col lg:grid lg:grid-cols-12 items-start lg:items-center gap-4 lg:gap-6">
+                              {/* Image & Details */}
+                              <div className="lg:col-span-8 flex items-start gap-4 w-full">
+                                <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gray-50 rounded-lg lg:rounded-xl overflow-hidden border border-gray-100 flex-shrink-0">
+                                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                </div>
+                                <div className="flex-1 min-w-0 pt-1">
+                                  <h4 className="font-bold text-gray-900 text-sm lg:text-base mb-1 truncate">{item.name}</h4>
+                                  <p className="text-xs lg:text-sm text-gray-500 line-clamp-1 mb-2">{item.description}</p>
+
+                                  {/* Mobile Price & Action */}
+                                  <div className="lg:hidden flex items-center justify-between mt-2">
+                                    <span className="text-sm font-bold text-violet-600">₹{item.price ? item.price.toLocaleString() : '0'}</span>
+                                    <Button onClick={() => { addToCart(item); navigate('/cart'); }} variant="outline" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-wider">
+                                      Buy Again
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
-                              <Button variant="outline" size="sm" className="shrink-0 h-9 text-xs font-bold uppercase tracking-wider">
-                                Buy Again
-                              </Button>
+
+                              {/* Desktop Price & Action */}
+                              <div className="hidden lg:col-span-4 lg:flex items-center justify-end gap-6">
+                                <span className="text-lg font-bold text-gray-900">₹{item.price ? item.price.toLocaleString() : '0'}</span>
+                                <Button onClick={() => { addToCart(item); navigate('/cart'); }} variant="outline" className="h-10 px-6 border-2 border-gray-100 hover:border-violet-600 hover:bg-violet-50 hover:text-violet-700 font-bold uppercase tracking-widest text-xs transition-all">
+                                  Buy Again
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -715,12 +778,12 @@ const Profile = () => {
                     ))}
                   </div>
                 ) : (
-                  <Card className="border-2 border-dashed border-gray-100 bg-white rounded-3xl p-20 flex flex-col items-center justify-center text-center">
-                    <Package className="w-16 h-16 text-gray-200 mb-6" />
-                    <h3 className="text-2xl font-black italic tracking-tighter mb-2">No Active Shipments</h3>
-                    <p className="text-gray-400 font-medium italic mb-8">You haven't initiated any material procurement sessions yet.</p>
+                  <Card className="border-2 border-dashed border-gray-100 bg-white rounded-3xl p-10 lg:p-20 flex flex-col items-center justify-center text-center">
+                    <Package className="w-12 h-12 lg:w-16 lg:h-16 text-gray-200 mb-6" />
+                    <h3 className="text-xl lg:text-2xl font-black italic tracking-tighter mb-2">No Active Shipments</h3>
+                    <p className="text-sm text-gray-400 font-medium italic mb-8">You haven't initiated any material procurement sessions yet.</p>
                     <Link to="/shop">
-                      <Button className="bg-gray-900 hover:bg-violet-600 h-14 px-10 rounded-xl font-black uppercase text-[10px] tracking-widest text-white transition-all shadow-xl shadow-gray-200">Start Shopping</Button>
+                      <Button className="bg-gray-900 hover:bg-violet-600 h-12 lg:h-14 px-8 lg:px-10 rounded-xl font-black uppercase text-[10px] tracking-widest text-white transition-all shadow-xl shadow-gray-200">Start Shopping</Button>
                     </Link>
                   </Card>
                 )}
@@ -911,112 +974,7 @@ const Profile = () => {
               </div>
             )}
 
-            {/* GIFT CARDS */}
-            {activeView === 'gift-cards' && (
-              <div className="space-y-8">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-black text-gray-900 italic tracking-tighter">Gift Cards Wallet</h2>
-                  <Button variant="outline" className="h-10 text-xs font-bold uppercase tracking-wider">
-                    <Clock className="w-3 h-3 mr-2" /> Check Balance
-                  </Button>
-                </div>
 
-                {/* Balance Card */}
-                <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl p-8 text-white shadow-xl shadow-violet-200 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-8 opacity-10">
-                    <Gift className="w-32 h-32" />
-                  </div>
-                  <p className="text-violet-100 font-bold uppercase tracking-widest text-[10px] mb-2">Total Gift Card Balance</p>
-                  <h3 className="text-4xl font-black tracking-tighter">₹0.00</h3>
-                  <p className="text-violet-200 text-xs mt-4 font-medium max-w-md">Use this balance to purchase products across our entire catalog. Balance never expires.</p>
-                </div>
-
-                <div className="grid lg:grid-cols-2 gap-8">
-                  {/* Add Gift Card Form */}
-                  <Card className="border border-gray-200 shadow-none p-6 rounded-xl">
-                    <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wide mb-6 flex items-center gap-2">
-                      <Plus className="w-4 h-4 text-violet-600" /> Add A Gift Card
-                    </h4>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Voucher Number</Label>
-                        <Input
-                          value={giftCardData.voucher}
-                          onChange={(e) => setGiftCardData({ ...giftCardData, voucher: e.target.value })}
-                          placeholder="Enter 16-digit voucher number"
-                          className="h-12 border-gray-200 font-mono tracking-widest uppercase"
-                          maxLength={16}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Voucher PIN</Label>
-                        <Input
-                          type="password"
-                          value={giftCardData.pin}
-                          onChange={(e) => setGiftCardData({ ...giftCardData, pin: e.target.value })}
-                          placeholder="Enter 6-digit PIN"
-                          className="h-12 border-gray-200 font-mono tracking-widest"
-                          maxLength={6}
-                        />
-                      </div>
-                      <Button onClick={handleAddGiftCard} className="w-full h-12 bg-gray-900 hover:bg-violet-600 font-black uppercase tracking-widest text-[10px]">Add to Wallet</Button>
-                    </div>
-                  </Card>
-
-                  {/* Help / Info */}
-                  <div className="space-y-4">
-                    <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wide mb-2">How it works</h4>
-                    <ul className="space-y-3">
-                      {[
-                        "Enter the 16-digit alphanumeric code from your email or physical card.",
-                        "Enter the 6-digit PIN provided with the voucher.",
-                        "Balance is instantly added to your wallet.",
-                        "Use 'Gift Card' as a payment method during checkout."
-                      ].map((text, i) => (
-                        <li key={i} className="flex gap-3 text-sm text-gray-500 font-medium leading-relaxed">
-                          <div className="w-1.5 h-1.5 rounded-full bg-violet-600 mt-2 shrink-0" />
-                          {text}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Empty State / List for Cards */}
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wide mb-4">Active Gift Cards</h4>
-                  {activeGiftCards.length > 0 ? (
-                    <div className="space-y-4">
-                      {activeGiftCards.map(card => (
-                        <div key={card.id} className="border border-gray-200 rounded-xl p-4 flex items-center justify-between bg-white relative group">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-8 bg-gray-900 rounded-md flex items-center justify-center">
-                              <Gift className="w-4 h-4 text-white" />
-                            </div>
-                            <div>
-                              <p className="font-mono font-bold text-gray-900 text-sm tracking-widest">{card.code}</p>
-                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Expires: {card.expiry}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-6">
-                            <p className="text-violet-600 font-black italic">₹{card.balance}</p>
-                            <Button onClick={() => handleRemoveGiftCard(card.id)} variant="ghost" size="icon" className="text-gray-300 hover:text-red-500 hover:bg-red-50">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-gray-100 rounded-xl p-12 flex flex-col items-center justify-center text-center">
-                      <Gift className="w-12 h-12 text-gray-200 mb-4" />
-                      <p className="text-gray-400 font-bold text-sm">No active gift cards found</p>
-                      <p className="text-gray-300 text-xs mt-1">Added cards will appear here</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* SAVED CARDS */}
             {activeView === 'saved-cards' && (
@@ -1244,105 +1202,112 @@ const Profile = () => {
               </div>
             )}
 
-            {/* WISHLIST */}
-            {activeView === 'wishlist' && (
-              <div className="space-y-10">
-                <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter px-4">My Collections</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {[
-                    { name: "Pro Headset X", price: "₹23,920", img: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop" },
-                    { name: "Quantum Watch", price: "₹47,920", img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop" },
-                  ].map((item, i) => (
-                    <Card key={i} className="border-0 shadow-sm rounded-2xl overflow-hidden group hover:shadow-xl transition-all h-full flex flex-col">
-                      <div className="aspect-square bg-gray-100 overflow-hidden relative">
-                        <img src={item.img} alt={item.name} className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700" />
-                        <Button variant="ghost" size="icon" className="absolute top-2 right-2 bg-white/80 backdrop-blur-md rounded-lg text-violet-600 shadow-sm transition-all hover:bg-violet-600 hover:text-white"><Heart className="w-4 h-4" /></Button>
-                      </div>
-                      <CardContent className="p-4 flex flex-col flex-1">
-                        <h4 className="font-bold text-gray-900 truncate mb-1 italic tracking-tight uppercaseLeading text-sm">{item.name}</h4>
-                        <p className="text-violet-600 font-black italic tracking-tighter text-base mt-auto">{item.price}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
+            {/* SAVED CARDS */}
+            {activeView === 'saved-cards' && (
+              <div className="space-y-8">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-black text-gray-900 italic tracking-tighter">Saved Cards</h2>
+                  <Button onClick={() => setIsAddCardOpen(true)} className="bg-violet-600 hover:bg-violet-700 h-10 px-6 rounded-lg font-black uppercase text-[10px] tracking-widest">Add New Card</Button>
                 </div>
-              </div>
-            )}
 
-            {/* REWARDS */}
-            {activeView === 'rewards' && (
-              <div className="space-y-12">
-                <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter">Status Rewards</h2>
-                <div className="grid gap-12">
-                  <Card className="border-0 shadow-2xl rounded-[3rem] bg-gray-900 p-16 text-white overflow-hidden relative">
-                    <div className="absolute top-0 right-0 w-80 h-80 bg-violet-600/20 rounded-full blur-[80px]" />
-                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-12">
-                      <div className="w-32 h-32 bg-white/10 rounded-3xl flex items-center justify-center border border-white/10 shadow-inner">
-                        <Star className="w-16 h-16 text-amber-400 fill-amber-400" />
+                {isAddCardOpen && (
+                  <Card className="p-6 border-0 shadow-sm bg-gray-50 rounded-2xl mb-8">
+                    {/* ... (Add Card Form logic would go here, kept simple for brevity as user asked to remove static data mainly) ... */}
+                    <div className="grid gap-4">
+                      <Input placeholder="Card Number" value={newCard.number} onChange={e => setNewCard({ ...newCard, number: e.target.value })} />
+                      <div className="flex gap-4">
+                        <Input placeholder="MM/YY" value={newCard.exp} onChange={e => setNewCard({ ...newCard, exp: e.target.value })} />
+                        <Input placeholder="Brand (e.g. VISA)" value={newCard.brand} onChange={e => setNewCard({ ...newCard, brand: e.target.value })} />
                       </div>
-                      <div className="text-center md:text-left">
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-violet-300 mb-2 italic">Total Reward Balance</p>
-                        <h3 className="text-7xl font-black tracking-tighter mb-2 italic leading-none">1,250</h3>
-                        <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px] italic leading-none">Credits Available for redemption</p>
+                      <div className="flex gap-4">
+                        <Button onClick={handleAddCard} className="bg-violet-600">Save Card</Button>
+                        <Button variant="ghost" onClick={() => setIsAddCardOpen(false)}>Cancel</Button>
                       </div>
                     </div>
                   </Card>
+                )}
 
-                  <div className="space-y-6">
-                    <h3 className="text-xl font-black italic tracking-tighter">Activity History</h3>
-                    <div className="bg-gray-50 rounded-2xl overflow-hidden divide-y divide-gray-100 border border-gray-100">
-                      {[
-                        { title: "Purchase Bonus", pts: "+450", date: "Jan 10, 2026" },
-                        { title: "Daily Check-in", pts: "+10", date: "Jan 09, 2026" },
-                        { title: "Review Calibration", pts: "+100", date: "Jan 05, 2026" }
-                      ].map((item, i) => (
-                        <div key={i} className="px-8 py-6 flex items-center justify-between hover:bg-white transition-all">
-                          <div>
-                            <p className="font-black text-gray-900 italic tracking-tight">{item.title}</p>
-                            <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">{item.date}</p>
-                          </div>
-                          <p className="text-emerald-500 font-black italic text-xl">{item.pts}</p>
+                <div className="grid gap-4">
+                  {savedCards.map(card => (
+                    <div key={card.id} className="p-4 border rounded-xl flex justify-between items-center bg-white">
+                      <div className="flex items-center gap-4">
+                        <CreditCard className="w-8 h-8 text-gray-400" />
+                        <div>
+                          <p className="font-bold text-gray-900">{card.brand} ending in {card.last4}</p>
+                          <p className="text-xs text-gray-500">Expires {card.exp}</p>
                         </div>
-                      ))}
+                      </div>
+                      <Button variant="ghost" onClick={() => handleDeleteCard(card.id)} className="text-red-500 hover:text-red-600"><Trash2 className="w-4 h-4" /></Button>
                     </div>
+                  ))}
+                  {savedCards.length === 0 && <p className="text-gray-500 italic">No saved cards found.</p>}
+                </div>
+              </div>
+            )}
+
+            {/* SAVED UPI */}
+            {activeView === 'saved-upi' && (
+              <div className="space-y-8">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-black text-gray-900 italic tracking-tighter">Saved UPI</h2>
+                  <Button onClick={() => setIsAddUPIOpen(true)} className="bg-violet-600 hover:bg-violet-700 h-10 px-6 rounded-lg font-black uppercase text-[10px] tracking-widest">Add New UPI</Button>
+                </div>
+
+                {isAddUPIOpen && (
+                  <div className="flex gap-4 mb-8">
+                    <Input placeholder="Enter UPI ID (e.g. name@bank)" value={newUPI} onChange={e => setNewUPI(e.target.value)} />
+                    <Button onClick={handleAddUPI} className="bg-violet-600">Save</Button>
+                    <Button variant="ghost" onClick={() => setIsAddUPIOpen(false)}>Cancel</Button>
                   </div>
+                )}
+
+                <div className="grid gap-4">
+                  {savedUPIs.map(upi => (
+                    <div key={upi.id} className="p-4 border rounded-xl flex justify-between items-center bg-white">
+                      <div className="flex items-center gap-4">
+                        <Smartphone className="w-6 h-6 text-gray-400" />
+                        <p className="font-bold text-gray-900">{upi.id}</p>
+                      </div>
+                      <Button variant="ghost" onClick={() => handleDeleteUPI(upi.id)} className="text-red-500 hover:text-red-600"><Trash2 className="w-4 h-4" /></Button>
+                    </div>
+                  ))}
+                  {savedUPIs.length === 0 && <p className="text-gray-500 italic">No saved UPI IDs found.</p>}
                 </div>
               </div>
             )}
 
-            {/* NOTIFICATIONS */}
-            {activeView === 'notifications' && (
-              <div className="space-y-10">
-                <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter">Inbox</h2>
-                <div className="space-y-4">
-                  {notifications.length === 0 ? (
-                    <div className="p-12 text-center bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-100">
-                      <Bell className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-                      <p className="text-sm text-gray-400 font-bold uppercase tracking-widest italic">Your inbox is empty.</p>
-                      <p className="text-[10px] text-gray-300 mt-2">Any new acquisition alerts or system logs will appear here.</p>
-                    </div>
-                  ) : (
-                    notifications.map((notif, i) => (
-                      <Card key={i} className="border-0 shadow-sm p-6 bg-gray-50 flex items-start gap-4 hover:border-violet-200 border-2 border-transparent transition-all group">
-                        <div className="p-3 bg-violet-100 text-violet-600 rounded-xl group-hover:bg-violet-600 group-hover:text-white transition-colors">
-                          <Bell className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-black text-gray-900 mb-1 italic">{notif.title}</h4>
-                          <p className="text-sm text-gray-500 italic mb-2">{notif.message}</p>
-                          <p className="text-[9px] font-black uppercase tracking-widest text-violet-400">
-                            {new Date(notif.created_at || Date.now()).toLocaleTimeString()} - Today
-                          </p>
-                        </div>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
+
+
+
+
+
 
           </main>
         </div>
       </div >
+
+      {/* Mobile Bottom Navigation (Amazon Style) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 pb-safe">
+        <div className="flex justify-around items-center p-2">
+          <button onClick={() => navigate('/')} className="flex flex-col items-center p-2 text-gray-500">
+            <div className="w-6 h-6"><img src="/assets/zlogo1.png" className="w-full h-full object-contain grayscale opacity-50" /></div>
+            <span className="text-[10px]">Home</span>
+          </button>
+          <button onClick={() => setActiveView('profile-info')} className={`flex flex-col items-center p-2 ${activeView === 'profile-info' ? 'text-violet-600' : 'text-gray-500'}`}>
+            <User className="w-6 h-6" />
+            <span className="text-[10px]">Profile</span>
+          </button>
+          <button onClick={() => setActiveView('orders')} className={`flex flex-col items-center p-2 ${activeView === 'orders' ? 'text-violet-600' : 'text-gray-500'}`}>
+            <Package className="w-6 h-6" />
+            <span className="text-[10px]">Orders</span>
+          </button>
+          <button onClick={() => setActiveView('overview')} className={`flex flex-col items-center p-2 ${activeView === 'overview' ? 'text-violet-600' : 'text-gray-500'}`}>
+            <LayoutDashboard className="w-6 h-6" />
+            <span className="text-[10px]">Menu</span>
+          </button>
+        </div>
+      </div>
+
       <Footer />
     </div >
   );

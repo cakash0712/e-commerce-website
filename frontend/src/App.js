@@ -413,54 +413,62 @@ const CartProvider = ({ children }) => {
     const fetchCart = async () => {
       cartLoaded.current = false;
       const guestItems = JSON.parse(localStorage.getItem('DACHCart_cart_guest') || '[]');
+      let finalCart = [];
 
       if (user?.id) {
         try {
           const token = localStorage.getItem('token');
+          // sync_user on backend already refreshes prices for logged-in users
           const response = await axios.get(`${API}/users/sync`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (response.data && response.data.cart) {
-            // Merge guest cart with user cart if guest cart has items
             let updatedCart = response.data.cart;
             if (guestItems.length > 0) {
               const userCartIds = new Set(updatedCart.map(i => i.id));
               const uniqueGuestItems = guestItems.filter(i => !userCartIds.has(i.id));
               if (uniqueGuestItems.length > 0) {
-                // We need to push these guest items to backend one by one or via bulk update
-                // For now, let's just add them locally and let the user save or we can iterate
-                // Ideally backend should handle merge, but here we can just "add" them
                 for (const item of uniqueGuestItems) {
                   await axios.post(`${API}/users/cart/items`, item, {
                     headers: { Authorization: `Bearer ${token}` }
                   });
                 }
-                // Refetch to get merged state
                 const refetch = await axios.get(`${API}/users/sync`, {
                   headers: { Authorization: `Bearer ${token}` }
                 });
                 updatedCart = refetch.data.cart;
-
-                // Clean up guest cart after merging
                 localStorage.removeItem('DACHCart_cart_guest');
               }
             }
-            setCartItems(updatedCart);
-            cartLoaded.current = true;
-            return;
+            finalCart = updatedCart;
           }
         } catch (e) {
           console.error("Failed to sync cart from backend", e);
         }
+      } else {
+        // Guest mode: Refresh prices for local items
+        try {
+          const savedCart = localStorage.getItem(userKey);
+          let localItems = savedCart ? JSON.parse(savedCart) : [];
+
+          if (localItems.length > 0) {
+            const productIds = localItems.map(item => item.id);
+            const priceRes = await axios.post(`${API}/products/refresh-prices`, productIds);
+            const updatedPrices = priceRes.data;
+
+            localItems = localItems.map(item => ({
+              ...item,
+              price: updatedPrices[item.id] !== undefined ? updatedPrices[item.id] : item.price
+            }));
+          }
+          finalCart = localItems;
+        } catch (e) {
+          console.error("Failed to refresh guest cart prices", e);
+          finalCart = [];
+        }
       }
 
-      // Fallback or Guest mode
-      try {
-        const savedCart = localStorage.getItem(userKey);
-        setCartItems(savedCart ? JSON.parse(savedCart) : []);
-      } catch (e) {
-        setCartItems([]);
-      }
+      setCartItems(finalCart);
       cartLoaded.current = true;
     };
 
@@ -486,7 +494,14 @@ const CartProvider = ({ children }) => {
             : item
         );
       } else {
-        return [...prevItems, { ...product, quantity: product.quantity || 1, selected: true }];
+        return [...prevItems, {
+          ...product,
+          quantity: product.quantity || 1,
+          selected: true,
+          delivery_type: product.delivery_type,
+          delivery_charge: product.delivery_charge,
+          free_delivery_above: product.free_delivery_above
+        }];
       }
     });
 
@@ -503,6 +518,9 @@ const CartProvider = ({ children }) => {
           image: product.image || (product.images && product.images[0]) || "",
           vendor_id: product.vendor_id,
           category: product.category,
+          delivery_type: product.delivery_type,
+          delivery_charge: product.delivery_charge,
+          free_delivery_above: product.free_delivery_above,
           selected: true
         };
         await axios.post(`${API}/users/cart/items`, itemPayload, {
