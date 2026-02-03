@@ -6,7 +6,7 @@ import {
     Heart, Plus, Minus, X, ArrowLeft, Filter, Sparkles, Flame, Zap,
     Bike, Check, Home, User, ShoppingCart, Menu, Phone, Mail, Timer,
     ChefHat, Coffee, Pizza, Salad, Sandwich, IceCream, Soup, Beef,
-    ArrowRight, Gift, Percent, TrendingUp
+    ArrowRight, Gift, Percent, TrendingUp, Building2
 } from 'lucide-react';
 import { useAuth } from '../../App';
 import FoodProfile from './FoodProfile';
@@ -83,6 +83,7 @@ const FoodCartProvider = ({ children }) => {
 };
 
 // Sample Data
+// Cuisines and Restaurants will be fetched from the backend or handled via state
 const cuisines = [
     { id: 1, name: 'Pizza', icon: Pizza, color: 'bg-red-500' },
     { id: 2, name: 'Burgers', icon: Sandwich, color: 'bg-amber-500' },
@@ -94,136 +95,86 @@ const cuisines = [
     { id: 8, name: 'BBQ', icon: Beef, color: 'bg-red-700' },
 ];
 
-const restaurants = [
-    {
-        id: 1,
-        name: "Spice Garden",
-        cuisine: "Indian",
-        rating: 4.5,
-        reviews: 234,
-        deliveryTime: "25-35",
-        deliveryFee: 40,
-        minOrder: 200,
-        image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=400&fit=crop",
-        featured: true,
-        offers: ["20% OFF on orders above ₹500"],
-        menu: [
-            { id: 101, name: "Butter Chicken", price: 320, description: "Creamy tomato-based curry with tender chicken", image: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=300&h=200&fit=crop", veg: false, bestseller: true },
-            { id: 102, name: "Paneer Tikka", price: 280, description: "Grilled cottage cheese with spices", image: "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=300&h=200&fit=crop", veg: true, bestseller: true },
-            { id: 103, name: "Dal Makhani", price: 220, description: "Slow-cooked black lentils in butter", image: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=300&h=200&fit=crop", veg: true },
-            { id: 104, name: "Biryani", price: 350, description: "Fragrant basmati rice with spices and meat", image: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=300&h=200&fit=crop", veg: false, bestseller: true },
-            { id: 105, name: "Naan Basket", price: 120, description: "Assorted fresh-baked breads", image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=300&h=200&fit=crop", veg: true },
-        ]
-    },
-    {
-        id: 2,
-        name: "Pizza Paradise",
-        cuisine: "Italian",
-        rating: 4.7,
-        reviews: 567,
-        deliveryTime: "20-30",
-        deliveryFee: 30,
-        minOrder: 250,
-        image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&h=400&fit=crop",
-        featured: true,
-        offers: ["Free Garlic Bread on orders above ₹600"],
-        menu: [
-            { id: 201, name: "Margherita Pizza", price: 299, description: "Classic tomato, mozzarella & basil", image: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=300&h=200&fit=crop", veg: true, bestseller: true },
-            { id: 202, name: "Pepperoni Pizza", price: 449, description: "Loaded with pepperoni slices", image: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=300&h=200&fit=crop", veg: false, bestseller: true },
-            { id: 203, name: "Pasta Alfredo", price: 329, description: "Creamy white sauce pasta", image: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=300&h=200&fit=crop", veg: true },
-            { id: 204, name: "Garlic Bread", price: 149, description: "Crispy bread with garlic butter", image: "https://images.unsplash.com/photo-1619531040576-f9416740661b?w=300&h=200&fit=crop", veg: true },
-        ]
-    },
-    {
-        id: 3,
-        name: "Dragon Wok",
-        cuisine: "Chinese",
-        rating: 4.3,
-        reviews: 189,
-        deliveryTime: "30-40",
-        deliveryFee: 50,
-        minOrder: 300,
-        image: "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=600&h=400&fit=crop",
-        featured: false,
-        offers: [],
-        menu: [
-            { id: 301, name: "Hakka Noodles", price: 220, description: "Stir-fried noodles with vegetables", image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=300&h=200&fit=crop", veg: true, bestseller: true },
-            { id: 302, name: "Manchurian", price: 250, description: "Crispy balls in spicy sauce", image: "https://images.unsplash.com/photo-1525755662778-989d0524087e?w=300&h=200&fit=crop", veg: true },
-            { id: 303, name: "Spring Rolls", price: 180, description: "Crispy rolls with vegetable filling", image: "https://images.unsplash.com/photo-1548507200-e587eb8ba5c4?w=300&h=200&fit=crop", veg: true },
-        ]
-    },
-    {
-        id: 4,
-        name: "Burger Barn",
-        cuisine: "American",
-        rating: 4.6,
-        reviews: 423,
-        deliveryTime: "15-25",
-        deliveryFee: 25,
-        minOrder: 150,
-        image: "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=600&h=400&fit=crop",
-        featured: true,
-        offers: ["Buy 1 Get 1 Free on Classic Burger"],
-        menu: [
-            { id: 401, name: "Classic Burger", price: 199, description: "Beef patty with fresh veggies", image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&h=200&fit=crop", veg: false, bestseller: true },
-            { id: 402, name: "Cheese Burger", price: 249, description: "Double cheese loaded burger", image: "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=300&h=200&fit=crop", veg: false },
-            { id: 403, name: "Veggie Burger", price: 179, description: "Crispy veggie patty with sauce", image: "https://images.unsplash.com/photo-1520072959219-c595dc870360?w=300&h=200&fit=crop", veg: true },
-            { id: 404, name: "French Fries", price: 99, description: "Crispy golden fries", image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=300&h=200&fit=crop", veg: true, bestseller: true },
-        ]
-    },
-    {
-        id: 5,
-        name: "Sweet Tooth",
-        cuisine: "Desserts",
-        rating: 4.8,
-        reviews: 312,
-        deliveryTime: "20-30",
-        deliveryFee: 35,
-        minOrder: 200,
-        image: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=600&h=400&fit=crop",
-        featured: false,
-        offers: ["Free brownie on orders above ₹400"],
-        menu: [
-            { id: 501, name: "Chocolate Lava Cake", price: 249, description: "Warm cake with molten chocolate", image: "https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=300&h=200&fit=crop", veg: true, bestseller: true },
-            { id: 502, name: "Ice Cream Sundae", price: 179, description: "Premium ice cream with toppings", image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=300&h=200&fit=crop", veg: true },
-            { id: 503, name: "Cheesecake", price: 299, description: "New York style cheesecake", image: "https://images.unsplash.com/photo-1524351199678-941a58a3df50?w=300&h=200&fit=crop", veg: true, bestseller: true },
-        ]
-    },
-    {
-        id: 6,
-        name: "Green Bowl",
-        cuisine: "Healthy",
-        rating: 4.4,
-        reviews: 156,
-        deliveryTime: "25-35",
-        deliveryFee: 40,
-        minOrder: 250,
-        image: "https://images.unsplash.com/photo-1466220549276-aef9ce186540?w=600&h=400&fit=crop",
-        featured: false,
-        offers: [],
-        menu: [
-            { id: 601, name: "Buddha Bowl", price: 349, description: "Quinoa, veggies, and tahini", image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300&h=200&fit=crop", veg: true, bestseller: true },
-            { id: 602, name: "Avocado Toast", price: 249, description: "Sourdough with fresh avocado", image: "https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?w=300&h=200&fit=crop", veg: true },
-            { id: 603, name: "Protein Smoothie", price: 199, description: "Banana, peanut butter, oats", image: "https://images.unsplash.com/photo-1502741224143-90386d7f8c82?w=300&h=200&fit=crop", veg: true },
-        ]
-    }
-];
-
 // Food Navigation Component
 const FoodNavigation = ({ onSwitchApp }) => {
     const { getItemCount } = useFoodCart();
-    const { user, logout } = useAuth();
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { user, logout, updateUser } = useAuth();
     const [showUserMenu, setShowUserMenu] = useState(false);
-    const location = useLocation();
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [showLocationModal, setShowLocationModal] = useState(false);
+    const [location, setLocation] = useState(user?.address || localStorage.getItem('food_delivery_location') || 'New Delhi, India');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchSuggestions, setSearchSuggestions] = useState([]);
+    const [newLocationInput, setNewLocationInput] = useState('');
+    const [suggestions, setSuggestions] = useState([]);
     const navigate = useNavigate();
     const itemCount = getItemCount();
 
-    const navLinks = [
-        { path: '/food', label: 'Home', icon: Home },
-        { path: '/food/restaurants', label: 'Restaurants', icon: Utensils },
-        { path: '/food/orders', label: 'My Orders', icon: Timer },
-    ];
+    // Main Search Suggestions Logic
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (searchQuery.trim().length > 1) {
+                try {
+                    const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                    const response = await axios.get(`${API_BASE}/api/food/search/suggestions?q=${searchQuery}`);
+                    setSearchSuggestions(response.data);
+                } catch (error) {
+                    console.error("Failed to fetch search suggestions:", error);
+                    setSearchSuggestions([]);
+                }
+            } else {
+                setSearchSuggestions([]);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Filter suggestions as user types - Fetching from MongoDB via Backend
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (newLocationInput.trim().length > 1) {
+                try {
+                    const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                    const response = await axios.get(`${API_BASE}/api/food/locations/search?q=${newLocationInput}`);
+                    setSuggestions(response.data);
+                } catch (error) {
+                    console.error("Failed to fetch location suggestions:", error);
+                    setSuggestions([]);
+                }
+            } else {
+                setSuggestions([]);
+            }
+        }, 300); // 300ms debounce
+
+        return () => clearTimeout(timer);
+    }, [newLocationInput]);
+
+    // Sync location if user data changes
+    useEffect(() => {
+        if (user?.address) {
+            setLocation(user.address);
+        }
+    }, [user?.address]);
+
+    const handleLocationUpdate = async (selectedLoc = null) => {
+        const finalLoc = (selectedLoc && typeof selectedLoc === 'string' ? selectedLoc : newLocationInput).trim();
+        if (!finalLoc) return;
+
+        setLocation(finalLoc);
+        localStorage.setItem('food_delivery_location', finalLoc);
+
+        if (user?.id) {
+            try {
+                await updateUser(user.id, { address: finalLoc });
+            } catch (error) {
+                console.error("Failed to sync location to backend:", error);
+            }
+        }
+
+        setShowLocationModal(false);
+        setNewLocationInput('');
+        setSuggestions([]);
+    };
 
     const handleLogout = () => {
         logout();
@@ -232,99 +183,117 @@ const FoodNavigation = ({ onSwitchApp }) => {
     };
 
     return (
-        <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-100 shadow-sm">
+        <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16">
-                    {/* Logo */}
-                    <Link to="/food" className="flex items-center gap-2">
+                <div className="flex items-center justify-between h-16 sm:h-20 gap-4">
+                    {/* Left: Logo */}
+                    <Link to="/food" className="flex items-center gap-2 flex-shrink-0">
                         <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center">
                             <Utensils className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                        <span className="hidden sm:block text-2xl font-black bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
                             DACHBites
                         </span>
                     </Link>
 
-                    {/* Desktop Nav */}
-                    <div className="hidden md:flex items-center gap-8">
-                        {navLinks.map(link => (
-                            <Link
-                                key={link.path}
-                                to={link.path}
-                                className={`flex items-center gap-2 text-sm font-medium transition-colors ${location.pathname === link.path
-                                    ? 'text-orange-600'
-                                    : 'text-gray-600 hover:text-orange-600'
-                                    }`}
-                            >
-                                <link.icon className="w-4 h-4" />
-                                {link.label}
-                            </Link>
-                        ))}
+                    {/* Center: Location & Search */}
+                    <div className="hidden lg:flex items-center flex-grow max-w-2xl bg-gray-50 rounded-full border border-gray-200 p-1">
+                        <div
+                            onClick={() => {
+                                setNewLocationInput(location);
+                                setShowLocationModal(true);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 border-r border-gray-200 min-w-[200px] cursor-pointer hover:bg-gray-100 hover:text-orange-600 transition-all rounded-l-full"
+                        >
+                            <MapPin className="w-4 h-4 text-orange-500" />
+                            <span className="text-sm font-medium truncate">{location}</span>
+                        </div>
+                        <div className="relative flex-grow">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search for restaurants, cuisines or dishes..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && navigate(`/food/restaurants?search=${searchQuery}`)}
+                                className="w-full bg-transparent pl-11 pr-4 py-2 text-sm focus:outline-none"
+                            />
+
+                            {/* Search Suggestions Dropdown */}
+                            {searchSuggestions.length > 0 && (
+                                <div className="absolute top-full left-0 right-0 mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 py-2">
+                                    {searchSuggestions.map((suggestion, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => {
+                                                setSearchQuery(suggestion.text);
+                                                setSearchSuggestions([]);
+                                                if (suggestion.type === 'dish') {
+                                                    navigate(`/food/restaurant/${suggestion.restaurant_id}#${suggestion.id}`);
+                                                } else if (suggestion.type === 'restaurant') {
+                                                    navigate(`/food/restaurant/${suggestion.id}`);
+                                                } else {
+                                                    navigate(`/food/restaurants?search=${suggestion.text}`);
+                                                }
+                                            }}
+                                            className="w-full flex items-center gap-4 px-4 py-3 hover:bg-orange-50 transition-colors text-left"
+                                        >
+                                            <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-white transition-colors">
+                                                {suggestion.type === 'restaurant' ? <Building2 className="w-4 h-4 text-gray-500" /> :
+                                                    suggestion.type === 'cuisine' ? <Utensils className="w-4 h-4 text-gray-500" /> :
+                                                        <Pizza className="w-4 h-4 text-gray-500" />}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-900 leading-none mb-1">{suggestion.text}</p>
+                                                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{suggestion.type}</p>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-3">
-                        {/* Switch to E-commerce */}
+                    {/* Right: Actions */}
+                    <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
                         <button
                             onClick={onSwitchApp}
-                            className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm text-violet-600 bg-violet-50 rounded-full hover:bg-violet-100 transition-colors"
+                            className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium text-violet-600 hover:bg-violet-50 rounded-xl transition-colors"
                         >
                             <ShoppingBag className="w-4 h-4" />
                             Shop
                         </button>
 
-                        {/* Cart */}
-                        <button
-                            onClick={() => navigate('/food/cart')}
-                            className="relative flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full font-medium hover:shadow-lg transition-all"
-                        >
-                            <ShoppingCart className="w-5 h-5" />
-                            <span className="hidden sm:inline">Cart</span>
-                            {itemCount > 0 && (
-                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-white text-orange-600 text-xs font-bold rounded-full flex items-center justify-center">
-                                    {itemCount}
-                                </span>
-                            )}
-                        </button>
+                        <div className="h-6 w-px bg-gray-200 hidden sm:block" />
 
-                        {/* User Login/Profile */}
                         {user ? (
                             <div className="relative">
                                 <button
                                     onClick={() => setShowUserMenu(!showUserMenu)}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-gray-100 transition-colors"
+                                    className="flex items-center gap-2 p-1 sm:px-2 sm:py-1 rounded-full hover:bg-gray-100 transition-colors"
                                 >
-                                    <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                                        <User className="w-4 h-4 text-orange-600" />
+                                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                                        <User className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
                                     </div>
-                                    <span className="hidden sm:inline text-sm font-medium text-gray-700">{user.name?.split(' ')[0]}</span>
+                                    <span className="hidden md:inline text-sm font-semibold text-gray-700">
+                                        {user.name?.split(' ')[0]}
+                                    </span>
                                 </button>
-
                                 {showUserMenu && (
-                                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
-                                        <Link
-                                            to="/food/profile"
-                                            onClick={() => setShowUserMenu(false)}
-                                            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-orange-50 hover:text-orange-600"
-                                        >
-                                            <User className="w-4 h-4" />
-                                            My Profile
+                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-3 z-50">
+                                        <div className="px-4 py-2 border-b border-gray-50 mb-2">
+                                            <p className="text-sm font-bold text-gray-900">{user.name}</p>
+                                            <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                                        </div>
+                                        <Link to="/food/profile" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600">
+                                            <User className="w-4 h-4" /> My Profile
                                         </Link>
-                                        <Link
-                                            to="/food/orders"
-                                            onClick={() => setShowUserMenu(false)}
-                                            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-orange-50 hover:text-orange-600"
-                                        >
-                                            <Timer className="w-4 h-4" />
-                                            My Orders
+                                        <Link to="/food/orders" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600">
+                                            <Clock className="w-4 h-4" /> My Orders
                                         </Link>
-                                        <div className="border-t border-gray-100 my-1" />
-                                        <button
-                                            onClick={handleLogout}
-                                            className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 w-full text-left"
-                                        >
-                                            <ArrowLeft className="w-4 h-4" />
-                                            Logout
+                                        <div className="border-t border-gray-50 my-2" />
+                                        <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full text-left">
+                                            <ArrowLeft className="w-4 h-4" /> Logout
                                         </button>
                                     </div>
                                 )}
@@ -332,93 +301,154 @@ const FoodNavigation = ({ onSwitchApp }) => {
                         ) : (
                             <Link
                                 to="/auth"
-                                className="flex items-center gap-2 px-4 py-2 text-orange-600 bg-orange-50 rounded-full font-medium hover:bg-orange-100 transition-colors"
+                                className="text-sm font-bold text-gray-700 hover:text-orange-600 px-3 py-2 transition-colors"
                             >
-                                <User className="w-4 h-4" />
-                                <span className="hidden sm:inline">Login</span>
+                                Login / Sign up
                             </Link>
                         )}
 
-                        {/* Mobile Menu */}
                         <button
-                            onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="md:hidden p-2 text-gray-600 hover:text-orange-600"
+                            onClick={() => navigate('/food/cart')}
+                            className="relative flex items-center gap-2 p-2 sm:px-4 sm:py-2.5 bg-orange-600 text-white rounded-2xl font-bold hover:shadow-lg hover:bg-orange-700 transition-all"
                         >
+                            <ShoppingCart className="w-5 h-5" />
+                            <span className="hidden sm:inline">Cart</span>
+                            {itemCount > 0 && (
+                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-white text-orange-600 text-xs font-black rounded-full flex items-center justify-center border-2 border-orange-600">
+                                    {itemCount}
+                                </span>
+                            )}
+                        </button>
+
+                        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden p-2 text-gray-600">
                             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                         </button>
                     </div>
                 </div>
 
-                {/* Mobile Menu */}
-                {isMenuOpen && (
-                    <div className="md:hidden py-4 border-t border-gray-100">
-                        {navLinks.map(link => (
-                            <Link
-                                key={link.path}
-                                to={link.path}
-                                onClick={() => setIsMenuOpen(false)}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-lg ${location.pathname === link.path
-                                    ? 'bg-orange-50 text-orange-600'
-                                    : 'text-gray-600'
-                                    }`}
-                            >
-                                <link.icon className="w-5 h-5" />
-                                {link.label}
-                            </Link>
-                        ))}
-
-                        {/* User section in mobile */}
-                        <div className="border-t border-gray-100 my-2 pt-2">
-                            {user ? (
-                                <>
-                                    <Link
-                                        to="/food/profile"
-                                        onClick={() => setIsMenuOpen(false)}
-                                        className="flex items-center gap-3 px-4 py-3 text-gray-600"
-                                    >
-                                        <User className="w-5 h-5" />
-                                        My Profile ({user.name?.split(' ')[0]})
-                                    </Link>
-                                    <button
-                                        onClick={() => { handleLogout(); setIsMenuOpen(false); }}
-                                        className="flex items-center gap-3 px-4 py-3 text-red-600 w-full"
-                                    >
-                                        <ArrowLeft className="w-5 h-5" />
-                                        Logout
-                                    </button>
-                                </>
-                            ) : (
-                                <Link
-                                    to="/auth"
-                                    onClick={() => setIsMenuOpen(false)}
-                                    className="flex items-center gap-3 px-4 py-3 text-orange-600"
-                                >
-                                    <User className="w-5 h-5" />
-                                    Login / Sign Up
-                                </Link>
-                            )}
-                        </div>
-
-                        {/* Partner link in mobile */}
-                        <Link
-                            to="/food/vendor/login"
-                            onClick={() => setIsMenuOpen(false)}
-                            className="flex items-center gap-3 px-4 py-3 text-amber-600 bg-amber-50 rounded-lg mx-2"
-                        >
-                            <ChefHat className="w-5 h-5" />
-                            Partner with us (Restaurant Login)
-                        </Link>
-
-                        <button
-                            onClick={() => { onSwitchApp(); setIsMenuOpen(false); }}
-                            className="flex items-center gap-3 px-4 py-3 text-violet-600 w-full mt-2"
-                        >
-                            <ShoppingBag className="w-5 h-5" />
-                            Switch to E-Commerce
-                        </button>
+                {/* Mobile Search & Location (Visible only on mobile/tablet) */}
+                <div className="lg:hidden pb-4 space-y-3">
+                    <div
+                        onClick={() => {
+                            setNewLocationInput(location);
+                            setShowLocationModal(true);
+                        }}
+                        className="flex items-center gap-2 bg-gray-100 rounded-xl px-4 py-2 cursor-pointer hover:bg-gray-200"
+                    >
+                        <MapPin className="w-4 h-4 text-orange-500" />
+                        <span className="text-sm font-medium truncate">{location}</span>
                     </div>
-                )}
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search for restaurants or dishes..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && navigate(`/food/restaurants?search=${searchQuery}`)}
+                            className="w-full bg-gray-100 pl-11 pr-4 py-3 rounded-xl text-sm focus:outline-none"
+                        />
+
+                        {/* Mobile Search Suggestions Dropdown */}
+                        {searchSuggestions.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 py-1">
+                                {searchSuggestions.map((suggestion, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => {
+                                            setSearchQuery(suggestion.text);
+                                            setSearchSuggestions([]);
+                                            if (suggestion.type === 'dish') {
+                                                navigate(`/food/restaurant/${suggestion.restaurant_id}#${suggestion.id}`);
+                                            } else if (suggestion.type === 'restaurant') {
+                                                navigate(`/food/restaurant/${suggestion.id}`);
+                                            } else {
+                                                navigate(`/food/restaurants?search=${suggestion.text}`);
+                                            }
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-orange-50 transition-colors text-left"
+                                    >
+                                        <div className="p-1.5 bg-gray-100 rounded-lg">
+                                            {suggestion.type === 'restaurant' ? <Building2 className="w-4 h-4 text-gray-400" /> :
+                                                suggestion.type === 'cuisine' ? <Utensils className="w-4 h-4 text-gray-400" /> :
+                                                    <Pizza className="w-4 h-4 text-gray-400" />}
+                                        </div>
+                                        <span className="text-sm font-semibold text-gray-800">{suggestion.text}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
+
+            {/* Location Selection Modal */}
+            {showLocationModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLocationModal(false)} />
+                    <div className="relative bg-white w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+                        <div className="p-8">
+                            <div className="flex items-center justify-between mb-8">
+                                <h3 className="text-2xl font-black text-gray-900">Delivery Address</h3>
+                                <button onClick={() => setShowLocationModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                    <X className="w-6 h-6 text-gray-500" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-black text-gray-500 uppercase tracking-widest">Select your location</label>
+                                    <div className="relative">
+                                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-500" />
+                                        <input
+                                            type="text"
+                                            placeholder="Enter area, street or city..."
+                                            value={newLocationInput}
+                                            onChange={(e) => setNewLocationInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleLocationUpdate()}
+                                            autoFocus
+                                            className={`w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl text-gray-900 font-bold outline-none transition-all shadow-inner ${suggestions.length > 0 ? 'rounded-b-none' : ''}`}
+                                        />
+
+                                        {/* Autocomplete Suggestions */}
+                                        {suggestions.length > 0 && (
+                                            <div className="absolute left-0 right-0 top-full bg-white border-2 border-t-0 border-orange-500 rounded-b-2xl shadow-xl overflow-hidden z-20">
+                                                {suggestions.map((loc, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => handleLocationUpdate(loc)}
+                                                        className="w-full px-12 py-3 text-left hover:bg-orange-50 font-bold text-gray-700 transition-colors flex items-center gap-3 border-b border-gray-50 last:border-0"
+                                                    >
+                                                        <Search className="w-4 h-4 text-gray-400" />
+                                                        {loc}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 p-3 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold uppercase tracking-wider">
+                                        <Sparkles className="w-4 h-4" />
+                                        <span>Now searching all over India</span>
+                                    </div>
+                                    <p className="text-gray-500 text-sm font-medium leading-relaxed">
+                                        Type your state or district name above to find your exact delivery location.
+                                    </p>
+                                </div>
+
+                                <button
+                                    onClick={handleLocationUpdate}
+                                    className="w-full py-5 bg-orange-600 text-white font-black rounded-2xl shadow-xl shadow-orange-200 hover:bg-orange-700 transition-all text-lg"
+                                >
+                                    Confirm Location
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </nav>
     );
 };
@@ -426,251 +456,334 @@ const FoodNavigation = ({ onSwitchApp }) => {
 
 // Food Home Page
 const FoodHome = () => {
-    const [searchQuery, setSearchQuery] = useState('');
     const navigate = useNavigate();
     const [restaurantsList, setRestaurantsList] = useState([]);
+    const [trendingDishes, setTrendingDishes] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [activeFilter, setActiveFilter] = useState('All');
 
     useEffect(() => {
-        const fetchRestaurants = async () => {
+        const fetchHomeData = async () => {
             try {
                 const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-                const response = await axios.get(`${API_BASE}/api/food/restaurants`);
-                setRestaurantsList(response.data);
+                // Fetch restaurants
+                const resResponse = await axios.get(`${API_BASE}/api/food/restaurants`);
+                setRestaurantsList(resResponse.data);
+
+                // Fetch trending dishes from new endpoint
+                const dishesResponse = await axios.get(`${API_BASE}/api/food/items?limit=8`);
+                setTrendingDishes(dishesResponse.data);
+
             } catch (e) {
-                console.error("Failed to fetch restaurants:", e);
+                console.error("Failed to fetch home data:", e);
             } finally {
                 setLoading(false);
             }
         };
-        fetchRestaurants();
+        fetchHomeData();
     }, []);
 
-    const featuredRestaurants = restaurantsList.filter(r => r.featured);
+    const offers = [
+        { id: 1, title: '50% OFF up to ₹150', sub: 'On all orders above ₹499', code: 'DACH50', color: 'from-orange-500 to-red-600' },
+        { id: 2, title: 'FREE Delivery', sub: 'On your first 3 orders', code: 'WELCOME', color: 'from-blue-500 to-indigo-600' },
+        { id: 3, title: 'Extra ₹100 Cashback', sub: 'Pay using DACH Wallet', code: 'CASH100', color: 'from-emerald-500 to-teal-600' },
+    ];
+
+    const filters = [
+        { label: 'All', icon: null },
+        { label: 'Rating 4.0+', icon: Star },
+        { label: 'Fast Delivery', icon: Clock },
+        { label: 'Veg Only', icon: Salad },
+        { label: 'Offers', icon: Percent },
+    ];
+
+    const trustCards = [
+        { title: 'Fast Delivery', desc: 'Orders delivered within 30 minutes', icon: Bike, color: 'bg-orange-100 text-orange-600' },
+        { title: 'Verified Restaurants', desc: 'Quality and hygiene checked partners', icon: ChefHat, color: 'bg-green-100 text-green-600' },
+        { title: 'Secure Payments', desc: '100% safe & encrypted payments', icon: Check, color: 'bg-blue-100 text-blue-600' },
+        { title: '24/7 Support', desc: 'Real-time help whenever you need it', icon: Phone, color: 'bg-purple-100 text-purple-600' },
+    ];
+
+    const filteredRestaurants = restaurantsList.filter(res => {
+        if (activeFilter === 'All') return true;
+        if (activeFilter === 'Rating 4.0+') return (res.rating || 4.0) >= 4.0;
+        if (activeFilter === 'Fast Delivery') return (res.deliveryTime || 30) <= 30;
+        if (activeFilter === 'Veg Only') return res.menu?.some(item => item.is_veg);
+        if (activeFilter === 'Offers') return res.offers && res.offers.length > 0;
+        return true;
+    });
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-white">
             {/* Hero Section */}
-            <section className="relative bg-gradient-to-br from-orange-500 via-red-500 to-pink-600 py-16 lg:py-24 overflow-hidden">
-                {/* Background decorations */}
-                <div className="absolute inset-0 opacity-20">
-                    <div className="absolute top-10 left-10 w-40 h-40 bg-white rounded-full blur-3xl" />
-                    <div className="absolute bottom-10 right-10 w-60 h-60 bg-yellow-300 rounded-full blur-3xl" />
+            <section className="relative h-[500px] flex items-center bg-gray-900 overflow-hidden">
+                <div className="absolute inset-0 z-0">
+                    <img
+                        src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1600&q=80"
+                        alt="Hero BG"
+                        className="w-full h-full object-cover opacity-40"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-900/80 to-transparent" />
                 </div>
 
-                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid lg:grid-cols-2 gap-12 items-center">
-                        <div className="text-center lg:text-left">
-                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full mb-6">
-                                <Sparkles className="w-4 h-4 text-yellow-300" />
-                                <span className="text-white text-sm font-medium">Delivering happiness since 2024</span>
-                            </div>
-                            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-6">
-                                Delicious Food,
-                                <span className="block text-yellow-300">Delivered Fast!</span>
-                            </h1>
-                            <p className="text-lg text-white/80 mb-8 max-w-lg mx-auto lg:mx-0">
-                                Order from your favorite restaurants and get food delivered to your doorstep in minutes.
-                            </p>
-
-                            {/* Search Bar */}
-                            <div className="relative max-w-md mx-auto lg:mx-0">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search for restaurants or cuisines..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && navigate(`/food/restaurants?search=${searchQuery}`)}
-                                    className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white shadow-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-white/30"
-                                />
-                            </div>
-
-                            {/* Quick Stats */}
-                            <div className="flex items-center gap-8 mt-8 justify-center lg:justify-start">
-                                <div className="text-center">
-                                    <p className="text-2xl font-bold text-white">500+</p>
-                                    <p className="text-white/70 text-sm">Restaurants</p>
-                                </div>
-                                <div className="w-px h-10 bg-white/30" />
-                                <div className="text-center">
-                                    <p className="text-2xl font-bold text-white">~25m</p>
-                                    <p className="text-white/70 text-sm">Avg Delivery</p>
-                                </div>
-                                <div className="w-px h-10 bg-white/30" />
-                                <div className="text-center">
-                                    <p className="text-2xl font-bold text-white">4.8★</p>
-                                    <p className="text-white/70 text-sm">Rating</p>
-                                </div>
-                            </div>
+                <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+                    <div className="max-w-3xl">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600/20 backdrop-blur-md rounded-full mb-6 border border-orange-500/30">
+                            <Sparkles className="w-4 h-4 text-orange-400" />
+                            <span className="text-orange-100 text-sm font-bold uppercase tracking-wider">Trusted by 50K+ Foodies</span>
                         </div>
+                        <h1 className="text-5xl sm:text-7xl font-black text-white leading-tight mb-6">
+                            Order food from your <br />
+                            <span className="text-orange-500">favorite restaurants</span>
+                        </h1>
+                        <p className="text-xl text-gray-300 font-medium mb-10 flex items-center gap-6">
+                            <span className="flex items-center gap-2"><Bike className="w-5 h-5 text-orange-500" /> Fast delivery</span>
+                            <span className="flex items-center gap-2"><Star className="w-5 h-5 text-orange-500" /> Best offers</span>
+                            <span className="flex items-center gap-2"><Utensils className="w-5 h-5 text-orange-500" /> Trusted restaurants</span>
+                        </p>
 
-                        {/* Hero Image */}
-                        <div className="hidden lg:block relative">
-                            <div className="relative">
-                                <img
-                                    src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&h=500&fit=crop"
-                                    alt="Delicious food"
-                                    className="rounded-3xl shadow-2xl"
-                                />
-                                {/* Floating Cards */}
-                                <div className="absolute -left-8 top-1/4 bg-white rounded-2xl p-4 shadow-xl animate-bounce">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                                            <Bike className="w-6 h-6 text-green-600" />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-900">Fast Delivery</p>
-                                            <p className="text-sm text-gray-500">Within 30 mins</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="absolute -right-4 bottom-1/4 bg-white rounded-2xl p-4 shadow-xl animate-bounce delay-500">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                                            <Star className="w-6 h-6 text-orange-600" />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-900">Top Rated</p>
-                                            <p className="text-sm text-gray-500">500+ Reviews</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div className="flex flex-col sm:flex-row items-center gap-6">
+                            <button
+                                onClick={() => navigate('/food/items')}
+                                className="w-full sm:w-auto px-12 py-5 bg-orange-600 text-white font-black rounded-2xl hover:bg-orange-700 transition-all text-xl shadow-2xl shadow-orange-600/30 hover:scale-105 active:scale-95"
+                            >
+                                Order Now
+                            </button>
+                            <button
+                                onClick={() => navigate('/food/restaurants')}
+                                className="w-full sm:w-auto px-12 py-5 bg-white/10 backdrop-blur-md text-white border-2 border-white/20 font-black rounded-2xl hover:bg-white/20 transition-all text-xl hover:scale-105 active:scale-95"
+                            >
+                                Restaurants
+                            </button>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Cuisines */}
-            <section className="py-12 bg-white">
+            {/* Categories */}
+            <section className="py-16 border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">What are you craving?</h2>
-                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-4">
+                    <h2 className="text-3xl font-black text-gray-900 mb-10 text-center">What's on your mind?</h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-8">
                         {cuisines.map(cuisine => (
                             <Link
                                 key={cuisine.id}
                                 to={`/food/restaurants?cuisine=${cuisine.name.toLowerCase()}`}
-                                className="flex flex-col items-center p-4 rounded-2xl hover:bg-gray-50 transition-colors group"
+                                className="flex flex-col items-center group"
                             >
-                                <div className={`w-16 h-16 ${cuisine.color} rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-lg`}>
-                                    <cuisine.icon className="w-8 h-8 text-white" />
+                                <div className={`w-24 h-24 ${cuisine.color} rounded-full flex items-center justify-center p-6 shadow-xl group-hover:scale-110 transition-all duration-300 ring-4 ring-white`}>
+                                    <cuisine.icon className="w-full h-full text-white" />
                                 </div>
-                                <span className="text-sm font-medium text-gray-700">{cuisine.name}</span>
+                                <span className="mt-4 text-base font-bold text-gray-800 group-hover:text-orange-600 transition-colors uppercase tracking-tight">{cuisine.name}</span>
                             </Link>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* Featured Restaurants */}
-            <section className="py-12 bg-gray-50">
+            {/* Trending Dishes */}
+            <section className="py-16 bg-gray-50 overflow-hidden">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center justify-between mb-10">
                         <div>
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Featured Restaurants</h2>
-                            <p className="text-gray-600">Handpicked favorites just for you</p>
+                            <h2 className="text-3xl font-black text-gray-900 mb-2">Popular Dishes</h2>
+                            <p className="text-gray-500 font-medium">The most loved items in your area</p>
                         </div>
-                        <Link
-                            to="/food/restaurants"
-                            className="flex items-center gap-2 text-orange-600 font-medium hover:text-orange-700"
-                        >
-                            View All
-                            <ChevronRight className="w-5 h-5" />
-                        </Link>
+                        <div className="flex gap-2">
+                            <button className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center bg-white hover:bg-orange-50 hover:border-orange-200 transition-colors">
+                                <ArrowLeft className="w-5 h-5" />
+                            </button>
+                            <button className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center bg-white hover:bg-orange-50 hover:border-orange-200 transition-colors">
+                                <ArrowRight className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
-
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {featuredRestaurants.map(restaurant => (
-                            <RestaurantCard key={restaurant.id} restaurant={restaurant} />
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* All Restaurants */}
-            <section className="py-12 bg-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-8">All Restaurants</h2>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {restaurantsList.map(restaurant => (
-                            <RestaurantCard key={restaurant.id} restaurant={restaurant} />
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Promo Banner */}
-            <section className="py-12 bg-gray-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-3xl p-8 lg:p-12 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-                        <div className="relative flex flex-col lg:flex-row items-center justify-between gap-6">
-                            <div className="text-center lg:text-left">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full mb-4">
-                                    <Gift className="w-4 h-4 text-white" />
-                                    <span className="text-white text-sm font-medium">Limited Time</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                        {trendingDishes.map((dish, i) => (
+                            <div key={i} className="bg-white rounded-3xl p-4 shadow-sm hover:shadow-xl transition-all group">
+                                <div className="relative h-48 rounded-2xl overflow-hidden mb-4">
+                                    <img src={dish.image} alt={dish.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg flex items-center gap-1 text-xs font-bold text-gray-700 shadow-sm">
+                                        <Star className="w-3 h-3 text-orange-500 fill-orange-500" /> 4.5
+                                    </div>
                                 </div>
-                                <h3 className="text-3xl font-bold text-white mb-2">First Order? Get 50% OFF!</h3>
-                                <p className="text-white/80">Use code DACHFIRST at checkout</p>
+                                <div className="mb-4">
+                                    <h3 className="font-bold text-gray-900 text-lg mb-1">{dish.name}</h3>
+                                    <p className="text-gray-500 text-sm font-medium">{dish.restaurantName}</p>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xl font-black text-gray-900">₹{dish.price}</span>
+                                    <button
+                                        onClick={() => navigate(`/food/restaurant/${dish.restaurantId}`)}
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700 transition-all shadow-md shadow-orange-200"
+                                    >
+                                        <Plus className="w-4 h-4" /> Add
+                                    </button>
+                                </div>
                             </div>
-                            <Link
-                                to="/food/restaurants"
-                                className="px-8 py-4 bg-white text-orange-600 rounded-2xl font-bold hover:bg-white/90 transition-colors shadow-lg"
-                            >
-                                Order Now
-                            </Link>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* Main Restaurants Section */}
+            <section className="py-20">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
+                        <h2 className="text-3xl font-black text-gray-900">Restaurants Near You</h2>
+
+                        {/* Quick Filters */}
+                        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                            {filters.map(filter => (
+                                <button
+                                    key={filter.label}
+                                    onClick={() => setActiveFilter(filter.label)}
+                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold border transition-all whitespace-nowrap ${activeFilter === filter.label
+                                        ? 'bg-orange-600 text-white border-orange-600 shadow-lg shadow-orange-100'
+                                        : 'bg-white text-gray-700 border-gray-200 hover:border-orange-300'
+                                        }`}
+                                >
+                                    {filter.icon && <filter.icon className="w-4 h-4" />}
+                                    {filter.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-10">
+                        {filteredRestaurants.length > 0 ? (
+                            filteredRestaurants.map(restaurant => (
+                                <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+                            ))
+                        ) : (
+                            <div className="col-span-full py-20 text-center bg-gray-50 rounded-[40px] border-2 border-dashed border-gray-200">
+                                <Utensils className="w-20 h-20 text-gray-300 mx-auto mb-6" />
+                                <h3 className="text-2xl font-bold text-gray-800 mb-2">Finding local flavors...</h3>
+                                <p className="text-gray-500 font-medium">Try exploring other cuisines</p>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="mt-16 text-center">
+                        <button onClick={() => navigate('/food/restaurants')} className="px-12 py-5 bg-white border-2 border-orange-600 text-orange-600 font-black rounded-3xl hover:bg-orange-50 transition-all text-lg shadow-xl shadow-orange-50">
+                            See More Restaurants
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            {/* Why Choose Us */}
+            <section className="py-20 bg-gray-900 text-white overflow-hidden relative">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+                    <h2 className="text-4xl font-black mb-4">Why Choose Us?</h2>
+                    <p className="text-gray-400 font-medium mb-16 max-w-2xl mx-auto text-lg text-center">Discover the best of food delivery with your favorite partners and fast delivery.</p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                        {trustCards.map((card, i) => (
+                            <div key={i} className="bg-gray-800/50 backdrop-blur-md p-10 rounded-[40px] border border-gray-700 hover:border-orange-500/50 transition-all group">
+                                <div className={`w-20 h-20 ${card.color} rounded-[28px] flex items-center justify-center mb-8 mx-auto group-hover:scale-110 transition-transform`}>
+                                    <card.icon className="w-10 h-10" />
+                                </div>
+                                <h4 className="text-2xl font-bold mb-4">{card.title}</h4>
+                                <p className="text-gray-400 font-medium leading-relaxed">{card.desc}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* App Download Banner */}
+            <section className="py-20">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-[50px] p-10 lg:p-20 flex flex-col lg:flex-row items-center gap-16 overflow-hidden relative">
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
+                        <div className="relative z-10 lg:w-3/5 text-center lg:text-left">
+                            <h2 className="text-4xl sm:text-6xl font-black text-white mb-8">Best experience is on the DACHBites App</h2>
+                            <p className="text-xl text-white/80 font-medium mb-12">Get special offers, track your order in real-time, and order faster with our mobile app.</p>
+                            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6">
+                                <div className="relative group">
+                                    <button className="transition-transform opacity-50 cursor-not-allowed">
+                                        <div className="bg-black px-8 py-4 rounded-2xl flex items-center gap-4 text-white">
+                                            <div className="p-2 bg-white/10 rounded-lg"><Zap className="w-6 h-6 fill-white" /></div>
+                                            <div className="text-left"><p className="text-xs font-bold text-gray-400 uppercase">Get it on</p><p className="text-xl font-black">Google Play</p></div>
+                                        </div>
+                                    </button>
+                                    <div className="absolute top-0 right-0 -mr-2 -mt-2">
+                                        <span className="bg-white text-orange-600 text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wider shadow-xl border border-orange-100">Coming Soon</span>
+                                    </div>
+                                </div>
+
+                                <div className="relative group">
+                                    <button className="transition-transform opacity-50 cursor-not-allowed">
+                                        <div className="bg-black px-8 py-4 rounded-2xl flex items-center gap-4 text-white border border-gray-800">
+                                            <div className="p-2 bg-white/10 rounded-lg"><Sparkles className="w-6 h-6 fill-white" /></div>
+                                            <div className="text-left"><p className="text-xs font-bold text-gray-400 uppercase">Download on the</p><p className="text-xl font-black">App Store</p></div>
+                                        </div>
+                                    </button>
+                                    <div className="absolute top-0 right-0 -mr-2 -mt-2">
+                                        <span className="bg-white text-orange-600 text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wider shadow-xl border border-orange-100">Coming Soon</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="lg:w-2/5 relative">
+                            <div className="w-full h-80 bg-white/20 backdrop-blur-md rounded-[40px] border border-white/20 p-8 transform lg:rotate-6">
+                                <div className="space-y-4">
+                                    <div className="h-4 w-3/4 bg-white/40 rounded-full" />
+                                    <div className="h-40 w-full bg-white/20 rounded-2xl" />
+                                    <div className="flex gap-2"><div className="h-10 w-10 bg-white/60 rounded-xl" /><div className="h-10 w-full bg-white/40 rounded-xl" /></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
 
             {/* Footer */}
-            <footer className="bg-gray-900 py-12">
+            <footer className="bg-gray-900 border-t border-gray-800 py-24 text-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid md:grid-cols-4 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-16">
                         <div>
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center">
-                                    <Utensils className="w-5 h-5 text-white" />
-                                </div>
-                                <span className="text-xl font-bold text-white">DACHBites</span>
+                            <div className="flex items-center gap-3 mb-8">
+                                <div className="w-12 h-12 bg-orange-600 rounded-2xl flex items-center justify-center"><Utensils className="w-6 h-6 text-white" /></div>
+                                <span className="text-3xl font-black tracking-tight">DACHBites</span>
                             </div>
-                            <p className="text-gray-400 text-sm">
-                                Delivering delicious food from the best restaurants near you.
-                            </p>
+                            <p className="text-gray-400 font-medium leading-relaxed text-lg">Delivering delicious food and happiness to your doorstep everyday.</p>
                         </div>
                         <div>
-                            <h4 className="text-white font-semibold mb-4">Quick Links</h4>
-                            <ul className="space-y-2">
-                                <li><Link to="/food" className="text-gray-400 hover:text-white text-sm">Home</Link></li>
-                                <li><Link to="/food/restaurants" className="text-gray-400 hover:text-white text-sm">Restaurants</Link></li>
-                                <li><Link to="/food/orders" className="text-gray-400 hover:text-white text-sm">My Orders</Link></li>
-                                <li><Link to="/food/vendor/login" className="text-gray-400 hover:text-orange-400 text-sm">Partner with us 🍽️</Link></li>
+                            <h4 className="text-xl font-bold mb-8">Company</h4>
+                            <ul className="space-y-4">
+                                <li><Link to="/about" className="text-gray-400 hover:text-white transition-colors">About Us</Link></li>
+                                <li><Link to="/contact" className="text-gray-400 hover:text-white transition-colors">Contact</Link></li>
+                                <li><Link to="/careers" className="text-gray-400 hover:text-white transition-colors">Careers</Link></li>
+                                <li><Link to="/food/vendor/login" className="text-orange-500 font-bold hover:underline">Partner with us 🍽️</Link></li>
                             </ul>
                         </div>
                         <div>
-                            <h4 className="text-white font-semibold mb-4">Support</h4>
-                            <ul className="space-y-2">
-                                <li><a href="#" className="text-gray-400 hover:text-white text-sm">Help Center</a></li>
-                                <li><a href="#" className="text-gray-400 hover:text-white text-sm">Contact Us</a></li>
-                                <li><a href="#" className="text-gray-400 hover:text-white text-sm">FAQs</a></li>
+                            <h4 className="text-xl font-bold mb-8">Support</h4>
+                            <ul className="space-y-4">
+                                <li><Link to="/help" className="text-gray-400 hover:text-white transition-colors">Help Center</Link></li>
+                                <li><Link to="/privacy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
+                                <li><Link to="/terms" className="text-gray-400 hover:text-white transition-colors">Terms of Use</Link></li>
                             </ul>
                         </div>
                         <div>
-                            <h4 className="text-white font-semibold mb-4">Contact</h4>
-                            <ul className="space-y-2">
-                                <li className="flex items-center gap-2 text-gray-400 text-sm">
-                                    <Phone className="w-4 h-4" /> +91 1234567890
-                                </li>
-                                <li className="flex items-center gap-2 text-gray-400 text-sm">
-                                    <Mail className="w-4 h-4" /> support@DACHbites.com
-                                </li>
-                            </ul>
+                            <h4 className="text-xl font-bold mb-8">Follow Us</h4>
+                            <div className="flex gap-4">
+                                {[1, 2, 3, 4].map(i => (
+                                    <button key={i} className="w-12 h-12 bg-gray-800 rounded-2xl flex items-center justify-center hover:bg-orange-600 transition-colors">
+                                        <Heart className="w-5 h-5" />
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
-                    <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500 text-sm">
-                        © 2024 DACHBites. All rights reserved.
+                    <div className="mt-20 pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 text-gray-500 font-medium">
+                        <p>© 2024 DACHBites. Real-time food delivery engine.</p>
+                        <div className="flex items-center gap-6">
+                            <span>English (US)</span>
+                            <span>₹ INR</span>
+                        </div>
                     </div>
                 </div>
             </footer>
@@ -681,50 +794,65 @@ const FoodHome = () => {
 // Restaurant Card Component
 const RestaurantCard = ({ restaurant }) => {
     const navigate = useNavigate();
+    const isOpen = restaurant.is_open ?? true;
 
     return (
         <div
             onClick={() => navigate(`/food/restaurant/${restaurant.id}`)}
-            className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer group"
+            className="group bg-white rounded-[40px] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer border border-gray-100 flex flex-col h-full"
         >
-            {/* Image */}
-            <div className="relative h-48 overflow-hidden">
+            {/* Image Section */}
+            <div className="relative h-64 overflow-hidden">
                 <img
                     src={restaurant.image}
                     alt={restaurant.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                 />
-                {restaurant.offers.length > 0 && (
-                    <div className="absolute bottom-3 left-3 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
-                        <Percent className="w-3 h-3" />
-                        {restaurant.offers[0].split(' ')[0]}
+
+                {/* Offer Badge */}
+                {restaurant.offers && restaurant.offers.length > 0 && (
+                    <div className="absolute bottom-4 left-4 right-4 bg-gradient-to-r from-orange-600 to-red-600 text-white p-3 rounded-2xl shadow-xl flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Percent className="w-5 h-5" />
+                            <span className="font-black text-sm uppercase tracking-tight">{restaurant.offers[0]}</span>
+                        </div>
                     </div>
                 )}
-                <button className="absolute top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors">
-                    <Heart className="w-5 h-5 text-gray-400 hover:text-red-500" />
+
+                {/* Status Badge */}
+                {!isOpen && (
+                    <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-[2px] flex items-center justify-center">
+                        <span className="px-6 py-2 bg-white text-gray-900 font-black rounded-full uppercase tracking-widest text-sm shadow-xl">Currently Closed</span>
+                    </div>
+                )}
+
+                <button className="absolute top-4 right-4 w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white shadow-lg group/btn">
+                    <Heart className="w-6 h-6 text-gray-400 group-hover/btn:text-red-500 group-hover/btn:fill-red-500 transition-all" />
                 </button>
             </div>
 
-            {/* Content */}
-            <div className="p-5">
-                <div className="flex items-start justify-between mb-2">
+            {/* Content Section */}
+            <div className="p-8 flex-grow flex flex-col">
+                <div className="flex items-start justify-between mb-4">
                     <div>
-                        <h3 className="text-lg font-bold text-gray-900">{restaurant.name}</h3>
-                        <p className="text-gray-500 text-sm">{restaurant.cuisine}</p>
+                        <h3 className="text-2xl font-black text-gray-900 mb-1 group-hover:text-orange-600 transition-colors leading-tight">{restaurant.name}</h3>
+                        <p className="text-gray-500 font-bold text-sm uppercase tracking-wider">{restaurant.cuisine}</p>
                     </div>
-                    <div className="flex items-center gap-1 px-2 py-1 bg-green-500 text-white text-sm font-bold rounded-lg">
-                        {restaurant.rating}
-                        <Star className="w-3 h-3 fill-current" />
+                    <div className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm font-black rounded-xl shadow-lg shadow-green-100">
+                        {restaurant.rating || "4.0"}
+                        <Star className="w-3.5 h-3.5 fill-current" />
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-sm text-gray-500 mt-3">
-                    <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {restaurant.deliveryTime} min
-                    </span>
-                    <span>•</span>
-                    <span>₹{restaurant.deliveryFee} delivery</span>
+                <div className="mt-auto pt-6 border-t border-gray-50 flex items-center justify-between text-gray-600">
+                    <div className="flex items-center gap-1.5 font-bold">
+                        <Clock className="w-5 h-5 text-orange-500" />
+                        <span>{restaurant.deliveryTime || "25-35"} min</span>
+                    </div>
+                    <div className="h-2 w-2 rounded-full bg-gray-300" />
+                    <div className="font-black text-gray-900">
+                        ₹{restaurant.avg_cost_for_one || "200"} <span className="text-gray-400 font-bold text-xs uppercase">for one</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -734,6 +862,7 @@ const RestaurantCard = ({ restaurant }) => {
 // Restaurant Detail Page
 const RestaurantDetail = () => {
     const { id } = useParams();
+    const location = useLocation();
     const [restaurant, setRestaurant] = useState(null);
     const [loading, setLoading] = useState(true);
     const { addToCart, cartItems, updateQuantity } = useFoodCart();
@@ -753,6 +882,22 @@ const RestaurantDetail = () => {
         };
         fetchRestaurant();
     }, [id]);
+
+    useEffect(() => {
+        if (!loading && restaurant && location.hash) {
+            const dishId = location.hash.substring(1);
+            const element = document.getElementById(dishId);
+            if (element) {
+                setTimeout(() => {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    element.classList.add('ring-2', 'ring-orange-500', 'ring-offset-4', 'scale-[1.02]');
+                    setTimeout(() => {
+                        element.classList.remove('ring-2', 'ring-orange-500', 'ring-offset-4', 'scale-[1.02]');
+                    }, 3000);
+                }, 500);
+            }
+        }
+    }, [loading, restaurant, location.hash]);
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -841,7 +986,8 @@ const RestaurantDetail = () => {
                         return (
                             <div
                                 key={item.id}
-                                className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
+                                id={item.id}
+                                className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm hover:shadow-md transition-all duration-500"
                             >
                                 {/* Image */}
                                 <div className="relative w-28 h-28 flex-shrink-0 rounded-xl overflow-hidden">
@@ -921,9 +1067,12 @@ const RestaurantsList = () => {
         if (search) setSearchQuery(search);
 
         const fetchRestaurants = async () => {
+            setLoading(true);
             try {
                 const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-                const response = await axios.get(`${API_BASE}/api/food/restaurants`);
+                const response = await axios.get(`${API_BASE}/api/food/restaurants`, {
+                    params: { search, cuisine }
+                });
                 setRestaurantsList(response.data);
             } catch (e) {
                 console.error("Failed to fetch restaurants:", e);
@@ -935,10 +1084,8 @@ const RestaurantsList = () => {
     }, [location.search]);
 
     const filteredRestaurants = restaurantsList.filter(r => {
-        const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (r.cuisine_type || "").toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCuisine = !selectedCuisine || (r.cuisine_type || "").toLowerCase() === selectedCuisine.toLowerCase();
-        return matchesSearch && matchesCuisine;
+        return matchesCuisine;
     });
 
     return (
@@ -1010,6 +1157,86 @@ const RestaurantsList = () => {
                         <p className="text-gray-500">Try adjusting your search or filters</p>
                     </div>
                 )}
+            </div>
+        </div>
+    );
+};
+
+// Food Items List Page (New Marketplace)
+const FoodItemsList = () => {
+    const [itemsList, setItemsList] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const { addToCart } = useFoodCart();
+
+    useEffect(() => {
+        const fetchItems = async () => {
+            try {
+                const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                const response = await axios.get(`${API_BASE}/api/food/items?limit=50`);
+                setItemsList(response.data);
+            } catch (e) {
+                console.error("Failed to fetch food items:", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchItems();
+    }, []);
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    );
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div className="mb-12">
+                    <h1 className="text-5xl font-black text-gray-900 mb-4">Order Your Favorite Dishes</h1>
+                    <p className="text-gray-500 font-bold text-xl uppercase tracking-widest">Global Marketplace / Freshly Prepared</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {itemsList.map((item, i) => (
+                        <div key={i} className="bg-white rounded-[32px] p-4 shadow-sm hover:shadow-2xl transition-all duration-500 group border border-gray-100 flex gap-6 items-center">
+                            {/* Flex Left: Image */}
+                            <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-[24px] overflow-hidden flex-shrink-0">
+                                <img
+                                    src={item.image}
+                                    alt={item.name}
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                />
+                                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg flex items-center gap-1 text-[10px] font-black text-gray-900 shadow-sm uppercase tracking-tight">
+                                    <Star className="w-3 h-3 text-orange-500 fill-orange-500" /> 4.8 Rating
+                                </div>
+                            </div>
+
+                            {/* Flex Right: Content */}
+                            <div className="flex-grow pr-4">
+                                <div className="mb-4">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className={`w-3 h-3 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none outline-none">{item.is_veg ? 'Veg' : 'Non-Veg'}</span>
+                                    </div>
+                                    <h3 className="font-black text-gray-900 text-xl sm:text-2xl mb-1 group-hover:text-orange-600 transition-colors leading-tight">{item.name}</h3>
+                                    <p className="text-gray-400 font-bold text-xs uppercase tracking-widest mb-2">{item.restaurant_name}</p>
+                                    <p className="text-gray-500 text-sm line-clamp-2 font-medium leading-relaxed">{item.description || 'Succulent and flavorful dish prepared with fresh ingredients and traditional spices.'}</p>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <span className="text-2xl font-black text-gray-900">₹{item.price}</span>
+                                    <button
+                                        onClick={() => addToCart(item, item.restaurant_id, item.restaurant_name)}
+                                        className="px-6 py-2.5 bg-orange-600 text-white font-black rounded-xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-100 flex items-center gap-2 hover:scale-105 active:scale-95 text-sm"
+                                    >
+                                        <Plus className="w-4 h-4" /> ADD
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     );
@@ -1234,6 +1461,7 @@ const FoodApp = ({ onSwitchApp }) => {
                 <FoodNavigation onSwitchApp={onSwitchApp} />
                 <Routes>
                     <Route path="/" element={<FoodHome />} />
+                    <Route path="/items" element={<FoodItemsList />} />
                     <Route path="/restaurants" element={<RestaurantsList />} />
                     <Route path="/restaurant/:id" element={<RestaurantDetail />} />
                     <Route path="/cart" element={<FoodCart />} />

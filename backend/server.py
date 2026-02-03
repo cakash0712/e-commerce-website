@@ -3036,15 +3036,19 @@ async def register_food_vendor(vendor_data: FoodVendorCreate):
         "address": vendor_data.address,
         "city": vendor_data.city,
         "pincode": vendor_data.pincode,
-        "cuisine_type": vendor_data.cuisine_type,
+        "cuisine_type": vendor_data.cuisine_type or "General",
+        "cuisine": vendor_data.cuisine_type or "General", # Compatibility
         "restaurant_type": vendor_data.restaurant_type,
         "phone": vendor_data.phone,
         "is_open": True,
-        "rating": 0,
+        "rating": 4.0, # Initial rating
         "reviews_count": 0,
         "delivery_time": vendor_data.avg_delivery_time or "30-45",
         "minimum_order": 100,
         "delivery_fee": 30,
+        "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=400&fit=crop", # Default image
+        "featured": True, # Feature new signups by default
+        "offers": [],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -3091,15 +3095,51 @@ async def get_current_food_vendor(authorization: Annotated[Optional[str], Header
 # Get Food Vendor's Restaurant
 @api_router.get("/food/vendor/restaurant")
 async def get_food_vendor_restaurant(current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+    # Search by vendor_id first
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    
+    # Fallback to restaurant_id if not found by vendor_id
+    if not restaurant and current_vendor.get('restaurant_id'):
+        restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
+        
     if restaurant and '_id' in restaurant:
         del restaurant['_id']
     return restaurant or {}
+
+# Update Food Vendor's Restaurant
+@api_router.put("/food/vendor/restaurant")
+async def update_food_vendor_restaurant(restaurant_data: dict, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+    # Search by vendor_id first
+    restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    
+    # Fallback to restaurant_id if not found by vendor_id
+    if not restaurant and current_vendor.get('restaurant_id'):
+        restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
+        
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    
+    # Remove fields that shouldn't be updated directly
+    data_to_update = {k: v for k, v in restaurant_data.items() if k not in ['id', 'vendor_id', '_id', 'created_at']}
+    
+    # Add/Update compatibility field
+    if 'cuisine_type' in data_to_update:
+        data_to_update['cuisine'] = data_to_update['cuisine_type']
+    
+    await food_db.restaurants.update_one(
+        {"id": restaurant['id']},
+        {"$set": {**data_to_update, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Restaurant profile updated successfully"}
 
 # Get Food Vendor Stats
 @api_router.get("/food/vendor/stats")
 async def get_food_vendor_stats(current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant and current_vendor.get('restaurant_id'):
+        restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
+        
     if not restaurant:
         return {
             "totalOrders": 0,
@@ -3135,7 +3175,7 @@ async def get_food_vendor_stats(current_vendor: Annotated[dict, Depends(get_curr
     total_revenue = revenue_result[0]['total'] if revenue_result else 0
     
     # Menu items count
-    menu_count = await food_db.menu_items.count_documents({"restaurant_id": restaurant_id})
+    menu_count = await food_db.food_items.count_documents({"restaurant_id": restaurant_id})
     
     return {
         "totalOrders": total_orders,
@@ -3150,10 +3190,13 @@ async def get_food_vendor_stats(current_vendor: Annotated[dict, Depends(get_curr
 @api_router.get("/food/vendor/menu")
 async def get_food_vendor_menu(current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant and current_vendor.get('restaurant_id'):
+        restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
+        
     if not restaurant:
         return []
     
-    items = await food_db.menu_items.find({"restaurant_id": restaurant['id']}).to_list(None)
+    items = await food_db.food_items.find({"restaurant_id": restaurant['id']}).to_list(None)
     for item in items:
         if '_id' in item:
             del item['_id']
@@ -3162,6 +3205,9 @@ async def get_food_vendor_menu(current_vendor: Annotated[dict, Depends(get_curre
 @api_router.post("/food/vendor/menu")
 async def add_menu_item(item_data: MenuItemCreate, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant and current_vendor.get('restaurant_id'):
+        restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
+        
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
     
@@ -3172,17 +3218,20 @@ async def add_menu_item(item_data: MenuItemCreate, current_vendor: Annotated[dic
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
-    await food_db.menu_items.insert_one(item_doc)
+    await food_db.food_items.insert_one(item_doc)
     item_doc.pop('_id', None)
     return item_doc
 
 @api_router.put("/food/vendor/menu/{item_id}")
 async def update_menu_item(item_id: str, item_data: MenuItemCreate, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant and current_vendor.get('restaurant_id'):
+        restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
+        
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
     
-    result = await food_db.menu_items.update_one(
+    result = await food_db.food_items.update_one(
         {"id": item_id, "restaurant_id": restaurant['id']},
         {"$set": item_data.model_dump()}
     )
@@ -3195,10 +3244,13 @@ async def update_menu_item(item_id: str, item_data: MenuItemCreate, current_vend
 @api_router.delete("/food/vendor/menu/{item_id}")
 async def delete_menu_item(item_id: str, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant and current_vendor.get('restaurant_id'):
+        restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
+        
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
     
-    result = await food_db.menu_items.delete_one({"id": item_id, "restaurant_id": restaurant['id']})
+    result = await food_db.food_items.delete_one({"id": item_id, "restaurant_id": restaurant['id']})
     
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Menu item not found")
@@ -3208,10 +3260,13 @@ async def delete_menu_item(item_id: str, current_vendor: Annotated[dict, Depends
 @api_router.patch("/food/vendor/menu/{item_id}/availability")
 async def toggle_menu_availability(item_id: str, data: MenuItemAvailability, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant and current_vendor.get('restaurant_id'):
+        restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
+        
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
     
-    await food_db.menu_items.update_one(
+    await food_db.food_items.update_one(
         {"id": item_id, "restaurant_id": restaurant['id']},
         {"$set": {"is_available": data.is_available}}
     )
@@ -3222,6 +3277,9 @@ async def toggle_menu_availability(item_id: str, data: MenuItemAvailability, cur
 @api_router.get("/food/vendor/orders")
 async def get_food_vendor_orders(current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant and current_vendor.get('restaurant_id'):
+        restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
+        
     if not restaurant:
         return []
     
@@ -3238,6 +3296,9 @@ async def get_food_vendor_orders(current_vendor: Annotated[dict, Depends(get_cur
 @api_router.patch("/food/vendor/orders/{order_id}/status")
 async def update_food_order_status(order_id: str, data: FoodOrderStatusUpdate, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
+    if not restaurant and current_vendor.get('restaurant_id'):
+        restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
+        
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
     
@@ -3264,22 +3325,95 @@ async def get_food_categories():
             del cat['_id']
     return categories
 
+@api_router.get("/food/locations/search")
+async def search_locations(q: str = ""):
+    if not q or len(q) < 2:
+        return []
+    
+    # Use regex for case-insensitive search
+    query = {"name": {"$regex": q, "$options": "i"}}
+    locations = await food_db.locations.find(query).limit(10).to_list(None)
+    
+    return [loc['name'] for loc in locations]
+
+@api_router.get("/food/search/suggestions")
+async def get_search_suggestions(q: str = ""):
+    if not q or len(q) < 2:
+        return []
+    
+    # Search in restaurants (name, cuisine)
+    res_matches = await food_db.restaurants.find({"$or": [
+        {"name": {"$regex": q, "$options": "i"}},
+        {"cuisine_type": {"$regex": q, "$options": "i"}}
+    ]}).limit(5).to_list(None)
+    
+    # Search in food items (name)
+    item_matches = await food_db.food_items.find({"name": {"$regex": q, "$options": "i"}}).limit(5).to_list(None)
+    
+    suggestions = []
+    for r in res_matches:
+        suggestions.append({"text": r['name'], "type": "restaurant", "id": r['id']})
+        if 'cuisine_type' in r and q.lower() in r['cuisine_type'].lower():
+            suggestions.append({"text": r['cuisine_type'], "type": "cuisine"})
+            
+    for i in item_matches:
+        suggestions.append({
+            "text": i['name'], 
+            "type": "dish", 
+            "id": i['id'], 
+            "restaurant_id": i['restaurant_id']
+        })
+        
+    # Remove duplicates
+    unique_suggestions = []
+    seen = set()
+    for s in suggestions:
+        if s['text'].lower() not in seen:
+            unique_suggestions.append(s)
+            seen.add(s['text'].lower())
+            
+    return unique_suggestions[:10]
+
 @api_router.get("/food/restaurants")
 async def get_restaurants(
     category: Optional[str] = None,
     cuisine: Optional[str] = None,
+    search: Optional[str] = None,
     limit: int = 50
 ):
     query = {"is_open": True}
+    
     if category:
         query["categories"] = category
+    
     if cuisine:
         query["cuisine_type"] = {"$regex": cuisine, "$options": "i"}
+        
+    if search:
+        search_query = {"$regex": search, "$options": "i"}
+        
+        # Also search in food items to find restaurants that serve the dish
+        matching_items = await food_db.food_items.find({"name": search_query}).to_list(100)
+        restaurant_ids_from_items = list(set([item['restaurant_id'] for item in matching_items]))
+        
+        query["$or"] = [
+            {"name": search_query},
+            {"cuisine_type": search_query},
+            {"categories": search_query},
+            {"description": search_query},
+            {"id": {"$in": restaurant_ids_from_items}}
+        ]
     
     restaurants = await food_db.restaurants.find(query).limit(limit).to_list(None)
     for r in restaurants:
         if '_id' in r:
             del r['_id']
+        # Compatibility fix: ensure 'cuisine' exists if 'cuisine_type' does
+        if 'cuisine_type' in r and 'cuisine' not in r:
+            r['cuisine'] = r['cuisine_type']
+        # Default fields
+        if 'image' not in r: r['image'] = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=400&fit=crop"
+        if 'offers' not in r: r['offers'] = []
     return restaurants
 
 @api_router.get("/food/restaurants/{restaurant_id}")
@@ -3291,8 +3425,14 @@ async def get_restaurant_detail(restaurant_id: str):
     if '_id' in restaurant:
         del restaurant['_id']
     
+    # Compatibility fix
+    if 'cuisine_type' in restaurant and 'cuisine' not in restaurant:
+        restaurant['cuisine'] = restaurant['cuisine_type']
+    if 'image' not in restaurant: restaurant['image'] = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=400&fit=crop"
+    if 'offers' not in restaurant: restaurant['offers'] = []
+    
     # Get menu items
-    menu = await food_db.menu_items.find({"restaurant_id": restaurant_id, "is_available": True}).to_list(None)
+    menu = await food_db.food_items.find({"restaurant_id": restaurant_id, "is_available": True}).to_list(None)
     for item in menu:
         if '_id' in item:
             del item['_id']
@@ -3320,6 +3460,17 @@ async def place_food_order(order: dict, current_user: Annotated[dict, Depends(ge
     }
     await food_db.food_orders.insert_one(order_doc)
     return {"id": order_id, "message": "Order placed successfully"}
+
+@api_router.get("/food/items")
+async def get_all_food_items(limit: int = 20):
+    items = await food_db.food_items.find({"is_available": True}).limit(limit).to_list(None)
+    for item in items:
+        if '_id' in item: del item['_id']
+        # Optionally attach restaurant info
+        restaurant = await food_db.restaurants.find_one({"id": item['restaurant_id']})
+        if restaurant:
+            item['restaurant_name'] = restaurant.get('name')
+    return items
 
 @api_router.get("/food/orders")
 async def get_user_food_orders(current_user: Annotated[dict, Depends(get_current_user)]):

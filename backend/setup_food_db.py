@@ -119,11 +119,11 @@ async def setup_food_database():
     await food_db.restaurants.create_index("is_open")
     await food_db.restaurants.create_index([("location", "2dsphere")])
     
-    # Menu items indexes
-    await food_db.menu_items.create_index("id", unique=True)
-    await food_db.menu_items.create_index("restaurant_id")
-    await food_db.menu_items.create_index("category")
-    await food_db.menu_items.create_index("is_available")
+    # Food items indexes
+    await food_db.food_items.create_index("id", unique=True)
+    await food_db.food_items.create_index("restaurant_id")
+    await food_db.food_items.create_index("category")
+    await food_db.food_items.create_index("is_available")
     
     # Food orders indexes
     await food_db.food_orders.create_index("id", unique=True)
@@ -197,7 +197,7 @@ async def setup_food_database():
             {"id": "item-102", "restaurant_id": "rest-1", "name": "Paneer Tikka", "price": 280, "description": "Grilled cottage cheese with spices", "image": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=300&h=200&fit=crop", "category": "Starters", "is_veg": True, "is_available": True, "bestseller": True},
             {"id": "item-103", "restaurant_id": "rest-2", "name": "Margherita Pizza", "price": 299, "description": "Classic tomato, mozzarella & basil", "image": "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=300&h=200&fit=crop", "category": "Pizza", "is_veg": True, "is_available": True, "bestseller": True}
         ]
-        await food_db.menu_items.insert_many(sample_menu)
+        await food_db.food_items.insert_many(sample_menu)
         print(f"  Created {len(sample_restaurants)} restaurants and their menu items.")
     
     # 3. List all collections
@@ -209,7 +209,7 @@ async def setup_food_database():
     print(f"Database: food_delivery")
     print(f"Categories: {await food_db.food_categories.count_documents({})}")
     print(f"Restaurants: {await food_db.restaurants.count_documents({})}")
-    print(f"Menu Items: {await food_db.menu_items.count_documents({})}")
+    print(f"Menu Items: {await food_db.food_items.count_documents({})}")
     print(f"Food Orders: {await food_db.food_orders.count_documents({})}")
     print(f"Food Vendors: {await food_db.food_vendors.count_documents({})}")
     

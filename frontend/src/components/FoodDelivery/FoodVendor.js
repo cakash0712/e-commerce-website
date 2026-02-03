@@ -70,6 +70,17 @@ const FoodVendor = () => {
         spice_level: "medium"
     });
 
+    // Restaurant Profile Form State
+    const [restaurantForm, setRestaurantForm] = useState({
+        name: "",
+        phone: "",
+        address: "",
+        cuisine_type: "",
+        opening_time: "",
+        closing_time: "",
+        image: ""
+    });
+
     // Check authentication
     useEffect(() => {
         if (!user) {
@@ -94,6 +105,16 @@ const FoodVendor = () => {
             if (restaurantRes.ok) {
                 const data = await restaurantRes.json();
                 setRestaurant(data);
+                // Initialize form
+                setRestaurantForm({
+                    name: data.name || "",
+                    phone: data.phone || "",
+                    address: data.address || "",
+                    cuisine_type: data.cuisine_type || "",
+                    opening_time: data.opening_time || "",
+                    closing_time: data.closing_time || "",
+                    image: data.image || ""
+                });
             }
 
             // Fetch menu items
@@ -218,6 +239,31 @@ const FoodVendor = () => {
             ));
         } catch (error) {
             console.error("Failed to toggle availability:", error);
+        }
+    };
+
+    const handleSaveProfile = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API}/food/vendor/restaurant`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(restaurantForm)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                alert(data.message || "Profile updated successfully!");
+                setRestaurant({ ...restaurant, ...restaurantForm });
+            } else {
+                alert("Failed to update profile");
+            }
+        } catch (error) {
+            console.error("Failed to update profile:", error);
+            alert("Error updating profile");
         }
     };
 
@@ -667,29 +713,53 @@ const FoodVendor = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>Restaurant Name</Label>
-                            <Input value={restaurant?.name || user?.restaurant_name || ""} placeholder="Restaurant Name" />
+                            <Input
+                                value={restaurantForm.name}
+                                onChange={(e) => setRestaurantForm({ ...restaurantForm, name: e.target.value })}
+                                placeholder="Restaurant Name"
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label>Contact Phone</Label>
-                            <Input value={restaurant?.phone || user?.phone || ""} placeholder="Phone Number" />
+                            <Input
+                                value={restaurantForm.phone}
+                                onChange={(e) => setRestaurantForm({ ...restaurantForm, phone: e.target.value })}
+                                placeholder="Phone Number"
+                            />
                         </div>
                     </div>
                     <div className="space-y-2">
                         <Label>Address</Label>
-                        <Input value={restaurant?.address || user?.address || ""} placeholder="Full Address" />
+                        <Input
+                            value={restaurantForm.address}
+                            onChange={(e) => setRestaurantForm({ ...restaurantForm, address: e.target.value })}
+                            placeholder="Full Address"
+                        />
                     </div>
                     <div className="space-y-2">
                         <Label>Cuisine Types</Label>
-                        <Input value={restaurant?.cuisine_type || user?.cuisine_type || ""} placeholder="e.g. Indian, Chinese" />
+                        <Input
+                            value={restaurantForm.cuisine_type}
+                            onChange={(e) => setRestaurantForm({ ...restaurantForm, cuisine_type: e.target.value })}
+                            placeholder="e.g. Indian, Chinese"
+                        />
                     </div>
                     <div className="space-y-2">
                         <Label>Operating Hours</Label>
                         <div className="grid grid-cols-2 gap-4">
-                            <Input placeholder="Open (e.g. 09:00)" defaultValue={user?.opening_time} />
-                            <Input placeholder="Close (e.g. 22:00)" defaultValue={user?.closing_time} />
+                            <Input
+                                placeholder="Open (e.g. 09:00)"
+                                value={restaurantForm.opening_time}
+                                onChange={(e) => setRestaurantForm({ ...restaurantForm, opening_time: e.target.value })}
+                            />
+                            <Input
+                                placeholder="Close (e.g. 22:00)"
+                                value={restaurantForm.closing_time}
+                                onChange={(e) => setRestaurantForm({ ...restaurantForm, closing_time: e.target.value })}
+                            />
                         </div>
                     </div>
-                    <Button className="bg-orange-600">Save Profile</Button>
+                    <Button onClick={handleSaveProfile} className="bg-orange-600">Save Profile</Button>
                 </CardContent>
             </Card>
 
@@ -697,11 +767,40 @@ const FoodVendor = () => {
                 <CardHeader>
                     <CardTitle>Store Images</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-orange-400 transition-colors cursor-pointer">
-                        <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500">Click to upload banner or logo</p>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label>Restaurant Banner/Main Image URL</Label>
+                        <div className="flex gap-2">
+                            <Input
+                                value={restaurantForm.image}
+                                onChange={(e) => setRestaurantForm({ ...restaurantForm, image: e.target.value })}
+                                placeholder="https://images.unsplash.com/..."
+                            />
+                        </div>
                     </div>
+
+                    {restaurantForm.image && (
+                        <div className="relative h-48 rounded-xl overflow-hidden group">
+                            <img
+                                src={restaurantForm.image}
+                                alt="Preview"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    e.target.src = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80";
+                                }}
+                            />
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <p className="text-white font-medium">Image Preview</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-orange-400 transition-colors">
+                        <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500">Enter a URL above to update your store image</p>
+                    </div>
+
+                    <Button onClick={handleSaveProfile} variant="outline" className="w-full">Update Store Images</Button>
                 </CardContent>
             </Card>
         </div>
@@ -815,7 +914,8 @@ const FoodVendor = () => {
     );
 
     // Add/Edit Menu Modal
-    const MenuFormModal = () => (
+    // Add/Edit Menu Modal
+    const renderMenuFormModal = () => (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-white z-10">
@@ -1050,7 +1150,7 @@ const FoodVendor = () => {
             </main>
 
             {/* Modals */}
-            {(showAddMenu || editingItem) && <MenuFormModal />}
+            {(showAddMenu || editingItem) && renderMenuFormModal()}
         </div>
     );
 };

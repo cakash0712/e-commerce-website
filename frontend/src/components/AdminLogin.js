@@ -31,11 +31,11 @@ const AdminLogin = () => {
             navigate("/admin/dashboard");
         } catch (err) {
             // Demo admin fallback for testing
-            if (email === 'admin@DACH.com' && password === 'admin_password') {
+            if (email === 'admin@zippy.com' && password === 'admin_password') {
                 const adminData = {
                     id: 'admin-id',
                     name: 'Super Admin',
-                    email: 'admin@DACH.com',
+                    email: 'admin@zippy.com',
                     user_type: 'admin',
                     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin'
                 };
@@ -91,7 +91,7 @@ const AdminLogin = () => {
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                                 <Input
                                     type="email"
-                                    placeholder="admin@DACHcart.com"
+                                    placeholder="admin@zippy.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="h-14 pl-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-violet-500 focus:ring-violet-500"
