@@ -720,7 +720,11 @@ const Navigation = () => {
                 )}
               </Button>
             </CartDrawer>
-            <Link to={user ? (user.user_type === "admin" ? "/admin/dashboard" : (user.user_type === "vendor" ? "/vendor/dashboard" : "/profile")) : "/auth"}>
+            <Link to={user ? (
+              user.user_type === "admin" ? "/admin/dashboard" :
+                (user.user_type === "vendor" ? "/vendor/dashboard" :
+                  (user.user_type === "restaurant" || user.user_type === "food_vendor" ? "/food/vendor/dashboard" : "/profile"))
+            ) : "/auth"}>
               <Button
                 variant="ghost"
                 size="icon"

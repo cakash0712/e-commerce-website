@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Utensils, Lock, Mail, Eye, EyeOff, AlertCircle, ArrowLeft, Phone, User, MapPin, Clock } from "lucide-react";
 import { useAuth } from "../../App";
 
-const FoodVendorLogin = () => {
+const RestaurantLogin = () => {
     const navigate = useNavigate();
     const { login, setUser } = useAuth();
     const [authMode, setAuthMode] = useState("login"); // login or signup
@@ -72,9 +72,9 @@ const FoodVendorLogin = () => {
 
         try {
             // Use the existing login but with food_vendor user_type
-            const userData = await login(email, password, "food_vendor");
-            if (userData.user_type !== "food_vendor") {
-                setError("Access denied. Food vendor credentials required.");
+            const userData = await login(email, password, "restaurant");
+            if (userData.user_type !== "restaurant" && userData.user_type !== "food_vendor") {
+                setError("Access denied. Restaurant owner credentials required.");
                 setLoading(false);
                 return;
             }
@@ -135,7 +135,7 @@ const FoodVendorLogin = () => {
 
         try {
             // Register as food_vendor
-            const response = await fetch(`${API}/food/vendors/register`, {
+            const response = await fetch(`${API}/food/restuarent/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -162,7 +162,7 @@ const FoodVendorLogin = () => {
                         ifsc: signupData.bank_ifsc,
                         upi_id: signupData.upi_id
                     },
-                    user_type: "food_vendor"
+                    user_type: "restaurant"
                 })
             });
 
@@ -170,15 +170,17 @@ const FoodVendorLogin = () => {
                 let errorMsg = "Registration failed";
                 try {
                     const data = await response.json();
+                    console.error("Registration error response:", data);
                     errorMsg = data.detail || errorMsg;
                 } catch (e) {
+                    console.error("Failed to parse error response:", response.statusText);
                     errorMsg = `Registration failed: ${response.statusText}`;
                 }
                 throw new Error(errorMsg);
             }
 
             // After successful registration, login
-            await login(signupData.email, signupData.password, "food_vendor");
+            await login(signupData.email, signupData.password, "restaurant");
             navigate("/food/vendor/dashboard");
         } catch (err) {
             setError(err.message || "Registration failed. Please try again.");
@@ -214,7 +216,7 @@ const FoodVendorLogin = () => {
                             <Utensils className="w-10 h-10 text-white" />
                         </div>
                         <h1 className="text-3xl font-black italic tracking-tight">
-                            Food<span className="text-orange-200">Partner.</span>
+                            Restuarent<span className="text-orange-200">Partner.</span>
                         </h1>
                         <p className="text-orange-200 text-sm font-medium mt-2">
                             {authMode === "login" ? "Access your restaurant dashboard" : "Register your restaurant"}
@@ -654,9 +656,9 @@ const FoodVendorLogin = () => {
                         Order food as customer? <Link to="/food" className="text-white/70 hover:text-white underline">Browse restaurants</Link>
                     </p>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 
-export default FoodVendorLogin;
+export default RestaurantLogin;

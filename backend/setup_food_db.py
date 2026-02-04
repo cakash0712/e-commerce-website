@@ -133,8 +133,8 @@ async def setup_food_database():
     await food_db.food_orders.create_index("created_at")
     
     # Food vendors (restaurants owners) - stored in main ecommerce DB but referenced here
-    await food_db.food_vendors.create_index("id", unique=True)
-    await food_db.food_vendors.create_index("email", unique=True)
+    await food_db.restuarent.create_index("id", unique=True)
+    await food_db.restuarent.create_index("email", unique=True)
     
     print("Indexes created successfully.")
     
@@ -211,7 +211,7 @@ async def setup_food_database():
     print(f"Restaurants: {await food_db.restaurants.count_documents({})}")
     print(f"Menu Items: {await food_db.food_items.count_documents({})}")
     print(f"Food Orders: {await food_db.food_orders.count_documents({})}")
-    print(f"Food Vendors: {await food_db.food_vendors.count_documents({})}")
+    print(f"Food Vendors: {await food_db.restuarent.count_documents({})}")
     
     client.close()
     print("\nDone!")

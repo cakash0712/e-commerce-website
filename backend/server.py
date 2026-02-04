@@ -34,7 +34,7 @@ import certifi
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url, tlsCAFile=certifi.where())
 db = client[os.environ['DB_NAME']]
-food_db = client["food_delivery"]
+food_db = client["restuarent"]
 
 # Comprehensive E-commerce Categories Structure
 initial_categories = [
@@ -410,7 +410,7 @@ class User(BaseModel):
     business_category: str = ""
     business_categories: List[str] = []
     owner_name: str = ""
-    user_type: str = "user"  # user, admin, vendor_ecommerce, vendor_food
+    user_type: str = "user"  # user, admin, vendor_ecommerce, restaurant
     status: str = "active"   # active, pending, rejected
     rejection_reason: Optional[str] = None
     is_blocked: bool = False
@@ -445,31 +445,31 @@ class UserCreate(BaseModel):
     pickup_items: List[str] = []
 
 class BankDetails(BaseModel):
-    account_name: str = ""
-    account_number: str = ""
-    ifsc: str = ""
-    upi_id: str = ""
+    account_name: Optional[str] = None
+    account_number: Optional[str] = None
+    ifsc: Optional[str] = None
+    upi_id: Optional[str] = None
 
 class FoodVendorCreate(BaseModel):
     name: str
     email: str
-    phone: str
+    phone: Optional[str] = None
     password: str
     restaurant_name: str
     owner_name: str
-    restaurant_type: str
-    cuisine_type: str
-    fssai_license: str = ""
-    gst_number: str = ""
-    address: str
-    city: str
-    pincode: str
-    opening_time: str
-    closing_time: str
-    delivery_radius: str
-    avg_delivery_time: str
+    restaurant_type: Optional[str] = None
+    cuisine_type: Optional[str] = None
+    fssai_license: Optional[str] = None
+    gst_number: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    pincode: Optional[str] = None
+    opening_time: Optional[str] = "09:00"
+    closing_time: Optional[str] = "22:00"
+    delivery_radius: Optional[str] = "5"
+    avg_delivery_time: Optional[str] = "30-45"
     bank_details: Optional[BankDetails] = None
-    user_type: str = "food_vendor"
+    user_type: str = "restaurant"
 
 class UserLogin(BaseModel):
     identifier: str  # phone or email
@@ -846,7 +846,7 @@ async def get_current_user(authorization: Annotated[Optional[str], Header()] = N
         # Verify user in DB and check block status/version
         user = await db.users.find_one({"id": user_id}) or \
                await db.vendors.find_one({"id": user_id}) or \
-               await food_db.food_vendors.find_one({"id": user_id})
+                   await food_db.restuarent.find_one({"id": user_id})
 
         if not user:
             raise HTTPException(status_code=401, detail="Invalid identity.")
@@ -893,7 +893,10 @@ async def get_status_checks(current_user: Annotated[dict, Depends(get_current_us
 @api_router.post("/users/signup", response_model=User)
 async def signup_user(user_data: UserCreate):
     # Determine collection based on user_type
-    collection = db.vendors if user_data.user_type.startswith("vendor") else db.users
+    if user_data.user_type in ["restaurant", "food_vendor", "vendor_food"]:
+        collection = client["restuarent"].restuarent
+    else:
+        collection = db.vendors if user_data.user_type.startswith("vendor") else db.users
 
     # Check if user already exists
     existing_user = await collection.find_one({
@@ -909,8 +912,12 @@ async def signup_user(user_data: UserCreate):
     user_dict = user_data.model_dump()
     user_dict['password'] = get_password_hash(user_dict['password'])
     
-    # Vendors start as pending
-    if user_data.user_type.startswith("vendor"):
+    # Vendors and Restaurants start as pending (though I previously set restaurants to active by default)
+    # Let's keep consistency: e-commerce vendors are pending, restaurants are active
+    if user_data.user_type in ["restaurant", "food_vendor", "vendor_food"]:
+        user_dict['status'] = "active"
+        user_dict['user_type'] = "restaurant" # Standardize
+    elif user_data.user_type.startswith("vendor"):
         user_dict['status'] = "pending"
     else:
         user_dict['status'] = "active"
@@ -945,17 +952,27 @@ async def login_user(login_data: UserLogin, request: Request):
     else:
         login_attempts[client_ip] = (now, 1)
 
-    # Determine collection based on user_type
-    # Food vendors are stored in a separate database
-    if login_data.user_type == "food_vendor":
-        # Food vendor - check food_delivery database
-        food_db_login = client["food_delivery"]
-        user = await food_db_login.food_vendors.find_one({
+    # Food vendors/Restaurants are stored in the 'restuarent' database
+    if login_data.user_type in ["restaurant", "food_vendor", "vendor_food"]:
+        # Food portal users - check 'restuarent' database
+        food_db_login = client["restuarent"]
+        
+        # Build query for email/phone
+        # Use regex for case-insensitive email match
+        query = {
             "$or": [
-                {"email": login_data.identifier},
+                {"email": {"$regex": f"^{login_data.identifier}$", "$options": "i"}},
                 {"phone": login_data.identifier}
             ]
-        })
+        }
+        
+        # Search in the primary 'restuarent' collection
+        user = await food_db_login.restuarent.find_one(query)
+        
+        # Fallback to 'food_vendors' collection for legacy data
+        if not user:
+            user = await food_db_login.food_vendors.find_one(query)
+            
     elif login_data.user_type.startswith("vendor"):
         collection = db.vendors
         user = await collection.find_one({
@@ -982,12 +999,12 @@ async def login_user(login_data: UserLogin, request: Request):
     if user.get('is_blocked', False):
         raise HTTPException(status_code=403, detail="Account access suspended. Contact compliance.")
 
-    # Check vendor status
-    if login_data.user_type.startswith("vendor"):
+    # Check partner status (Vendors and Restaurants)
+    if login_data.user_type.startswith("vendor") or login_data.user_type in ["restaurant", "food_vendor"]:
         if user.get('status') == "pending":
-            raise HTTPException(status_code=403, detail="Vendor account is pending administrative approval.")
+            raise HTTPException(status_code=403, detail="Account is pending administrative approval.")
         if user.get('status') == "rejected":
-            raise HTTPException(status_code=403, detail=f"Vendor account rejected: {user.get('rejection_reason', 'Compliance failure')}")
+            raise HTTPException(status_code=403, detail=f"Account rejected: {user.get('rejection_reason', 'Compliance failure')}")
 
     # Generate Token
     token = create_access_token({
@@ -2933,36 +2950,11 @@ async def update_user(user_id: str, update_data: dict, current_user: Annotated[d
 # FOOD DELIVERY API ENDPOINTS
 # =============================================================================
 
-# Connect to Food Delivery Database (separate from e-commerce)
-food_db = client["food_delivery"]
+# Connect to Restaurant Database
+food_db = client["restuarent"]
 
 # Food Vendor Models
-class BankDetails(BaseModel):
-    account_name: Optional[str] = None
-    account_number: Optional[str] = None
-    ifsc: Optional[str] = None
-    upi_id: Optional[str] = None
 
-class FoodVendorCreate(BaseModel):
-    name: str
-    email: str
-    phone: Optional[str] = None
-    password: str
-    restaurant_name: str
-    owner_name: str
-    restaurant_type: Optional[str] = None
-    cuisine_type: Optional[str] = None
-    fssai_license: Optional[str] = None
-    gst_number: Optional[str] = None
-    address: Optional[str] = None
-    city: Optional[str] = None
-    pincode: Optional[str] = None
-    opening_time: Optional[str] = "09:00"
-    closing_time: Optional[str] = "22:00"
-    delivery_radius: Optional[str] = "5"
-    avg_delivery_time: Optional[str] = "30-45"
-    bank_details: Optional[BankDetails] = None
-    user_type: str = "food_vendor"
 
 class MenuItemCreate(BaseModel):
     name: str
@@ -2981,120 +2973,143 @@ class FoodOrderStatusUpdate(BaseModel):
 class MenuItemAvailability(BaseModel):
     is_available: bool
 
-# Food Vendor Registration
-@api_router.post("/food/vendors/register")
-async def register_food_vendor(vendor_data: FoodVendorCreate):
-    # Check if vendor already exists
-    existing = await food_db.food_vendors.find_one({
-        "$or": [
-            {"email": vendor_data.email},
-            {"phone": vendor_data.phone}
-        ]
-    })
-    
-    if existing:
-        raise HTTPException(status_code=400, detail="Restaurant already registered with this email or phone")
-    
-    vendor_id = str(uuid.uuid4())
-    restaurant_id = str(uuid.uuid4())
-    
-    # Create vendor document
-    vendor_doc = {
-        "id": vendor_id,
-        "name": vendor_data.owner_name,
-        "email": vendor_data.email,
-        "phone": vendor_data.phone,
-        "password": get_password_hash(vendor_data.password),
-        "restaurant_name": vendor_data.restaurant_name,
-        "owner_name": vendor_data.owner_name,
-        "restaurant_type": vendor_data.restaurant_type,
-        "fssai_license": vendor_data.fssai_license,
-        "gst_number": vendor_data.gst_number,
-        "address": vendor_data.address,
-        "city": vendor_data.city,
-        "pincode": vendor_data.pincode,
-        "opening_time": vendor_data.opening_time,
-        "closing_time": vendor_data.closing_time,
-        "delivery_radius": vendor_data.delivery_radius,
-        "avg_delivery_time": vendor_data.avg_delivery_time,
-        "bank_details": vendor_data.bank_details.model_dump() if vendor_data.bank_details else None,
-        "cuisine_type": vendor_data.cuisine_type,
-        "user_type": "food_vendor",
-        "status": "pending",
-        "token_version": 1,
-        "restaurant_id": restaurant_id,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    
-    await food_db.food_vendors.insert_one(vendor_doc)
-    
-    # Create restaurant document
-    restaurant_doc = {
-        "id": restaurant_id,
-        "vendor_id": vendor_id,
-        "name": vendor_data.restaurant_name,
-        "address": vendor_data.address,
-        "city": vendor_data.city,
-        "pincode": vendor_data.pincode,
-        "cuisine_type": vendor_data.cuisine_type or "General",
-        "cuisine": vendor_data.cuisine_type or "General", # Compatibility
-        "restaurant_type": vendor_data.restaurant_type,
-        "phone": vendor_data.phone,
-        "is_open": True,
-        "rating": 4.0, # Initial rating
-        "reviews_count": 0,
-        "delivery_time": vendor_data.avg_delivery_time or "30-45",
-        "minimum_order": 100,
-        "delivery_fee": 30,
-        "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=400&fit=crop", # Default image
-        "featured": True, # Feature new signups by default
-        "offers": [],
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    
-    await food_db.restaurants.insert_one(restaurant_doc)
-    
-    # Generate token
-    token = create_access_token({
-        "sub": vendor_id,
-        "user_type": "food_vendor",
-        "version": 1
-    })
-    
-    vendor_doc.pop('password', None)
-    vendor_doc.pop('_id', None)
-    
-    return {**vendor_doc, "token": token}
 
-# Food Vendor Login (uses the general login endpoint with user_type=food_vendor)
+# Restaurant Registration
+@api_router.post("/food/restuarent/register")
+async def register_restaurant(request: Request, vendor_data: FoodVendorCreate):
+    try:
+        # Log raw request for debugging
+        raw_body = await request.body()
+        logging.info(f"Registration request for: {vendor_data.email}, raw body length: {len(raw_body)}")
+        # Check if vendor already exists by email
+        existing_by_email = await food_db.restuarent.find_one({"email": vendor_data.email})
+        if existing_by_email:
+            raise HTTPException(status_code=400, detail=f"Email '{vendor_data.email}' is already registered. Please use a different email or login.")
+        
+        # Check by phone only if phone is provided
+        if vendor_data.phone and vendor_data.phone.strip():
+            existing_by_phone = await food_db.restuarent.find_one({"phone": vendor_data.phone})
+            if existing_by_phone:
+                raise HTTPException(status_code=400, detail=f"Phone '{vendor_data.phone}' is already registered. Please use a different phone number.")
+        
+        vendor_id = str(uuid.uuid4())
+        restaurant_id = str(uuid.uuid4())
+        
+        # Create vendor document
+        vendor_doc = {
+            "id": vendor_id,
+            "name": vendor_data.owner_name,
+            "email": vendor_data.email,
+            "phone": vendor_data.phone,
+            "password": get_password_hash(vendor_data.password),
+            "restaurant_name": vendor_data.restaurant_name,
+            "owner_name": vendor_data.owner_name,
+            "restaurant_type": vendor_data.restaurant_type,
+            "fssai_license": vendor_data.fssai_license,
+            "gst_number": vendor_data.gst_number,
+            "address": vendor_data.address,
+            "city": vendor_data.city,
+            "pincode": vendor_data.pincode,
+            "opening_time": vendor_data.opening_time,
+            "closing_time": vendor_data.closing_time,
+            "delivery_radius": vendor_data.delivery_radius,
+            "avg_delivery_time": vendor_data.avg_delivery_time,
+            "bank_details": vendor_data.bank_details.model_dump() if vendor_data.bank_details else None,
+            "cuisine_type": vendor_data.cuisine_type,
+            "user_type": "restaurant",
+            "status": "active",
+            "token_version": 1,
+            "restaurant_id": restaurant_id,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Store in restuarent collection (primary)
+        await food_db.restuarent.insert_one(vendor_doc.copy())
+        
+        # Also store in food_vendors collection (for compatibility)
+        food_vendor_doc = vendor_doc.copy()
+        food_vendor_doc.pop('_id', None)  # Remove _id if added by first insert
+        await food_db.food_vendors.insert_one(food_vendor_doc)
+        
+        logging.info(f"Registered new restaurant: {vendor_data.email}")
+        
+        # Create restaurant document
+        restaurant_doc = {
+            "id": restaurant_id,
+            "vendor_id": vendor_id,
+            "name": vendor_data.restaurant_name,
+            "address": vendor_data.address,
+            "city": vendor_data.city,
+            "pincode": vendor_data.pincode,
+            "cuisine_type": vendor_data.cuisine_type or "General",
+            "cuisine": vendor_data.cuisine_type or "General", # Compatibility
+            "restaurant_type": vendor_data.restaurant_type,
+            "phone": vendor_data.phone,
+            "is_open": True,
+            "rating": 4.5,
+            "reviews_count": 0,
+            "delivery_time": vendor_data.avg_delivery_time or "30-45",
+            "minimum_order": 100,
+            "delivery_fee": 30,
+            "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=400&fit=crop",
+            "featured": True, # Feature new signups by default
+            "offers": [],
+            "opening_time": vendor_data.opening_time,
+            "closing_time": vendor_data.closing_time,
+            "avg_delivery_time": vendor_data.avg_delivery_time,
+            "delivery_radius": vendor_data.delivery_radius,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await food_db.restaurants.insert_one(restaurant_doc)
+        
+        # Generate token
+        token = create_access_token({
+            "sub": vendor_id,
+            "user_type": "restaurant",
+            "version": 1
+        })
+        
+        vendor_doc.pop('password', None)
+        vendor_doc.pop('_id', None)
+
+        return {**vendor_doc, "token": token}
+    except Exception as e:
+        if isinstance(e, HTTPException): raise e
+        logging.error(f"Registration error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=400, detail=f"Registration failed: {str(e)}")
+
+# Restaurant Login (uses the general login endpoint with user_type=restaurant)
 # The login endpoint already handles this through collection determination
 
-# Helper function for food vendor auth
-async def get_current_food_vendor(authorization: Annotated[Optional[str], Header()] = None):
+# Helper function for restaurant auth
+async def get_current_restaurant(authorization: Annotated[Optional[str], Header()] = None):
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header missing.")
-    
+
     try:
         token = authorization.split(" ")[1]
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         version: int = payload.get("version")
-        
-        vendor = await food_db.food_vendors.find_one({"id": user_id})
-        
+
+        vendor = await food_db.restuarent.find_one({"id": user_id})
+
         if not vendor:
-            raise HTTPException(status_code=401, detail="Invalid food vendor identity.")
-        
+            raise HTTPException(status_code=401, detail="Invalid restaurant identity.")
+
         if vendor.get('token_version', 1) != version:
             raise HTTPException(status_code=401, detail="Session expired.")
-        
+
         return vendor
     except Exception:
         raise HTTPException(status_code=401, detail="Authentication failed.")
 
-# Get Food Vendor's Restaurant
-@api_router.get("/food/vendor/restaurant")
-async def get_food_vendor_restaurant(current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+# Get Restaurant's Profile
+@api_router.get("/food/restuarent/profile")
+async def get_restaurant_profile(current_vendor: Annotated[dict, Depends(get_current_restaurant)]):
     # Search by vendor_id first
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
     
@@ -3106,9 +3121,9 @@ async def get_food_vendor_restaurant(current_vendor: Annotated[dict, Depends(get
         del restaurant['_id']
     return restaurant or {}
 
-# Update Food Vendor's Restaurant
-@api_router.put("/food/vendor/restaurant")
-async def update_food_vendor_restaurant(restaurant_data: dict, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+# Update Restaurant's Profile
+@api_router.put("/food/restuarent/profile")
+async def update_restaurant_profile(restaurant_data: dict, current_vendor: Annotated[dict, Depends(get_current_restaurant)]):
     # Search by vendor_id first
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
     
@@ -3126,16 +3141,24 @@ async def update_food_vendor_restaurant(restaurant_data: dict, current_vendor: A
     if 'cuisine_type' in data_to_update:
         data_to_update['cuisine'] = data_to_update['cuisine_type']
     
-    await food_db.restaurants.update_one(
-        {"id": restaurant['id']},
-        {"$set": {**data_to_update, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    # Update the core details in our 'restuarent' collection too
+    await food_db.restuarent.update_one(
+        {"id": current_vendor['id']},
+        {"$set": {
+            "restaurant_name": data_to_update.get('name', current_vendor.get('restaurant_name')),
+            "phone": data_to_update.get('phone', current_vendor.get('phone')),
+            "address": data_to_update.get('address', current_vendor.get('address')),
+            "cuisine_type": data_to_update.get('cuisine_type', current_vendor.get('cuisine_type')),
+            "opening_time": data_to_update.get('opening_time', current_vendor.get('opening_time')),
+            "closing_time": data_to_update.get('closing_time', current_vendor.get('closing_time')),
+        }}
     )
-    
+
     return {"message": "Restaurant profile updated successfully"}
 
-# Get Food Vendor Stats
-@api_router.get("/food/vendor/stats")
-async def get_food_vendor_stats(current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+# Get Restaurant Stats
+@api_router.get("/food/restuarent/stats")
+async def get_restaurant_stats(current_vendor: Annotated[dict, Depends(get_current_restaurant)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
     if not restaurant and current_vendor.get('restaurant_id'):
         restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
@@ -3187,8 +3210,8 @@ async def get_food_vendor_stats(current_vendor: Annotated[dict, Depends(get_curr
     }
 
 # Menu Item CRUD
-@api_router.get("/food/vendor/menu")
-async def get_food_vendor_menu(current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+@api_router.get("/food/restuarent/menu")
+async def get_food_vendor_menu(current_vendor: Annotated[dict, Depends(get_current_restaurant)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
     if not restaurant and current_vendor.get('restaurant_id'):
         restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
@@ -3202,8 +3225,8 @@ async def get_food_vendor_menu(current_vendor: Annotated[dict, Depends(get_curre
             del item['_id']
     return items
 
-@api_router.post("/food/vendor/menu")
-async def add_menu_item(item_data: MenuItemCreate, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+@api_router.post("/food/restuarent/menu")
+async def add_menu_item(item_data: MenuItemCreate, current_vendor: Annotated[dict, Depends(get_current_restaurant)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
     if not restaurant and current_vendor.get('restaurant_id'):
         restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
@@ -3222,8 +3245,8 @@ async def add_menu_item(item_data: MenuItemCreate, current_vendor: Annotated[dic
     item_doc.pop('_id', None)
     return item_doc
 
-@api_router.put("/food/vendor/menu/{item_id}")
-async def update_menu_item(item_id: str, item_data: MenuItemCreate, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+@api_router.put("/food/restuarent/menu/{item_id}")
+async def update_menu_item(item_id: str, item_data: MenuItemCreate, current_vendor: Annotated[dict, Depends(get_current_restaurant)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
     if not restaurant and current_vendor.get('restaurant_id'):
         restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
@@ -3241,8 +3264,8 @@ async def update_menu_item(item_id: str, item_data: MenuItemCreate, current_vend
     
     return {"message": "Menu item updated"}
 
-@api_router.delete("/food/vendor/menu/{item_id}")
-async def delete_menu_item(item_id: str, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+@api_router.delete("/food/restuarent/menu/{item_id}")
+async def delete_menu_item(item_id: str, current_vendor: Annotated[dict, Depends(get_current_restaurant)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
     if not restaurant and current_vendor.get('restaurant_id'):
         restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
@@ -3257,8 +3280,8 @@ async def delete_menu_item(item_id: str, current_vendor: Annotated[dict, Depends
     
     return {"message": "Menu item deleted"}
 
-@api_router.patch("/food/vendor/menu/{item_id}/availability")
-async def toggle_menu_availability(item_id: str, data: MenuItemAvailability, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+@api_router.patch("/food/restuarent/menu/{item_id}/availability")
+async def toggle_menu_availability(item_id: str, data: MenuItemAvailability, current_vendor: Annotated[dict, Depends(get_current_restaurant)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
     if not restaurant and current_vendor.get('restaurant_id'):
         restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
@@ -3274,8 +3297,8 @@ async def toggle_menu_availability(item_id: str, data: MenuItemAvailability, cur
     return {"message": "Availability updated"}
 
 # Food Orders for Vendor
-@api_router.get("/food/vendor/orders")
-async def get_food_vendor_orders(current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+@api_router.get("/food/restuarent/orders")
+async def get_food_vendor_orders(current_vendor: Annotated[dict, Depends(get_current_restaurant)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
     if not restaurant and current_vendor.get('restaurant_id'):
         restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})
@@ -3293,8 +3316,8 @@ async def get_food_vendor_orders(current_vendor: Annotated[dict, Depends(get_cur
     
     return orders
 
-@api_router.patch("/food/vendor/orders/{order_id}/status")
-async def update_food_order_status(order_id: str, data: FoodOrderStatusUpdate, current_vendor: Annotated[dict, Depends(get_current_food_vendor)]):
+@api_router.patch("/food/restuarent/orders/{order_id}/status")
+async def update_food_order_status(order_id: str, data: FoodOrderStatusUpdate, current_vendor: Annotated[dict, Depends(get_current_restaurant)]):
     restaurant = await food_db.restaurants.find_one({"vendor_id": current_vendor['id']})
     if not restaurant and current_vendor.get('restaurant_id'):
         restaurant = await food_db.restaurants.find_one({"id": current_vendor['restaurant_id']})

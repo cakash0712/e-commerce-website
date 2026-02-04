@@ -6,7 +6,7 @@ import {
     Heart, Plus, Minus, X, ArrowLeft, Filter, Sparkles, Flame, Zap,
     Bike, Check, Home, User, ShoppingCart, Menu, Phone, Mail, Timer,
     ChefHat, Coffee, Pizza, Salad, Sandwich, IceCream, Soup, Beef,
-    ArrowRight, Gift, Percent, TrendingUp, Building2
+    ArrowRight, Gift, Percent, TrendingUp, Building2, Store
 } from 'lucide-react';
 import { useAuth } from '../../App';
 import FoodProfile from './FoodProfile';
@@ -291,6 +291,11 @@ const FoodNavigation = ({ onSwitchApp }) => {
                                         <Link to="/food/orders" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600">
                                             <Clock className="w-4 h-4" /> My Orders
                                         </Link>
+                                        {(user.user_type === 'restaurant' || user.user_type === 'food_vendor') && (
+                                            <Link to="/food/vendor/dashboard" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-orange-600 hover:bg-orange-50 transition-colors">
+                                                <Store className="w-4 h-4" /> Restaurant Dashboard
+                                            </Link>
+                                        )}
                                         <div className="border-t border-gray-50 my-2" />
                                         <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full text-left">
                                             <ArrowLeft className="w-4 h-4" /> Logout

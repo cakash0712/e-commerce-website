@@ -35,7 +35,7 @@ const FOOD_CATEGORIES = [
     { value: "healthy-salads", label: "Healthy & Salads" }
 ];
 
-const FoodVendor = () => {
+const RestaurantDashboard = () => {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const [activeTab, setActiveTab] = useState("dashboard");
@@ -87,7 +87,7 @@ const FoodVendor = () => {
             navigate('/food/vendor/login');
             return;
         }
-        if (user.user_type !== 'food_vendor') {
+        if (user.user_type !== 'restaurant' && user.user_type !== 'food_vendor') {
             navigate('/');
             return;
         }
@@ -101,7 +101,7 @@ const FoodVendor = () => {
             const headers = { Authorization: `Bearer ${token}` };
 
             // Fetch restaurant details
-            const restaurantRes = await fetch(`${API}/food/vendor/restaurant`, { headers });
+            const restaurantRes = await fetch(`${API}/food/restuarent/profile`, { headers });
             if (restaurantRes.ok) {
                 const data = await restaurantRes.json();
                 setRestaurant(data);
@@ -118,21 +118,21 @@ const FoodVendor = () => {
             }
 
             // Fetch menu items
-            const menuRes = await fetch(`${API}/food/vendor/menu`, { headers });
+            const menuRes = await fetch(`${API}/food/restuarent/menu`, { headers });
             if (menuRes.ok) {
                 const data = await menuRes.json();
                 setMenuItems(data);
             }
 
             // Fetch orders
-            const ordersRes = await fetch(`${API}/food/vendor/orders`, { headers });
+            const ordersRes = await fetch(`${API}/food/restuarent/orders`, { headers });
             if (ordersRes.ok) {
                 const data = await ordersRes.json();
                 setOrders(data);
             }
 
             // Fetch stats
-            const statsRes = await fetch(`${API}/food/vendor/stats`, { headers });
+            const statsRes = await fetch(`${API}/food/restuarent/stats`, { headers });
             if (statsRes.ok) {
                 const data = await statsRes.json();
                 setStats(data);
@@ -153,7 +153,7 @@ const FoodVendor = () => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API}/food/vendor/menu`, {
+            const response = await fetch(`${API}/food/restuarent/menu`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -180,7 +180,7 @@ const FoodVendor = () => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API}/food/vendor/menu/${editingItem.id}`, {
+            const response = await fetch(`${API}/food/restuarent/menu/${editingItem.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -209,7 +209,7 @@ const FoodVendor = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API}/food/vendor/menu/${itemId}`, {
+            const response = await fetch(`${API}/food/restuarent/menu/${itemId}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -225,7 +225,7 @@ const FoodVendor = () => {
     const handleToggleAvailability = async (itemId, currentStatus) => {
         try {
             const token = localStorage.getItem('token');
-            await fetch(`${API}/food/vendor/menu/${itemId}/availability`, {
+            await fetch(`${API}/food/restuarent/menu/${itemId}/availability`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -245,7 +245,7 @@ const FoodVendor = () => {
     const handleSaveProfile = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API}/food/vendor/restaurant`, {
+            const response = await fetch(`${API}/food/restuarent/profile`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -270,7 +270,7 @@ const FoodVendor = () => {
     const handleUpdateOrderStatus = async (orderId, newStatus) => {
         try {
             const token = localStorage.getItem('token');
-            await fetch(`${API}/food/vendor/orders/${orderId}/status`, {
+            await fetch(`${API}/food/restuarent/orders/${orderId}/status`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1155,4 +1155,4 @@ const FoodVendor = () => {
     );
 };
 
-export default FoodVendor;
+export default RestaurantDashboard;

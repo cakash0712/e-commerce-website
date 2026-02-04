@@ -243,14 +243,14 @@ const Auth = () => {
               <h2 className="text-2xl font-bold mb-1">
                 {userType === "admin" ? "Admin Panel" :
                   userType === "vendor_ecommerce" ? "E-commerce Vendor" :
-                    userType === "vendor_food" ? "Food Vendor Portal" :
+                    userType === "vendor_food" ? "Restaurant Owner Portal" :
                       userType === "vendor" ? "Vendor Portal" :
                         (authMode === "login" ? "Welcome Back" : "Create Account")}
               </h2>
               <p className="text-violet-200 text-sm">
                 {userType === "admin" && "Access admin dashboard"}
                 {userType === "vendor_ecommerce" && "Manage your shop and inventory"}
-                {userType === "vendor_food" && "Manage your kitchen and deliveries"}
+                {userType === "vendor_food" && "Manage your kitchen, menu and deliveries"}
                 {userType === "vendor" && "Manage your products"}
                 {userType === "user" && authStep === "credentials" && "Enter your login details"}
                 {userType === "user" && authStep === "details" && (authMode === "signup" ? "Complete your profile information" : "Complete your profile")}
