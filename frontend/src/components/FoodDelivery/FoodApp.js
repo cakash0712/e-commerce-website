@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { Routes, Route, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import {
     Utensils, ShoppingBag, MapPin, Clock, Star, Search, ChevronRight,
@@ -87,7 +87,16 @@ const FoodCartProvider = ({ children }) => {
 const cuisines = [
     { id: 1, name: 'Pizza', icon: Pizza, color: 'bg-red-500' },
     { id: 2, name: 'Burgers', icon: Sandwich, color: 'bg-amber-500' },
-    { id: 3, name: 'Indian', icon: ChefHat, color: 'bg-orange-500' },
+    {
+        id: 3,
+        name: 'Indian',
+        icon: ChefHat,
+        color: 'bg-orange-500',
+        subCategories: [
+            { id: 3.1, name: 'South Indian', icon: Soup, color: 'bg-green-600' },
+            { id: 3.2, name: 'North Indian', icon: ChefHat, color: 'bg-orange-600' }
+        ]
+    },
     { id: 4, name: 'Chinese', icon: Soup, color: 'bg-rose-500' },
     { id: 5, name: 'Desserts', icon: IceCream, color: 'bg-pink-500' },
     { id: 6, name: 'Healthy', icon: Salad, color: 'bg-green-500' },
@@ -571,16 +580,38 @@ const FoodHome = () => {
                     <h2 className="text-3xl font-black text-gray-900 mb-10 text-center">What's on your mind?</h2>
                     <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-8">
                         {cuisines.map(cuisine => (
-                            <Link
-                                key={cuisine.id}
-                                to={`/food/restaurants?cuisine=${cuisine.name.toLowerCase()}`}
-                                className="flex flex-col items-center group"
-                            >
-                                <div className={`w-24 h-24 ${cuisine.color} rounded-full flex items-center justify-center p-6 shadow-xl group-hover:scale-110 transition-all duration-300 ring-4 ring-white`}>
-                                    <cuisine.icon className="w-full h-full text-white" />
-                                </div>
-                                <span className="mt-4 text-base font-bold text-gray-800 group-hover:text-orange-600 transition-colors uppercase tracking-tight">{cuisine.name}</span>
-                            </Link>
+                            <div key={cuisine.id} className="relative group">
+                                <Link
+                                    to={cuisine.subCategories
+                                        ? `/food/restaurants?cuisine=${cuisine.name.toLowerCase()}`
+                                        : `/food/restaurants?cuisine=${cuisine.name.toLowerCase()}`}
+                                    className="flex flex-col items-center"
+                                >
+                                    <div className={`w-24 h-24 ${cuisine.color} rounded-full flex items-center justify-center p-6 shadow-xl group-hover:scale-110 transition-all duration-300 ring-4 ring-white`}>
+                                        <cuisine.icon className="w-full h-full text-white" />
+                                    </div>
+                                    <span className="mt-4 text-base font-bold text-gray-800 group-hover:text-orange-600 transition-colors uppercase tracking-tight">{cuisine.name}</span>
+                                </Link>
+                                {/* Sub-categories dropdown */}
+                                {cuisine.subCategories && (
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                                        <div className="bg-white rounded-xl shadow-2xl p-3 min-w-[140px] border border-gray-100">
+                                            {cuisine.subCategories.map(sub => (
+                                                <Link
+                                                    key={sub.id}
+                                                    to={`/food/restaurants?cuisine=${sub.name.toLowerCase().replace(' ', '-')}`}
+                                                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-orange-50 transition-colors"
+                                                >
+                                                    <div className={`w-8 h-8 ${sub.color} rounded-full flex items-center justify-center`}>
+                                                        <sub.icon className="w-4 h-4 text-white" />
+                                                    </div>
+                                                    <span className="text-sm font-semibold text-gray-700 whitespace-nowrap">{sub.name}</span>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -1172,21 +1203,31 @@ const FoodItemsList = () => {
     const [itemsList, setItemsList] = useState([]);
     const [loading, setLoading] = useState(true);
     const { addToCart } = useFoodCart();
+    const [searchParams] = useSearchParams();
+    const category = searchParams.get('cuisine') || searchParams.get('category');
 
     useEffect(() => {
         const fetchItems = async () => {
+            setLoading(true);
             try {
                 const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-                const response = await axios.get(`${API_BASE}/api/food/items?limit=50`);
+                let url = `${API_BASE}/api/food/items?limit=50`;
+                if (category) {
+                    url += `&category=${encodeURIComponent(category)}`;
+                }
+                console.log('Fetching items from:', url);
+                const response = await axios.get(url);
+                console.log('Items fetched:', response.data);
                 setItemsList(response.data);
             } catch (e) {
                 console.error("Failed to fetch food items:", e);
+                console.error("Error response:", e.response);
             } finally {
                 setLoading(false);
             }
         };
         fetchItems();
-    }, []);
+    }, [category]);
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">

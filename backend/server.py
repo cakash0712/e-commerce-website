@@ -1067,9 +1067,16 @@ async def force_logout(user_id: str, current_admin: Annotated[dict, Depends(get_
 
 @api_router.get("/users/sync")
 async def sync_user(current_user: Annotated[dict, Depends(get_current_user)]):
-    # current_user is already fetched from get_current_user, but we want the freshest data
-    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
-    user = await collection.find_one({"id": current_user['id']}, {"_id": 0, "password": 0})
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        # Food vendors are in the 'restuarent' database
+        sync_collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        sync_collection = db.vendors
+    else:
+        sync_collection = db.users
+    
+    user = await sync_collection.find_one({"id": current_user['id']}, {"_id": 0, "password": 0})
     
     if user and 'cart' in user and user['cart']:
         # Refresh cart items with current prices from DB
@@ -1104,7 +1111,7 @@ async def sync_user(current_user: Annotated[dict, Depends(get_current_user)]):
                     any_changed = True
             
             if any_changed:
-                await collection.update_one(
+                await sync_collection.update_one(
                     {"id": current_user['id']}, 
                     {"$set": {"cart": cart_items}}
                 )
@@ -1116,14 +1123,27 @@ async def sync_user(current_user: Annotated[dict, Depends(get_current_user)]):
 
 @api_router.put("/users/cart")
 async def update_cart(cart: List[CartItem], current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        collection = db.vendors
+    else:
+        collection = db.users
+    
     cart_data = [item.model_dump() for item in cart]
     await collection.update_one({"id": current_user['id']}, {"$set": {"cart": cart_data}})
     return {"message": "Cart synchronized"}
 
 @api_router.post("/users/cart/items")
 async def add_to_cart(item: CartItem, current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        collection = db.vendors
+    else:
+        collection = db.users
     
     # Attempt to update quantity if item with same ID exists
     result = await collection.update_one(
@@ -1142,7 +1162,13 @@ async def add_to_cart(item: CartItem, current_user: Annotated[dict, Depends(get_
 
 @api_router.delete("/users/cart/items/{item_id}")
 async def remove_from_cart(item_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        collection = db.vendors
+    else:
+        collection = db.users
     
     await collection.update_one(
         {"id": current_user['id']},
@@ -1153,14 +1179,27 @@ async def remove_from_cart(item_id: str, current_user: Annotated[dict, Depends(g
 
 @api_router.put("/users/wishlist")
 async def update_wishlist(wishlist: List[WishlistItem], current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        collection = db.vendors
+    else:
+        collection = db.users
+    
     wishlist_data = [item.model_dump() for item in wishlist]
     await collection.update_one({"id": current_user['id']}, {"$set": {"wishlist": wishlist_data}})
     return {"message": "Wishlist synchronized"}
 
 @api_router.post("/users/wishlist/items")
 async def add_to_wishlist(item: WishlistItem, current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        collection = db.vendors
+    else:
+        collection = db.users
     
     # Attempt to update item if it exists (e.g. update price/image)
     result = await collection.update_one(
@@ -1179,7 +1218,13 @@ async def add_to_wishlist(item: WishlistItem, current_user: Annotated[dict, Depe
 
 @api_router.delete("/users/wishlist/items/{item_id}")
 async def remove_from_wishlist(item_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        collection = db.vendors
+    else:
+        collection = db.users
     
     await collection.update_one(
         {"id": current_user['id']},
@@ -1191,7 +1236,14 @@ async def remove_from_wishlist(item_id: str, current_user: Annotated[dict, Depen
 @api_router.put("/users/recently-viewed")
 async def update_recently_viewed(product_ids: List[str], current_user: Annotated[dict, Depends(get_current_user)]):
     print(f"DEBUG: update_recently_viewed called with: {product_ids} for user {current_user['id']}")
-    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        collection = db.vendors
+    else:
+        collection = db.users
+    
     # Keep only last 20 items
     product_ids = product_ids[:20]
     result = await collection.update_one({"id": current_user['id']}, {"$set": {"recently_viewed": product_ids}})
@@ -1200,7 +1252,14 @@ async def update_recently_viewed(product_ids: List[str], current_user: Annotated
 
 @api_router.get("/users/recently-viewed")
 async def get_recently_viewed(current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'].startswith('vendor') else db.users
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        collection = db.vendors
+    else:
+        collection = db.users
+    
     user = await collection.find_one({"id": current_user['id']}, {"recently_viewed": 1})
     product_ids = user.get('recently_viewed', [])
     
@@ -1225,7 +1284,14 @@ async def get_recently_viewed(current_user: Annotated[dict, Depends(get_current_
 
 @api_router.put("/users/pickup-items")
 async def update_pickup_items(product_ids: List[str], current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        collection = db.vendors
+    else:
+        collection = db.users
+    
     # Keep only last 10 items
     product_ids = product_ids[:10]
     await collection.update_one({"id": current_user['id']}, {"$set": {"pickup_items": product_ids}})
@@ -1233,7 +1299,14 @@ async def update_pickup_items(product_ids: List[str], current_user: Annotated[di
 
 @api_router.get("/users/pickup-items")
 async def get_pickup_items(current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        collection = db.vendors
+    else:
+        collection = db.users
+    
     user = await collection.find_one({"id": current_user['id']}, {"pickup_items": 1})
     product_ids = user.get('pickup_items', [])
     
@@ -1263,7 +1336,14 @@ async def get_pickup_items(current_user: Annotated[dict, Depends(get_current_use
 
 @api_router.put("/users/recent-searches")
 async def update_recent_searches(searches: List[str], current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        collection = db.vendors
+    else:
+        collection = db.users
+    
     # Keep only last 10 searches
     searches = searches[:10]
     await collection.update_one({"id": current_user['id']}, {"$set": {"recent_searches": searches}})
@@ -1271,13 +1351,27 @@ async def update_recent_searches(searches: List[str], current_user: Annotated[di
 
 @api_router.get("/users/recent-searches")
 async def get_recent_searches(current_user: Annotated[dict, Depends(get_current_user)]):
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        collection = db.vendors
+    else:
+        collection = db.users
+    
     user = await collection.find_one({"id": current_user['id']}, {"recent_searches": 1})
     return user.get('recent_searches', [])
 
 @api_router.put("/users/delivery-location")
 async def update_delivery_location(current_user: Annotated[dict, Depends(get_current_user)], delivery_location: str = Body(..., embed=True)):
-    collection = db.vendors if current_user['user_type'] == 'vendor' else db.users
+    # Determine the correct collection based on user_type
+    if current_user.get('user_type') == 'restaurant':
+        collection = food_db.restuarent
+    elif current_user['user_type'].startswith('vendor'):
+        collection = db.vendors
+    else:
+        collection = db.users
+    
     await collection.update_one({"id": current_user['id']}, {"$set": {"delivery_location": delivery_location}})
     return {"message": "Delivery location updated"}
 
@@ -3094,17 +3188,33 @@ async def get_current_restaurant(authorization: Annotated[Optional[str], Header(
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         version: int = payload.get("version")
+        
+        logging.debug(f"RESTAURANT AUTH: Trying user_id={user_id}, version={version}")
 
+        # Check both 'restuarent' and 'food_vendors' collections
         vendor = await food_db.restuarent.find_one({"id": user_id})
+        if not vendor:
+            logging.debug(f"RESTAURANT AUTH: Not found in restuarent, trying food_vendors")
+            vendor = await food_db.food_vendors.find_one({"id": user_id})
+        else:
+            logging.debug(f"RESTAURANT AUTH: Found in restuarent collection")
 
         if not vendor:
+            logging.warning(f"RESTAURANT AUTH: Vendor not found for user_id={user_id}")
             raise HTTPException(status_code=401, detail="Invalid restaurant identity.")
 
-        if vendor.get('token_version', 1) != version:
-            raise HTTPException(status_code=401, detail="Session expired.")
+        db_version = vendor.get('token_version', 1)
+        logging.debug(f"RESTAURANT AUTH: DB version={db_version}, Token version={version}")
+        
+        if db_version != version:
+            raise HTTPException(status_code=401, detail=f"Session expired. DB version: {db_version}, Token version: {version}")
 
         return vendor
-    except Exception:
+    except jwt.PyJWTError as e:
+        logging.error(f"RESTAURANT AUTH: JWT decode error: {e}")
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    except Exception as e:
+        logging.error(f"RESTAURANT AUTH: Error: {e}")
         raise HTTPException(status_code=401, detail="Authentication failed.")
 
 # Get Restaurant's Profile
@@ -3141,6 +3251,12 @@ async def update_restaurant_profile(restaurant_data: dict, current_vendor: Annot
     if 'cuisine_type' in data_to_update:
         data_to_update['cuisine'] = data_to_update['cuisine_type']
     
+    # Update the restaurant document in the restaurants collection
+    await food_db.restaurants.update_one(
+        {"vendor_id": current_vendor['id']},
+        {"$set": data_to_update}
+    )
+    
     # Update the core details in our 'restuarent' collection too
     await food_db.restuarent.update_one(
         {"id": current_vendor['id']},
@@ -3151,6 +3267,7 @@ async def update_restaurant_profile(restaurant_data: dict, current_vendor: Annot
             "cuisine_type": data_to_update.get('cuisine_type', current_vendor.get('cuisine_type')),
             "opening_time": data_to_update.get('opening_time', current_vendor.get('opening_time')),
             "closing_time": data_to_update.get('closing_time', current_vendor.get('closing_time')),
+            "image": data_to_update.get('image', ''),
         }}
     )
 
@@ -3410,7 +3527,17 @@ async def get_restaurants(
         query["categories"] = category
     
     if cuisine:
-        query["cuisine_type"] = {"$regex": cuisine, "$options": "i"}
+        # Handle hyphenated cuisine names (e.g., "south-indian" -> "South Indian")
+        cuisine_variants = [cuisine]
+        if '-' in cuisine:
+            # Convert "south-indian" to "South Indian" and vice versa
+            converted = cuisine.replace('-', ' ').title()
+            cuisine_variants.append(converted)
+            # Also add original with space to hyphen
+            cuisine_variants.append(cuisine.replace('-', ' '))
+        
+        # Use $in to match any variant
+        query["cuisine_type"] = {"$in": [{"$regex": v, "$options": "i"} for v in cuisine_variants]}
         
     if search:
         search_query = {"$regex": search, "$options": "i"}
@@ -3485,8 +3612,21 @@ async def place_food_order(order: dict, current_user: Annotated[dict, Depends(ge
     return {"id": order_id, "message": "Order placed successfully"}
 
 @api_router.get("/food/items")
-async def get_all_food_items(limit: int = 20):
-    items = await food_db.food_items.find({"is_available": True}).limit(limit).to_list(None)
+async def get_all_food_items(limit: int = 20, category: Optional[str] = None):
+    query = {"is_available": True}
+    
+    if category:
+        # Handle hyphenated category names (e.g., "south-indian" -> "South Indian")
+        category_variants = [category]
+        if '-' in category:
+            converted = category.replace('-', ' ').title()
+            category_variants.append(converted)
+            category_variants.append(category.replace('-', ' '))
+        
+        # Match any variant
+        query["category"] = {"$in": [{"$regex": v, "$options": "i"} for v in category_variants]}
+    
+    items = await food_db.food_items.find(query).limit(limit).to_list(None)
     for item in items:
         if '_id' in item: del item['_id']
         # Optionally attach restaurant info
