@@ -599,7 +599,7 @@ const FoodHome = () => {
                                             {cuisine.subCategories.map(sub => (
                                                 <Link
                                                     key={sub.id}
-                                                    to={`/food/restaurants?cuisine=${sub.name.toLowerCase().replace(' ', '-')}`}
+                                                    to={`/food/items?category=${sub.name.toLowerCase().replace(' ', '-')}`}
                                                     className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-orange-50 transition-colors"
                                                 >
                                                     <div className={`w-8 h-8 ${sub.color} rounded-full flex items-center justify-center`}>
@@ -1120,7 +1120,9 @@ const RestaurantsList = () => {
     }, [location.search]);
 
     const filteredRestaurants = restaurantsList.filter(r => {
-        const matchesCuisine = !selectedCuisine || (r.cuisine_type || "").toLowerCase() === selectedCuisine.toLowerCase();
+        const restaurantCuisine = (r.cuisine_type || "").toLowerCase().replace(/-/g, ' ');
+        const selectedCuisineNormalized = (selectedCuisine || "").toLowerCase().replace(/-/g, ' ');
+        const matchesCuisine = !selectedCuisine || restaurantCuisine === selectedCuisineNormalized;
         return matchesCuisine;
     });
 

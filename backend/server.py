@@ -3536,8 +3536,8 @@ async def get_restaurants(
             # Also add original with space to hyphen
             cuisine_variants.append(cuisine.replace('-', ' '))
         
-        # Use $in to match any variant
-        query["cuisine_type"] = {"$in": [{"$regex": v, "$options": "i"} for v in cuisine_variants]}
+        # Use $or to match any variant (MongoDB doesn't allow $regex inside $in)
+        query["$or"] = [{"cuisine_type": {"$regex": v, "$options": "i"}} for v in cuisine_variants]
         
     if search:
         search_query = {"$regex": search, "$options": "i"}
@@ -3623,8 +3623,8 @@ async def get_all_food_items(limit: int = 20, category: Optional[str] = None):
             category_variants.append(converted)
             category_variants.append(category.replace('-', ' '))
         
-        # Match any variant
-        query["category"] = {"$in": [{"$regex": v, "$options": "i"} for v in category_variants]}
+        # Use $or to match any variant (MongoDB doesn't allow $regex inside $in)
+        query["$or"] = [{"category": {"$regex": v, "$options": "i"}} for v in category_variants]
     
     items = await food_db.food_items.find(query).limit(limit).to_list(None)
     for item in items:
