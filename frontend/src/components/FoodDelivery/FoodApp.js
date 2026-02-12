@@ -23,6 +23,8 @@ export const useFoodCart = () => {
 };
 
 const FoodCartProvider = ({ children }) => {
+    const { user, updateUser } = useAuth();
+    const [location, setLocation] = useState(user?.address || localStorage.getItem('food_delivery_location') || 'New Delhi, India');
     const [cartItems, setCartItems] = useState(() => {
         try {
             const saved = localStorage.getItem('DACHBites_cart');
@@ -35,6 +37,29 @@ const FoodCartProvider = ({ children }) => {
     useEffect(() => {
         localStorage.setItem('DACHBites_cart', JSON.stringify(cartItems));
     }, [cartItems]);
+
+    // Sync location if user data changes
+    useEffect(() => {
+        if (user?.address) {
+            setLocation(user.address);
+        }
+    }, [user?.address]);
+
+    const handleLocationUpdate = async (newLoc) => {
+        const finalLoc = typeof newLoc === 'string' ? newLoc.trim() : '';
+        if (!finalLoc) return;
+
+        setLocation(finalLoc);
+        localStorage.setItem('food_delivery_location', finalLoc);
+
+        if (user?.id) {
+            try {
+                await updateUser(user.id, { address: finalLoc });
+            } catch (error) {
+                console.error("Failed to sync location to backend:", error);
+            }
+        }
+    };
 
     const addToCart = (item, restaurantId, restaurantName) => {
         setCartItems(prev => {
@@ -75,7 +100,8 @@ const FoodCartProvider = ({ children }) => {
 
     return (
         <FoodCartContext.Provider value={{
-            cartItems, addToCart, removeFromCart, updateQuantity, clearCart, getTotal, getItemCount
+            cartItems, addToCart, removeFromCart, updateQuantity, clearCart, getTotal, getItemCount,
+            location, handleLocationUpdate
         }}>
             {children}
         </FoodCartContext.Provider>
@@ -106,12 +132,11 @@ const cuisines = [
 
 // Food Navigation Component
 const FoodNavigation = ({ onSwitchApp }) => {
-    const { getItemCount } = useFoodCart();
-    const { user, logout, updateUser } = useAuth();
+    const { getItemCount, location, handleLocationUpdate } = useFoodCart();
+    const { user, logout } = useAuth();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showLocationModal, setShowLocationModal] = useState(false);
-    const [location, setLocation] = useState(user?.address || localStorage.getItem('food_delivery_location') || 'New Delhi, India');
     const [searchQuery, setSearchQuery] = useState('');
     const [searchSuggestions, setSearchSuggestions] = useState([]);
     const [newLocationInput, setNewLocationInput] = useState('');
@@ -158,28 +183,11 @@ const FoodNavigation = ({ onSwitchApp }) => {
         return () => clearTimeout(timer);
     }, [newLocationInput]);
 
-    // Sync location if user data changes
-    useEffect(() => {
-        if (user?.address) {
-            setLocation(user.address);
-        }
-    }, [user?.address]);
-
-    const handleLocationUpdate = async (selectedLoc = null) => {
+    const onLocationConfirm = async (selectedLoc = null) => {
         const finalLoc = (selectedLoc && typeof selectedLoc === 'string' ? selectedLoc : newLocationInput).trim();
         if (!finalLoc) return;
 
-        setLocation(finalLoc);
-        localStorage.setItem('food_delivery_location', finalLoc);
-
-        if (user?.id) {
-            try {
-                await updateUser(user.id, { address: finalLoc });
-            } catch (error) {
-                console.error("Failed to sync location to backend:", error);
-            }
-        }
-
+        await handleLocationUpdate(finalLoc);
         setShowLocationModal(false);
         setNewLocationInput('');
         setSuggestions([]);
@@ -419,7 +427,7 @@ const FoodNavigation = ({ onSwitchApp }) => {
                                             placeholder="Enter area, street or city..."
                                             value={newLocationInput}
                                             onChange={(e) => setNewLocationInput(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleLocationUpdate()}
+                                            onKeyDown={(e) => e.key === 'Enter' && onLocationConfirm()}
                                             autoFocus
                                             className={`w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl text-gray-900 font-bold outline-none transition-all shadow-inner ${suggestions.length > 0 ? 'rounded-b-none' : ''}`}
                                         />
@@ -430,7 +438,7 @@ const FoodNavigation = ({ onSwitchApp }) => {
                                                 {suggestions.map((loc, idx) => (
                                                     <button
                                                         key={idx}
-                                                        onClick={() => handleLocationUpdate(loc)}
+                                                        onClick={() => onLocationConfirm(loc)}
                                                         className="w-full px-12 py-3 text-left hover:bg-orange-50 font-bold text-gray-700 transition-colors flex items-center gap-3 border-b border-gray-50 last:border-0"
                                                     >
                                                         <Search className="w-4 h-4 text-gray-400" />
@@ -453,7 +461,7 @@ const FoodNavigation = ({ onSwitchApp }) => {
                                 </div>
 
                                 <button
-                                    onClick={handleLocationUpdate}
+                                    onClick={() => onLocationConfirm()}
                                     className="w-full py-5 bg-orange-600 text-white font-black rounded-2xl shadow-xl shadow-orange-200 hover:bg-orange-700 transition-all text-lg"
                                 >
                                     Confirm Location
@@ -471,6 +479,7 @@ const FoodNavigation = ({ onSwitchApp }) => {
 // Food Home Page
 const FoodHome = () => {
     const navigate = useNavigate();
+    const { location: userLocation } = useFoodCart();
     const [restaurantsList, setRestaurantsList] = useState([]);
     const [trendingDishes, setTrendingDishes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -519,6 +528,14 @@ const FoodHome = () => {
     ];
 
     const filteredRestaurants = restaurantsList.filter(res => {
+        // Location Filter
+        const userLoc = userLocation.toLowerCase();
+        const resCity = (res.city || "").toLowerCase();
+        const resPincode = (res.pincode || "").toLowerCase();
+        const isNearby = !userLocation || userLoc.includes(resCity) || userLoc.includes(resPincode) || resCity.includes(userLoc);
+
+        if (!isNearby && resCity) return false;
+
         if (activeFilter === 'All') return true;
         if (activeFilter === 'Rating 4.0+') return (res.rating || 4.0) >= 4.0;
         if (activeFilter === 'Fast Delivery') return (res.deliveryTime || 30) <= 30;
@@ -582,9 +599,7 @@ const FoodHome = () => {
                         {cuisines.map(cuisine => (
                             <div key={cuisine.id} className="relative group">
                                 <Link
-                                    to={cuisine.subCategories
-                                        ? `/food/restaurants?cuisine=${cuisine.name.toLowerCase()}`
-                                        : `/food/restaurants?cuisine=${cuisine.name.toLowerCase()}`}
+                                    to={`/food/items?category=${cuisine.name.toLowerCase()}`}
                                     className="flex flex-col items-center"
                                 >
                                     <div className={`w-24 h-24 ${cuisine.color} rounded-full flex items-center justify-center p-6 shadow-xl group-hover:scale-110 transition-all duration-300 ring-4 ring-white`}>
@@ -693,9 +708,12 @@ const FoodHome = () => {
                             ))
                         ) : (
                             <div className="col-span-full py-20 text-center bg-gray-50 rounded-[40px] border-2 border-dashed border-gray-200">
-                                <Utensils className="w-20 h-20 text-gray-300 mx-auto mb-6" />
-                                <h3 className="text-2xl font-bold text-gray-800 mb-2">Finding local flavors...</h3>
-                                <p className="text-gray-500 font-medium">Try exploring other cuisines</p>
+                                <MapPin className="w-20 h-20 text-gray-300 mx-auto mb-6" />
+                                <h3 className="text-2xl font-bold text-gray-800 mb-2">No restaurants found in {userLocation}</h3>
+                                <p className="text-gray-500 font-medium mb-6">We're expanding fast! Try searching another area or see all restaurants.</p>
+                                <button onClick={() => navigate('/food/restaurants')} className="px-6 py-3 bg-white border border-gray-200 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors">
+                                    View All Restaurants
+                                </button>
                             </div>
                         )}
                     </div>
@@ -989,7 +1007,7 @@ const RestaurantDetail = () => {
                         <span className="flex items-center gap-1 px-2 py-1 bg-green-500 rounded-lg">
                             {restaurant.rating} <Star className="w-3 h-3 fill-current" />
                         </span>
-                        <span>{restaurant.reviews} reviews</span>
+                        <span>{restaurant.reviews_count || 0} reviews</span>
                         <span>•</span>
                         <span className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
@@ -1011,79 +1029,206 @@ const RestaurantDetail = () => {
                 </div>
             )}
 
-            {/* Menu */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Menu</h2>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div className="grid lg:grid-cols-3 gap-12">
+                    {/* Left: Menu */}
+                    <div className="lg:col-span-2">
+                        <h2 className="text-3xl font-black text-gray-900 mb-8">Menu</h2>
+                        <div className="space-y-6">
+                            {restaurant.menu.map(item => {
+                                const quantity = getItemQuantity(item.id);
+                                return (
+                                    <div
+                                        key={item.id}
+                                        id={item.id}
+                                        className="flex items-center gap-6 bg-white p-6 rounded-[32px] shadow-sm hover:shadow-xl transition-all duration-500 group border border-gray-100"
+                                    >
+                                        <div className="relative w-32 h-32 flex-shrink-0 rounded-2xl overflow-hidden">
+                                            <img
+                                                src={item.image}
+                                                alt={item.name}
+                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                            />
+                                            {item.bestseller && (
+                                                <span className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wider">
+                                                    Bestseller
+                                                </span>
+                                            )}
+                                        </div>
 
-                <div className="space-y-4">
-                    {restaurant.menu.map(item => {
-                        const quantity = getItemQuantity(item.id);
+                                        <div className="flex-grow">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className={`w-3 h-3 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                <h3 className="text-xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors">{item.name}</h3>
+                                            </div>
+                                            <p className="text-gray-500 text-sm mb-4 line-clamp-2 leading-relaxed">{item.description}</p>
+                                            <p className="text-2xl font-black text-gray-900">₹{item.price}</p>
+                                        </div>
 
-                        return (
-                            <div
-                                key={item.id}
-                                id={item.id}
-                                className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm hover:shadow-md transition-all duration-500"
-                            >
-                                {/* Image */}
-                                <div className="relative w-28 h-28 flex-shrink-0 rounded-xl overflow-hidden">
-                                    <img
-                                        src={item.image}
-                                        alt={item.name}
-                                        className="w-full h-full object-cover"
-                                    />
-                                    {item.bestseller && (
-                                        <span className="absolute top-1 left-1 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                                            Bestseller
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Content */}
-                                <div className="flex-grow">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className={`w-4 h-4 rounded border-2 flex items-center justify-center ${item.is_veg ? 'border-green-500' : 'border-red-500'}`}>
-                                            <span className={`w-2 h-2 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
-                                        </span>
-                                        <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                                        <div className="flex-shrink-0">
+                                            {quantity === 0 ? (
+                                                <button
+                                                    onClick={() => addToCart(item, restaurant.id, restaurant.name)}
+                                                    className="px-8 py-3 bg-white border-2 border-orange-500 text-orange-600 font-bold rounded-2xl hover:bg-orange-50 transition-all active:scale-95"
+                                                >
+                                                    ADD
+                                                </button>
+                                            ) : (
+                                                <div className="flex items-center gap-4 bg-orange-600 rounded-2xl p-1 shadow-lg shadow-orange-100">
+                                                    <button
+                                                        onClick={() => updateQuantity(item.id, quantity - 1)}
+                                                        className="p-2 text-white hover:bg-orange-700 rounded-xl transition-colors"
+                                                    >
+                                                        <Minus className="w-5 h-5" />
+                                                    </button>
+                                                    <span className="text-white font-black text-lg min-w-[20px] text-center">{quantity}</span>
+                                                    <button
+                                                        onClick={() => addToCart(item, restaurant.id, restaurant.name)}
+                                                        className="p-2 text-white hover:bg-orange-700 rounded-xl transition-colors"
+                                                    >
+                                                        <Plus className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                    <p className="text-gray-500 text-sm mb-2 line-clamp-2">{item.description}</p>
-                                    <p className="font-bold text-gray-900">₹{item.price}</p>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Right: Reviews & Feedback */}
+                    <div className="space-y-8">
+                        <div>
+                            <h2 className="text-3xl font-black text-gray-900 mb-8">Customer Reviews</h2>
+                            <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm space-y-8">
+                                {/* Summary */}
+                                <div className="flex items-center gap-6 pb-8 border-b border-gray-50">
+                                    <div className="text-center">
+                                        <div className="text-5xl font-black text-gray-900 mb-1">{restaurant.rating}</div>
+                                        <div className="flex items-center justify-center gap-0.5 text-orange-500">
+                                            {[...Array(5)].map((_, i) => (
+                                                <Star key={i} className={`w-4 h-4 ${i < Math.floor(restaurant.rating) ? 'fill-current' : ''}`} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="h-16 w-px bg-gray-100" />
+                                    <div>
+                                        <div className="text-gray-900 font-bold text-lg">{restaurant.reviews_count || 0} Verified Reviews</div>
+                                        <div className="text-gray-400 font-medium text-sm">From food lovers like you</div>
+                                    </div>
                                 </div>
 
-                                {/* Add to Cart */}
-                                <div className="flex-shrink-0">
-                                    {quantity === 0 ? (
-                                        <button
-                                            onClick={() => addToCart(item, restaurant.id, restaurant.name)}
-                                            className="px-6 py-2 bg-white border-2 border-orange-500 text-orange-500 font-bold rounded-xl hover:bg-orange-50 transition-colors"
-                                        >
-                                            ADD
-                                        </button>
+                                {/* Reviews List */}
+                                <div className="space-y-8 max-h-[600px] overflow-y-auto pr-2 scrollbar-hide">
+                                    {(restaurant.user_reviews && restaurant.user_reviews.length > 0) ? (
+                                        restaurant.user_reviews.map((rev, idx) => (
+                                            <div key={idx} className="space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-black">
+                                                            {rev.user_name?.charAt(0) || 'U'}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-bold text-gray-900">{rev.user_name}</div>
+                                                            <div className="text-xs text-gray-400 font-medium">{new Date(rev.created_at).toLocaleDateString()}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-600 rounded-lg text-xs font-black">
+                                                        {rev.rating} <Star className="w-3 h-3 fill-current" />
+                                                    </div>
+                                                </div>
+                                                <p className="text-gray-600 text-sm leading-relaxed font-medium bg-gray-50/50 p-4 rounded-2xl italic">"{rev.comment}"</p>
+                                            </div>
+                                        ))
                                     ) : (
-                                        <div className="flex items-center gap-2 bg-orange-500 rounded-xl">
-                                            <button
-                                                onClick={() => updateQuantity(item.id, quantity - 1)}
-                                                className="p-2 text-white hover:bg-orange-600 rounded-l-xl"
-                                            >
-                                                <Minus className="w-5 h-5" />
-                                            </button>
-                                            <span className="text-white font-bold px-2">{quantity}</span>
-                                            <button
-                                                onClick={() => addToCart(item, restaurant.id, restaurant.name)}
-                                                className="p-2 text-white hover:bg-orange-600 rounded-r-xl"
-                                            >
-                                                <Plus className="w-5 h-5" />
-                                            </button>
+                                        <div className="text-center py-12">
+                                            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-dashed border-gray-200">
+                                                <Star className="w-8 h-8 text-gray-300" />
+                                            </div>
+                                            <p className="text-gray-400 font-bold">No reviews yet. Be the first!</p>
                                         </div>
                                     )}
                                 </div>
+
+                                {/* Review Form (Simplistic for this component) */}
+                                <ReviewForm restaurantId={restaurant.id} onReviewAdded={() => {
+                                    // Refresh data
+                                    const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                                    axios.get(`${API_BASE}/api/food/restaurants/${restaurant.id}`).then(res => setRestaurant(res.data));
+                                }} />
                             </div>
-                        );
-                    })}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+    );
+};
+
+const ReviewForm = ({ restaurantId, onReviewAdded }) => {
+    const { user } = useAuth();
+    const [rating, setRating] = useState(5);
+    const [comment, setComment] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!user) return alert('Please login to post a review');
+        setLoading(true);
+        try {
+            const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+            const token = localStorage.getItem('token');
+            await axios.post(`${API_BASE}/api/food/restaurants/${restaurantId}/reviews`,
+                { rating, comment },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setComment('');
+            onReviewAdded();
+        } catch (e) {
+            console.error("Failed to post review:", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!user) return (
+        <div className="pt-8 border-t border-gray-50 text-center">
+            <p className="text-gray-500 font-bold mb-4 uppercase tracking-widest text-xs">Share your experience</p>
+            <Link to="/auth" className="inline-block px-6 py-3 bg-gray-900 text-white font-black rounded-2xl hover:bg-orange-600 transition-all">Sign In to Review</Link>
+        </div>
+    );
+
+    return (
+        <form onSubmit={handleSubmit} className="pt-8 border-t border-gray-50 space-y-4">
+            <p className="text-gray-900 font-black uppercase tracking-widest text-xs">Rate your meal</p>
+            <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map(num => (
+                    <button
+                        key={num}
+                        type="button"
+                        onClick={() => setRating(num)}
+                        className={`p-2 transition-all ${rating >= num ? 'text-orange-500' : 'text-gray-200'}`}
+                    >
+                        <Star className={`w-8 h-8 ${rating >= num ? 'fill-current' : ''}`} />
+                    </button>
+                ))}
+            </div>
+            <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Share more details about your experience..."
+                className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl text-gray-900 font-medium outline-none transition-all resize-none h-32"
+                required
+            />
+            <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-orange-600 text-white font-black rounded-2xl hover:bg-orange-700 transition-all shadow-xl shadow-orange-100 disabled:opacity-50"
+            >
+                {loading ? 'POSTING...' : 'POST REVIEW'}
+            </button>
+        </form>
     );
 };
 
@@ -1093,6 +1238,7 @@ const RestaurantsList = () => {
     const [selectedCuisine, setSelectedCuisine] = useState(null);
     const [restaurantsList, setRestaurantsList] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [sortBy, setSortBy] = useState('Relevance');
     const location = useLocation();
 
     useEffect(() => {
@@ -1119,56 +1265,119 @@ const RestaurantsList = () => {
         fetchRestaurants();
     }, [location.search]);
 
-    const filteredRestaurants = restaurantsList.filter(r => {
-        const restaurantCuisine = (r.cuisine_type || "").toLowerCase().replace(/-/g, ' ');
-        const selectedCuisineNormalized = (selectedCuisine || "").toLowerCase().replace(/-/g, ' ');
-        const matchesCuisine = !selectedCuisine || restaurantCuisine === selectedCuisineNormalized;
-        return matchesCuisine;
-    });
+    const filteredRestaurants = restaurantsList
+        .filter(r => {
+            const restaurantCuisine = (r.cuisine_type || "").toLowerCase().replace(/-/g, ' ');
+            const selectedCuisineNormalized = (selectedCuisine || "").toLowerCase().replace(/-/g, ' ');
+            const matchesCuisine = !selectedCuisine || restaurantCuisine.includes(selectedCuisineNormalized);
+
+            const matchesSearch = !searchQuery ||
+                r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (r.cuisine_type || "").toLowerCase().includes(searchQuery.toLowerCase());
+
+            return matchesCuisine && matchesSearch;
+        })
+        .sort((a, b) => {
+            if (sortBy === 'Rating') return (b.rating || 0) - (a.rating || 0);
+            if (sortBy === 'Delivery Time') return (a.deliveryTime || 30) - (b.deliveryTime || 30);
+            if (sortBy === 'Cost: Low to High') return (a.avg_cost_for_one || 0) - (b.avg_cost_for_one || 0);
+            if (sortBy === 'Cost: High to Low') return (b.avg_cost_for_one || 0) - (a.avg_cost_for_one || 0);
+            return 0;
+        });
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-white">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-gray-500 font-black uppercase tracking-widest animate-pulse">Finding best restaurants...</p>
+            </div>
+        </div>
+    );
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <div className="bg-white border-b border-gray-100 sticky top-16 z-40">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex items-center gap-4">
-                        {/* Search */}
-                        <div className="relative flex-grow">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search restaurants..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-100 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            />
+        <div className="min-h-screen bg-white">
+            {/* Premium Hero Section */}
+            <div className="relative pt-32 pb-24 bg-gray-900 overflow-hidden">
+                <div className="absolute inset-0">
+                    <img
+                        src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1920&q=80"
+                        alt="Hero Background"
+                        className="w-full h-full object-cover opacity-40"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-gray-900/40 via-gray-900 to-white" />
+                </div>
+
+                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 backdrop-blur-md rounded-full text-orange-400 text-xs font-black uppercase tracking-widest mb-6 border border-orange-500/20">
+                        <Sparkles className="w-4 h-4" />
+                        Premium Dining Experiences
+                    </div>
+                    <h1 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tight">
+                        Discover <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">Local Flavors</span>
+                    </h1>
+                    <p className="text-xl text-gray-400 max-w-2xl mx-auto font-medium">
+                        From street food to fine dining, explore the culinary excellence available for delivery right to your doorstep.
+                    </p>
+                </div>
+            </div>
+
+            {/* Sticky Filter Bar */}
+            <div className="sticky top-16 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100 shadow-sm shadow-gray-100/20">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-grow max-w-4xl">
+                            {/* Modern Search */}
+                            <div className="relative flex-grow group">
+                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-colors group-focus-within:text-orange-500" />
+                                <input
+                                    type="text"
+                                    placeholder="Find your favorite restaurant or cuisine..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-14 pr-6 py-4 rounded-2xl bg-gray-50 border-2 border-transparent focus:border-orange-500 focus:bg-white text-gray-900 font-bold outline-none transition-all shadow-inner"
+                                />
+                            </div>
+
+                            {/* Sort Dropdown */}
+                            <div className="relative min-w-[200px]">
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value)}
+                                    className="w-full pl-6 pr-10 py-4 appearance-none bg-gray-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl text-gray-900 font-bold outline-none transition-all cursor-pointer shadow-inner"
+                                >
+                                    {['Relevance', 'Rating', 'Delivery Time', 'Cost: Low to High', 'Cost: High to Low'].map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                                <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 rotate-90 pointer-events-none" />
+                            </div>
                         </div>
 
-                        {/* Filter */}
-                        <button className="flex items-center gap-2 px-4 py-3 bg-gray-100 rounded-xl text-gray-700 hover:bg-gray-200">
-                            <Filter className="w-5 h-5" />
-                            <span className="hidden sm:inline">Filters</span>
-                        </button>
+                        {/* Stats */}
+                        <div className="hidden lg:block text-right">
+                            <span className="text-gray-400 font-bold text-xs uppercase tracking-widest block mb-1">Results Found</span>
+                            <span className="text-3xl font-black text-gray-900">{filteredRestaurants.length}</span>
+                        </div>
                     </div>
 
-                    {/* Cuisine Pills */}
-                    <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
+                    {/* Cuisine Quick Access */}
+                    <div className="flex gap-3 mt-6 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
                         <button
                             onClick={() => setSelectedCuisine(null)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${!selectedCuisine
-                                ? 'bg-orange-500 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            className={`px-8 py-3 rounded-2xl text-sm font-black uppercase tracking-wider whitespace-nowrap transition-all border-2 ${!selectedCuisine
+                                ? 'bg-orange-600 text-white border-orange-600 shadow-xl shadow-orange-100'
+                                : 'bg-white text-gray-500 border-gray-100 hover:border-orange-200 hover:text-orange-600 shadow-sm'
                                 }`}
                         >
-                            All
+                            All Cuisines
                         </button>
                         {cuisines.map(cuisine => (
                             <button
                                 key={cuisine.id}
                                 onClick={() => setSelectedCuisine(cuisine.name.toLowerCase())}
-                                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedCuisine === cuisine.name.toLowerCase()
-                                    ? 'bg-orange-500 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                className={`flex items-center gap-2 px-8 py-3 rounded-2xl text-sm font-black uppercase tracking-wider whitespace-nowrap transition-all border-2 ${selectedCuisine === cuisine.name.toLowerCase()
+                                    ? 'bg-orange-600 text-white border-orange-600 shadow-xl shadow-orange-100'
+                                    : 'bg-white text-gray-500 border-gray-100 hover:border-orange-200 hover:text-orange-600 shadow-sm'
                                     }`}
                             >
                                 {cuisine.name}
@@ -1178,21 +1387,27 @@ const RestaurantsList = () => {
                 </div>
             </div>
 
-            {/* Results */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <p className="text-gray-600 mb-6">{filteredRestaurants.length} restaurants found</p>
-
+            {/* Elegant Results Grid */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
                 {filteredRestaurants.length > 0 ? (
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-10">
                         {filteredRestaurants.map(restaurant => (
                             <RestaurantCard key={restaurant.id} restaurant={restaurant} />
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-12">
-                        <Utensils className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-gray-700 mb-2">No restaurants found</h3>
-                        <p className="text-gray-500">Try adjusting your search or filters</p>
+                    <div className="text-center py-32 bg-gray-50 rounded-[48px] border-2 border-dashed border-gray-200 max-w-4xl mx-auto">
+                        <div className="w-24 h-24 bg-white rounded-3xl shadow-xl flex items-center justify-center mx-auto mb-8">
+                            <Utensils className="w-12 h-12 text-gray-300" />
+                        </div>
+                        <h3 className="text-3xl font-black text-gray-900 mb-4 tracking-tight">No restaurants match your filters</h3>
+                        <p className="text-gray-500 font-medium text-lg mb-8 max-w-sm mx-auto">Try adjusting your search query or explore other culinary categories.</p>
+                        <button
+                            onClick={() => { setSearchQuery(''); setSelectedCuisine(null); }}
+                            className="px-10 py-4 bg-orange-600 text-white font-black rounded-2xl hover:bg-orange-700 transition-all shadow-xl shadow-orange-100 flex items-center gap-3 mx-auto"
+                        >
+                            Clear All Filters <Zap className="w-5 h-5" />
+                        </button>
                     </div>
                 )}
             </div>
@@ -1241,8 +1456,17 @@ const FoodItemsList = () => {
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="mb-12">
-                    <h1 className="text-5xl font-black text-gray-900 mb-4">Order Your Favorite Dishes</h1>
-                    <p className="text-gray-500 font-bold text-xl uppercase tracking-widest">Global Marketplace / Freshly Prepared</p>
+                    <h1 className="text-5xl font-black text-gray-900 mb-4">
+                        {category ? `${category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} Dishes` : 'Order Your Favorite Dishes'}
+                    </h1>
+                    <p className="text-gray-500 font-bold text-xl uppercase tracking-widest">
+                        {category ? `Showing all ${category.replace(/-/g, ' ')} items` : 'Global Marketplace / Freshly Prepared'}
+                    </p>
+                    {category && (
+                        <Link to="/food/items" className="inline-flex items-center gap-2 mt-4 text-orange-600 font-bold hover:text-orange-700 transition-colors">
+                            View All Items <ArrowRight className="w-4 h-4" />
+                        </Link>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

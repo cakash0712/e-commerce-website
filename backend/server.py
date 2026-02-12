@@ -3588,7 +3588,40 @@ async def get_restaurant_detail(restaurant_id: str):
             del item['_id']
     
     restaurant['menu'] = menu
+
+    # Get reviews
+    reviews = await food_db.reviews.find({"restaurant_id": restaurant_id}).sort("created_at", -1).to_list(None)
+    for r in reviews:
+        if '_id' in r: del r['_id']
+    restaurant['user_reviews'] = reviews
+    
+    # Update aggregate rating if reviews exist
+    if reviews:
+        restaurant['rating'] = round(sum(r['rating'] for r in reviews) / len(reviews), 1)
+        restaurant['reviews_count'] = len(reviews)
+    else:
+        restaurant['reviews_count'] = 0
+
     return restaurant
+
+@api_router.post("/food/restaurants/{restaurant_id}/reviews")
+async def add_restaurant_review(
+    restaurant_id: str, 
+    review_data: dict, 
+    current_user: Annotated[dict, Depends(get_current_user)]
+):
+    review_id = str(uuid.uuid4())
+    review_doc = {
+        "id": review_id,
+        "restaurant_id": restaurant_id,
+        "user_id": current_user['id'],
+        "user_name": current_user['name'],
+        "rating": float(review_data.get('rating', 5)),
+        "comment": review_data.get('comment', ""),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await food_db.reviews.insert_one(review_doc)
+    return {"message": "Review added successfully", "id": review_id}
 
 # =============================================================================
 
