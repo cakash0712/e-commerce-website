@@ -410,7 +410,7 @@ class User(BaseModel):
     business_category: str = ""
     business_categories: List[str] = []
     owner_name: str = ""
-    user_type: str = "user"  # user, admin, vendor_ecommerce, restaurant
+    user_type: str = "user"  # user, admin, vendor_ecommerce, restaurant, delivery_partner
     status: str = "active"   # active, pending, rejected
     rejection_reason: Optional[str] = None
     is_blocked: bool = False
@@ -427,6 +427,10 @@ class User(BaseModel):
     shipping_rates: List[ShippingRate] = [] # For vendors
     delivery_location: str = ""
     recent_searches: List[str] = []
+    favorite_restaurants: List[str] = []
+    wallet_balance: float = 0.0
+    live_location: Optional[dict] = {"lat": 0.0, "lng": 0.0}
+    availability_status: str = "offline"  # online, offline, busy (for delivery partners)
 
 class UserCreate(BaseModel):
     name: str
@@ -443,6 +447,7 @@ class UserCreate(BaseModel):
     delivery_location: str = ""
     recent_searches: List[str] = []
     pickup_items: List[str] = []
+    wallet_balance: float = 0.0
 
 class BankDetails(BaseModel):
     account_name: Optional[str] = None
@@ -468,6 +473,8 @@ class FoodVendorCreate(BaseModel):
     closing_time: Optional[str] = "22:00"
     delivery_radius: Optional[str] = "5"
     avg_delivery_time: Optional[str] = "30-45"
+    min_order_amount: Optional[float] = 100.0
+    delivery_charge: Optional[float] = 30.0
     bank_details: Optional[BankDetails] = None
     user_type: str = "restaurant"
 
@@ -500,6 +507,8 @@ class UserUpdate(BaseModel):
     active_gift_cards: Optional[List[GiftCard]] = None
     delivery_location: Optional[str] = None
     recent_searches: Optional[List[str]] = None
+    favorite_restaurants: Optional[List[str]] = None
+    wallet_balance: Optional[float] = None
 
 class Product(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -617,6 +626,61 @@ class SubCategory(BaseModel):
     main_category_slug: str
     link: str
 
+# --- Food Delivery Specific Models ---
+
+class FoodOption(BaseModel):
+    name: str
+    price: float = 0.0
+    is_available: bool = True
+
+class FoodOptionGroup(BaseModel):
+    name: str # e.g., "Size", "Add-ons"
+    min_selectable: int = 1
+    max_selectable: int = 1
+    options: List[FoodOption]
+
+class FoodItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    restaurant_id: str
+    category_id: Optional[str] = None
+    category_name: str # e.g., "Pizza", "Burgers"
+    name: str
+    description: str = ""
+    base_price: float
+    image: str = ""
+    tax_percent: float = 5.0
+    discount_percent: float = 0.0
+    is_veg: bool = True
+    preparation_time: str = "20 mins"
+    is_available: bool = True
+    dietary_tags: List[str] = [] # Vegan, Keto, etc.
+    calorie_info: Optional[str] = None
+    customization_groups: List[FoodOptionGroup] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class FoodRestaurant(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    vendor_id: str
+    name: str
+    logo: str = ""
+    image: str = "" # Cover image
+    cuisine_type: str = "General"
+    rating: float = 4.5
+    reviews_count: int = 0
+    address: str = ""
+    city: str = ""
+    is_open: bool = True
+    delivery_time: str = "30-45"
+    delivery_fee: float = 30.0
+    minimum_order: float = 100.0
+    contact_phone: str = ""
+    menu_categories: List[str] = []
+    featured: bool = False
+    offers: List[str] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class OrderItem(BaseModel):
     product_id: str
     name: str
@@ -625,6 +689,7 @@ class OrderItem(BaseModel):
     image: str
     vendor_id: str
     status: str = "processing" # processing, shipped, delivered, cancelled
+    customizations: List[dict] = [] # e.g. [{"group": "Size", "option": "Large", "price": 2.0}]
 
 class Order(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -637,6 +702,9 @@ class Order(BaseModel):
     payment_method: str = "card"
     items: List[OrderItem]
     total_amount: float
+    tax_amount: float = 0.0
+    delivery_charge: float = 0.0
+    tip_amount: float = 0.0
     coupon_code: Optional[str] = None
     discount_amount: float = 0
     status: str = "processing"
@@ -656,6 +724,9 @@ class OrderCreate(BaseModel):
     payment_method: str = "card"
     items: List[OrderItem]
     total_amount: float
+    tax_amount: float = 0.0
+    delivery_charge: float = 0.0
+    tip_amount: float = 0.0
     coupon_code: Optional[str] = None
     discount_amount: float = 0
     # Food delivery fields
@@ -1016,6 +1087,33 @@ async def login_user(login_data: UserLogin, request: Request):
     # Return user data with token, without password
     user_data = {k: v for k, v in user.items() if k != 'password' and k != '_id'}
     return {**user_data, "token": token}
+    
+@api_router.post("/users/send-otp")
+async def send_otp(identifier: str): # email or phone
+    # In a real app, this would send an SMS or Email
+    # For now, we'll return a mock success
+    logging.info(f"OTP requested for {identifier}")
+    return {"message": "OTP sent successfully to " + identifier, "otp": "123456"} # Mock OTP
+
+@api_router.post("/users/verify-otp")
+async def verify_otp(identifier: str, otp: str):
+    # Mock OTP verification
+    if otp != "123456":
+        raise HTTPException(status_code=400, detail="Invalid OTP code protocol.")
+        
+    # Check if user exists
+    user = await db.users.find_one({"$or": [{"email": identifier}, {"phone": identifier}]}) or \
+           await db.vendors.find_one({"$or": [{"email": identifier}, {"phone": identifier}]}) or \
+           await food_db.restuarent.find_one({"$or": [{"email": identifier}, {"phone": identifier}]})
+           
+    if not user:
+        return {"message": "OTP verified. Redirecting to registration.", "verified": True, "user_exists": False}
+        
+    # Generate Token for existing user
+    token = create_access_token({"sub": user['id'], "user_type": user['user_type'], "version": user.get('token_version', 1)})
+    
+    user_data = {k: v for k, v in user.items() if k != 'password' and k != '_id'}
+    return {**user_data, "token": token, "verified": True, "user_exists": True}
 
 
 
@@ -3581,13 +3679,20 @@ async def get_restaurant_detail(restaurant_id: str):
     if 'image' not in restaurant: restaurant['image'] = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=400&fit=crop"
     if 'offers' not in restaurant: restaurant['offers'] = []
     
-    # Get menu items
-    menu = await food_db.food_items.find({"restaurant_id": restaurant_id, "is_available": True}).to_list(None)
-    for item in menu:
-        if '_id' in item:
-            del item['_id']
+    # Get Categorized menu items
+    all_items = await food_db.food_items.find({"restaurant_id": restaurant_id, "is_available": True}).to_list(None)
     
-    restaurant['menu'] = menu
+    # Organize by category
+    categorized_menu = {}
+    for item in all_items:
+        if '_id' in item: del item['_id']
+        cat = item.get('category_name', 'Others')
+        if cat not in categorized_menu:
+            categorized_menu[cat] = []
+        categorized_menu[cat].append(item)
+    
+    restaurant['menu'] = categorized_menu
+    restaurant['menu_categories'] = list(categorized_menu.keys())
 
     # Get reviews
     reviews = await food_db.reviews.find({"restaurant_id": restaurant_id}).sort("created_at", -1).to_list(None)
@@ -3625,10 +3730,35 @@ async def add_restaurant_review(
 
 # =============================================================================
 
+@api_router.post("/food/coupons/validate")
+async def validate_food_coupon(data: dict):
+    code = data.get('code', '').upper()
+    order_value = float(data.get('order_value', 0))
+    
+    if code == "WELCOME20":
+        discount = round(order_value * 0.20, 2)
+        return {"valid": True, "discount": discount, "message": "20% Discount applied!"}
+    elif code == "FREE50":
+        discount = 50.0 if order_value > 200 else 0
+        return {"valid": True, "discount": discount, "message": "₹50 OFF applied!"}
+    
+    return {"valid": False, "discount": 0, "message": "Invalid coupon code"}
+
 # Public Food Order Endpoints
 @api_router.post("/food/orders")
 async def place_food_order(order: dict, current_user: Annotated[dict, Depends(get_current_user)]):
     order_id = str(uuid.uuid4())
+    
+    # Financial calculations
+    subtotal = float(order.get('subtotal', order.get('total', 0)))
+    tax_rate = 0.05  # 5% tax for food delivery
+    tax_amount = round(subtotal * tax_rate, 2)
+    delivery_charge = float(order.get('delivery_charge', 30.0))
+    tip_amount = float(order.get('tip_amount', 0.0))
+    discount_amount = float(order.get('discount_amount', 0.0))
+    
+    total_amount = subtotal + tax_amount + delivery_charge + tip_amount - discount_amount
+    
     order_doc = {
         "id": order_id,
         "user_id": current_user['id'],
@@ -3636,13 +3766,47 @@ async def place_food_order(order: dict, current_user: Annotated[dict, Depends(ge
         "restaurant_id": order['restaurant_id'],
         "restaurant_name": order['restaurant_name'],
         "items": order['items'],
-        "total": order['total'],
-        "status": "pending",
+        "subtotal": subtotal,
+        "tax_amount": tax_amount,
+        "delivery_charge": delivery_charge,
+        "tip_amount": tip_amount,
+        "discount_amount": discount_amount,
+        "coupon_code": order.get('coupon_code'),
+        "total": total_amount,
+        "status": "pending", # pending, preparing, ready, out_for_delivery, delivered, cancelled
+        "delivery_status": "pending",
+        "payment_method": order.get('payment_method', 'card'),
+        "delivery_notes": order.get('delivery_notes', ""),
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "delivery_address": order.get('delivery_address', current_user.get('address', ''))
+        "delivery_address": order.get('delivery_address', current_user.get('address', '')),
+        "invoice_generated": True
     }
     await food_db.food_orders.insert_one(order_doc)
-    return {"id": order_id, "message": "Order placed successfully"}
+    return {"id": order_id, "message": "Order placed successfully", "total": total_amount}
+
+@api_router.put("/food/orders/{order_id}/status")
+async def update_food_order_status(
+    order_id: str, 
+    status_data: dict, 
+    current_user: Annotated[dict, Depends(get_current_user)]
+):
+    # Only restaurant owners or admins can update order status
+    if current_user.get('user_type') not in ['restaurant', 'admin']:
+         raise HTTPException(status_code=403, detail="Not authorized")
+         
+    new_status = status_data.get('status')
+    if new_status not in ["pending", "preparing", "ready", "out_for_delivery", "delivered", "cancelled"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+        
+    update_result = await food_db.food_orders.update_one(
+        {"id": order_id},
+        {"$set": {"status": new_status}}
+    )
+    
+    if update_result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    return {"message": f"Order status updated to {new_status}"}
 
 @api_router.get("/food/items")
 async def get_all_food_items(limit: int = 20, category: Optional[str] = None):
@@ -3657,7 +3821,7 @@ async def get_all_food_items(limit: int = 20, category: Optional[str] = None):
             category_variants.append(category.replace('-', ' '))
         
         # Use $or to match any variant (MongoDB doesn't allow $regex inside $in)
-        query["$or"] = [{"category": {"$regex": v, "$options": "i"}} for v in category_variants]
+        query["$or"] = [{"category_name": {"$regex": v, "$options": "i"}} for v in category_variants]
     
     items = await food_db.food_items.find(query).limit(limit).to_list(None)
     for item in items:
@@ -3674,6 +3838,345 @@ async def get_user_food_orders(current_user: Annotated[dict, Depends(get_current
     for o in orders:
         if '_id' in o: del o['_id']
     return orders
+
+@api_router.get("/food/orders/{order_id}/invoice")
+async def get_food_order_invoice(order_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
+    order = await food_db.food_orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    if order['user_id'] != current_user['id'] and current_user.get('user_type') not in ['admin', 'restaurant']:
+        raise HTTPException(status_code=403, detail="Not authorized to view this invoice")
+        
+    if '_id' in order: del order['_id']
+    
+    # Simple invoice structure
+    invoice = {
+        "invoice_number": f"INV-{order_id[:8].upper()}",
+        "order_id": order_id,
+        "date": order['created_at'],
+        "customer": {
+            "name": order['customer_name'],
+            "address": order['delivery_address']
+        },
+        "restaurant_name": order['restaurant_name'],
+        "items": order['items'],
+        "financials": {
+            "subtotal": order.get('subtotal', 0),
+            "tax": order.get('tax_amount', 0),
+            "delivery": order.get('delivery_charge', 0),
+            "tip": order.get('tip_amount', 0),
+            "total": order['total']
+        },
+        "status": order['status'],
+        "payment_method": order.get('payment_method', 'card')
+    }
+    return invoice
+
+@api_router.get("/hello")
+async def hello():
+    return {"message": "hello"}
+
+@api_router.post("/internal/seed-restaurants")
+async def seed_restaurants():
+    # 1. Categories
+    categories = [
+        {"id": "cat-pizza", "name": "Pizza", "image": "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400"},
+        {"id": "cat-burgers", "name": "Burgers", "image": "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400"},
+        {"id": "cat-chicken", "name": "Chicken", "image": "https://images.unsplash.com/photo-1567622646622-4a697693e56c?w=400"},
+        {"id": "cat-healthy", "name": "Healthy & Salads", "image": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400"},
+        {"id": "cat-beverages", "name": "Beverages", "image": "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400"}
+    ]
+    
+    # 2. Restaurants
+    restaurants = [
+        {
+            "id": "dominos-001",
+            "name": "Domino's Pizza",
+            "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Domino%27s_pizza_logo.svg/1200px-Domino%27s_pizza_logo.svg.png",
+            "image": "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800",
+            "cuisine_type": "Italian, Pizza",
+            "rating": 4.5,
+            "reviews_count": 2800,
+            "address": "45 Pizza Street, Crust City",
+            "is_open": True,
+            "delivery_time": "30 mins",
+            "delivery_fee": 30.0,
+            "minimum_order": 250.0,
+            "menu_categories": ["Pizza", "Sides", "Beverages"],
+            "featured": True,
+            "offers": ["30% OFF on first 3 orders"]
+        },
+        {
+            "id": "mcdonalds-001",
+            "name": "McDonald's",
+            "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/McDonald%27s_Golden_Arches.svg/1200px-McDonald%27s_Golden_Arches.svg.png",
+            "image": "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800",
+            "cuisine_type": "American, Fast Food",
+            "rating": 4.2,
+            "reviews_count": 1500,
+            "address": "123 Burger Lane, Foodie Hub",
+            "is_open": True,
+            "delivery_time": "20-30 mins",
+            "delivery_fee": 35.0,
+            "minimum_order": 150.0,
+            "menu_categories": ["Burgers", "Combos", "Beverages"],
+            "featured": True,
+            "offers": ["Free McVeggie on orders above ₹500"]
+        },
+        {
+            "id": "kfc-001",
+            "name": "KFC",
+            "logo": "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/KFC_logo.svg/1200px-KFC_logo.svg.png",
+            "image": "https://images.unsplash.com/photo-1513639776629-7b61b0ac49bc?w=800",
+            "cuisine_type": "American, Fried Chicken",
+            "rating": 4.3,
+            "reviews_count": 1200,
+            "address": "78 Fried Chicken Road, Crispy Town",
+            "is_open": True,
+            "delivery_time": "25-35 mins",
+            "delivery_fee": 40.0,
+            "minimum_order": 200.0,
+            "menu_categories": ["Chicken", "Burgers", "Sides"],
+            "featured": False,
+            "offers": ["Extra wing free on bucket order"]
+        }
+    ]
+    
+    # 3. Menu Items
+    menu_items = [
+        # Domino's Items
+        {
+            "id": "pizza-margherita-001",
+            "restaurant_id": "dominos-001",
+            "category_name": "Pizza",
+            "name": "Margherita Pizza",
+            "description": "Fresh mozzarella & basil on classic tomato base",
+            "base_price": 299.0,
+            "image": "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=500",
+            "is_veg": True,
+            "preparation_time": "20 mins",
+            "customization_groups": [
+                {
+                    "name": "Size",
+                    "min_selectable": 1, "max_selectable": 1,
+                    "options": [
+                        {"name": "Small", "price": 0.0},
+                        {"name": "Medium", "price": 150.0},
+                        {"name": "Large", "price": 300.0}
+                    ]
+                },
+                {
+                    "name": "Extra Toppings",
+                    "min_selectable": 0, "max_selectable": 5,
+                    "options": [
+                        {"name": "Olives", "price": 40.0},
+                        {"name": "Extra Cheese", "price": 80.0},
+                        {"name": "Mushrooms", "price": 50.0}
+                    ]
+                }
+            ]
+        },
+        # McDonald's Items
+        {
+            "id": "burger-maharaja-001",
+            "restaurant_id": "mcdonalds-001",
+            "category_name": "Burgers",
+            "name": "Maharaja Mac",
+            "description": "Double decker burger with rich spicy sauce",
+            "base_price": 199.0,
+            "image": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500",
+            "is_veg": False,
+            "preparation_time": "15 mins",
+            "customization_groups": [
+                {
+                    "name": "Patty Style",
+                    "min_selectable": 1, "max_selectable": 1,
+                    "options": [
+                        {"name": "Single Patty", "price": 0.0},
+                        {"name": "Double Patty", "price": 70.0}
+                    ]
+                },
+                {
+                    "name": "Spice Level",
+                    "min_selectable": 1, "max_selectable": 1,
+                    "options": [
+                        {"name": "Normal", "price": 0.0},
+                        {"name": "Spicy", "price": 0.0},
+                        {"name": "Hellfire", "price": 10.0}
+                    ]
+                },
+                {
+                    "name": "Add-ons",
+                    "min_selectable": 0, "max_selectable": 3,
+                    "options": [
+                        {"name": "Add Cheese Slice", "price": 25.0},
+                        {"name": "Make it a Combo (Fries + Drink)", "price": 99.0}
+                    ]
+                },
+                {
+                    "name": "Removals",
+                    "min_selectable": 0, "max_selectable": 3,
+                    "options": [
+                        {"name": "No Onion", "price": 0.0},
+                        {"name": "No Tomato", "price": 0.0}
+                    ]
+                }
+            ]
+        },
+        # Healthy Item
+        {
+            "id": "salad-quinoa-001",
+            "restaurant_id": "mcdonalds-001", # McDonald's adding healthy options
+            "category_name": "Healthy & Salads",
+            "name": "Quinoa Power Salad",
+            "description": "High protein quinoa with kale and roasted chickpeas",
+            "base_price": 249.0,
+            "is_veg": True,
+            "dietary_tags": ["Vegan", "Gluten-free", "High-protein"],
+            "calorie_info": "320 kcal",
+            "customization_groups": [
+                {
+                    "name": "Dressing",
+                    "min_selectable": 1, "max_selectable": 1,
+                    "options": [
+                        {"name": "Lemon Vinaigrette", "price": 0.0},
+                        {"name": "Tahini", "price": 0.0},
+                        {"name": "No Dressing", "price": 0.0}
+                    ]
+                },
+                {
+                    "name": "Portion Size",
+                    "min_selectable": 1, "max_selectable": 1,
+                    "options": [
+                        {"name": "Regular", "price": 0.0},
+                        {"name": "Large", "price": 60.0}
+                    ]
+                }
+            ]
+        },
+        # Beverage Item
+        {
+            "id": "bev-iced-latte-001",
+            "restaurant_id": "mcdonalds-001",
+            "category_name": "Beverages",
+            "name": "Iced Vanilla Latte",
+            "description": "Premium espresso with cold milk and vanilla syrup",
+            "base_price": 129.0,
+            "customization_groups": [
+                {
+                    "name": "Size",
+                    "min_selectable": 1, "max_selectable": 1,
+                    "options": [
+                        {"name": "Small", "price": 0.0},
+                        {"name": "Medium", "price": 30.0},
+                        {"name": "Large", "price": 50.0}
+                    ]
+                },
+                {
+                    "name": "Ice Level",
+                    "min_selectable": 1, "max_selectable": 1,
+                    "options": [
+                        {"name": "No Ice", "price": 0.0},
+                        {"name": "Less Ice", "price": 0.0},
+                        {"name": "Normal Ice", "price": 0.0}
+                    ]
+                },
+                {
+                    "name": "Sugar Level",
+                    "min_selectable": 1, "max_selectable": 1,
+                    "options": [
+                        {"name": "No Sugar", "price": 0.0},
+                        {"name": "50% Sugar", "price": 0.0},
+                        {"name": "Normal", "price": 0.0}
+                    ]
+                }
+            ]
+        }
+    ]
+    
+    # Insert Data
+    for cat in categories:
+        await food_db.food_categories.update_one({"id": cat['id']}, {"$set": cat}, upsert=True)
+    
+    for rest in restaurants:
+        rest['created_at'] = datetime.now(timezone.utc).isoformat()
+        await food_db.restaurants.update_one({"id": rest['id']}, {"$set": rest}, upsert=True)
+        
+    for item in menu_items:
+        item['created_at'] = datetime.now(timezone.utc).isoformat()
+        await food_db.food_items.update_one({"id": item['id']}, {"$set": item}, upsert=True)
+        
+    return {"message": "Enhanced food data seeded successfully", "restaurants": len(restaurants), "items": len(menu_items)}
+
+@api_router.post("/user/wallet/add")
+async def add_wallet_money(amount: float, current_user: Annotated[dict, Depends(get_current_user)]):
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
+        
+    collection = db.users
+    if current_user.get('user_type') == "restaurant":
+        collection = food_db.restuarent
+    elif current_user.get('user_type') == "vendor_ecommerce":
+        collection = db.vendors
+        
+    await collection.update_one(
+        {"id": current_user['id']},
+        {"$inc": {"wallet_balance": amount}}
+    )
+    
+    return {"message": f"Added ₹{amount} to wallet", "new_balance": (current_user.get('wallet_balance', 0) + amount)}
+
+@api_router.post("/user/favorites/restaurants/{restaurant_id}")
+async def toggle_fav_restaurant(restaurant_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
+    collection = db.users
+    if current_user.get('user_type') == "restaurant":
+        collection = food_db.restuarent
+    elif current_user.get('user_type') == "vendor_ecommerce":
+        collection = db.vendors
+        
+    favorites = current_user.get('favorite_restaurants', [])
+    if restaurant_id in favorites:
+        await collection.update_one({"id": current_user['id']}, {"$pull": {"favorite_restaurants": restaurant_id}})
+        return {"message": "Removed from favorites", "is_favorite": False}
+    else:
+        await collection.update_one({"id": current_user['id']}, {"$push": {"favorite_restaurants": restaurant_id}})
+        return {"message": "Added to favorites", "is_favorite": True}
+
+@api_router.put("/delivery/location")
+async def update_rider_location(location: dict, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user.get('user_type') != "delivery_partner":
+        raise HTTPException(status_code=403, detail="Not authorized as delivery partner")
+        
+    await db.users.update_one(
+        {"id": current_user['id']},
+        {"$set": {"live_location": location, "availability_status": "online"}}
+    )
+    return {"status": "success", "location": location}
+
+@api_router.get("/food/orders/{order_id}/tracking")
+async def track_food_order(order_id: str):
+    order = await food_db.food_orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    rider_id = order.get('delivery_partner_id')
+    rider_info = None
+    if rider_id:
+        rider = await db.users.find_one({"id": rider_id})
+        if rider:
+            rider_info = {
+                "name": rider.get('name'),
+                "phone": rider.get('phone'),
+                "location": rider.get('live_location')
+            }
+            
+    return {
+        "order_id": order_id,
+        "status": order['status'],
+        "delivery_status": order.get('delivery_status', 'pending'),
+        "rider": rider_info
+    }
 
 
 app.include_router(api_router)

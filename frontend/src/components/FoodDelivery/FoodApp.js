@@ -650,29 +650,42 @@ const FoodHome = () => {
                         </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {trendingDishes.map((dish, i) => (
-                            <div key={i} className="bg-white rounded-3xl p-4 shadow-sm hover:shadow-xl transition-all group">
-                                <div className="relative h-48 rounded-2xl overflow-hidden mb-4">
-                                    <img src={dish.image} alt={dish.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg flex items-center gap-1 text-xs font-bold text-gray-700 shadow-sm">
-                                        <Star className="w-3 h-3 text-orange-500 fill-orange-500" /> 4.5
+                        {trendingDishes.length > 0 ? trendingDishes.map((dish, i) => (
+                            <div key={dish.id || i} className="bg-white rounded-3xl p-4 shadow-sm hover:shadow-xl transition-all group">
+                                <div className="relative h-48 rounded-2xl overflow-hidden mb-4 bg-orange-50">
+                                    {dish.image ? (
+                                        <img src={dish.image} alt={dish.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <Utensils className="w-12 h-12 text-orange-200" />
+                                        </div>
+                                    )}
+                                    <div className="absolute top-3 left-3">
+                                        <span className={`px-2 py-1 rounded-lg text-xs font-bold text-white ${dish.is_veg ? 'bg-green-600' : 'bg-red-500'}`}>
+                                            {dish.is_veg ? '🌱 Veg' : '🍖 Non-Veg'}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="mb-4">
                                     <h3 className="font-bold text-gray-900 text-lg mb-1">{dish.name}</h3>
-                                    <p className="text-gray-500 text-sm font-medium">{dish.restaurantName}</p>
+                                    <p className="text-gray-500 text-sm font-medium">{dish.restaurant_name || 'Restaurant'}</p>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xl font-black text-gray-900">₹{dish.price}</span>
+                                    <span className="text-xl font-black text-gray-900">₹{dish.base_price || dish.price}</span>
                                     <button
-                                        onClick={() => navigate(`/food/restaurant/${dish.restaurantId}`)}
+                                        onClick={() => navigate(`/food/restaurant/${dish.restaurant_id}`)}
                                         className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700 transition-all shadow-md shadow-orange-200"
                                     >
-                                        <Plus className="w-4 h-4" /> Add
+                                        <Plus className="w-4 h-4" /> View
                                     </button>
                                 </div>
                             </div>
-                        ))}
+                        )) : (
+                            <div className="col-span-full py-12 text-center">
+                                <Utensils className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                                <p className="text-gray-400 font-medium">No dishes available yet. Check back soon!</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>
@@ -856,12 +869,18 @@ const RestaurantCard = ({ restaurant }) => {
             className="group bg-white rounded-[40px] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer border border-gray-100 flex flex-col h-full"
         >
             {/* Image Section */}
-            <div className="relative h-64 overflow-hidden">
-                <img
-                    src={restaurant.image}
-                    alt={restaurant.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
+            <div className="relative h-64 overflow-hidden bg-orange-50">
+                {restaurant.image ? (
+                    <img
+                        src={restaurant.image}
+                        alt={restaurant.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                        <Utensils className="w-16 h-16 text-orange-200" />
+                    </div>
+                )}
 
                 {/* Offer Badge */}
                 {restaurant.offers && restaurant.offers.length > 0 && (
@@ -890,7 +909,7 @@ const RestaurantCard = ({ restaurant }) => {
                 <div className="flex items-start justify-between mb-4">
                     <div>
                         <h3 className="text-2xl font-black text-gray-900 mb-1 group-hover:text-orange-600 transition-colors leading-tight">{restaurant.name}</h3>
-                        <p className="text-gray-500 font-bold text-sm uppercase tracking-wider">{restaurant.cuisine}</p>
+                        <p className="text-gray-500 font-bold text-sm uppercase tracking-wider">{restaurant.cuisine_type || restaurant.cuisine}</p>
                     </div>
                     <div className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm font-black rounded-xl shadow-lg shadow-green-100">
                         {restaurant.rating || "4.0"}
@@ -901,11 +920,11 @@ const RestaurantCard = ({ restaurant }) => {
                 <div className="mt-auto pt-6 border-t border-gray-50 flex items-center justify-between text-gray-600">
                     <div className="flex items-center gap-1.5 font-bold">
                         <Clock className="w-5 h-5 text-orange-500" />
-                        <span>{restaurant.deliveryTime || "25-35"} min</span>
+                        <span>{restaurant.delivery_time || restaurant.deliveryTime || "30-45"} min</span>
                     </div>
                     <div className="h-2 w-2 rounded-full bg-gray-300" />
                     <div className="font-black text-gray-900">
-                        ₹{restaurant.avg_cost_for_one || "200"} <span className="text-gray-400 font-bold text-xs uppercase">for one</span>
+                        ₹{restaurant.delivery_fee || restaurant.deliveryFee || "0"} <span className="text-gray-400 font-bold text-xs uppercase">delivery</span>
                     </div>
                 </div>
             </div>
@@ -1034,67 +1053,94 @@ const RestaurantDetail = () => {
                     {/* Left: Menu */}
                     <div className="lg:col-span-2">
                         <h2 className="text-3xl font-black text-gray-900 mb-8">Menu</h2>
-                        <div className="space-y-6">
-                            {restaurant.menu.map(item => {
-                                const quantity = getItemQuantity(item.id);
-                                return (
-                                    <div
-                                        key={item.id}
-                                        id={item.id}
-                                        className="flex items-center gap-6 bg-white p-6 rounded-[32px] shadow-sm hover:shadow-xl transition-all duration-500 group border border-gray-100"
-                                    >
-                                        <div className="relative w-32 h-32 flex-shrink-0 rounded-2xl overflow-hidden">
-                                            <img
-                                                src={item.image}
-                                                alt={item.name}
-                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                                            />
-                                            {item.bestseller && (
-                                                <span className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wider">
-                                                    Bestseller
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <div className="flex-grow">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <div className={`w-3 h-3 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
-                                                <h3 className="text-xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors">{item.name}</h3>
-                                            </div>
-                                            <p className="text-gray-500 text-sm mb-4 line-clamp-2 leading-relaxed">{item.description}</p>
-                                            <p className="text-2xl font-black text-gray-900">₹{item.price}</p>
-                                        </div>
-
-                                        <div className="flex-shrink-0">
-                                            {quantity === 0 ? (
-                                                <button
-                                                    onClick={() => addToCart(item, restaurant.id, restaurant.name)}
-                                                    className="px-8 py-3 bg-white border-2 border-orange-500 text-orange-600 font-bold rounded-2xl hover:bg-orange-50 transition-all active:scale-95"
-                                                >
-                                                    ADD
-                                                </button>
-                                            ) : (
-                                                <div className="flex items-center gap-4 bg-orange-600 rounded-2xl p-1 shadow-lg shadow-orange-100">
-                                                    <button
-                                                        onClick={() => updateQuantity(item.id, quantity - 1)}
-                                                        className="p-2 text-white hover:bg-orange-700 rounded-xl transition-colors"
+                        {/* Menu is a categorized dict: { 'Pizza': [...], 'Burgers': [...] } */}
+                        {restaurant.menu && Object.keys(restaurant.menu).length > 0 ? (
+                            <div className="space-y-10">
+                                {Object.entries(restaurant.menu).map(([categoryName, items]) => (
+                                    <div key={categoryName}>
+                                        <h3 className="text-xl font-black text-gray-800 mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
+                                            <Utensils className="w-5 h-5 text-orange-500" />
+                                            {categoryName}
+                                            <span className="text-sm font-normal text-gray-400">({items.length} items)</span>
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {items.map(item => {
+                                                const quantity = getItemQuantity(item.id);
+                                                const itemPrice = item.base_price || item.price;
+                                                return (
+                                                    <div
+                                                        key={item.id}
+                                                        id={item.id}
+                                                        className="flex items-center gap-6 bg-white p-6 rounded-[32px] shadow-sm hover:shadow-xl transition-all duration-500 group border border-gray-100"
                                                     >
-                                                        <Minus className="w-5 h-5" />
-                                                    </button>
-                                                    <span className="text-white font-black text-lg min-w-[20px] text-center">{quantity}</span>
-                                                    <button
-                                                        onClick={() => addToCart(item, restaurant.id, restaurant.name)}
-                                                        className="p-2 text-white hover:bg-orange-700 rounded-xl transition-colors"
-                                                    >
-                                                        <Plus className="w-5 h-5" />
-                                                    </button>
-                                                </div>
-                                            )}
+                                                        <div className="relative w-32 h-32 flex-shrink-0 rounded-2xl overflow-hidden bg-orange-50">
+                                                            {item.image ? (
+                                                                <img
+                                                                    src={item.image}
+                                                                    alt={item.name}
+                                                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center">
+                                                                    <Utensils className="w-10 h-10 text-orange-200" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="flex-grow">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <div className={`w-3 h-3 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                                <h3 className="text-xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors">{item.name}</h3>
+                                                            </div>
+                                                            <p className="text-gray-500 text-sm mb-3 line-clamp-2 leading-relaxed">{item.description}</p>
+                                                            {item.preparation_time && (
+                                                                <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
+                                                                    <Clock className="w-3 h-3" /> {item.preparation_time}
+                                                                </p>
+                                                            )}
+                                                            <p className="text-2xl font-black text-gray-900">₹{itemPrice}</p>
+                                                        </div>
+
+                                                        <div className="flex-shrink-0">
+                                                            {quantity === 0 ? (
+                                                                <button
+                                                                    onClick={() => addToCart({ ...item, price: itemPrice }, restaurant.id, restaurant.name)}
+                                                                    className="px-8 py-3 bg-white border-2 border-orange-500 text-orange-600 font-bold rounded-2xl hover:bg-orange-50 transition-all active:scale-95"
+                                                                >
+                                                                    ADD
+                                                                </button>
+                                                            ) : (
+                                                                <div className="flex items-center gap-4 bg-orange-600 rounded-2xl p-1 shadow-lg shadow-orange-100">
+                                                                    <button
+                                                                        onClick={() => updateQuantity(item.id, quantity - 1)}
+                                                                        className="p-2 text-white hover:bg-orange-700 rounded-xl transition-colors"
+                                                                    >
+                                                                        <Minus className="w-5 h-5" />
+                                                                    </button>
+                                                                    <span className="text-white font-black text-lg min-w-[20px] text-center">{quantity}</span>
+                                                                    <button
+                                                                        onClick={() => addToCart({ ...item, price: itemPrice }, restaurant.id, restaurant.name)}
+                                                                        className="p-2 text-white hover:bg-orange-700 rounded-xl transition-colors"
+                                                                    >
+                                                                        <Plus className="w-5 h-5" />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-20 bg-gray-50 rounded-[40px] border-2 border-dashed border-gray-200">
+                                <Utensils className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                <h3 className="text-xl font-bold text-gray-700 mb-2">Menu coming soon</h3>
+                                <p className="text-gray-400">This restaurant hasn't added menu items yet.</p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Right: Reviews & Feedback */}
