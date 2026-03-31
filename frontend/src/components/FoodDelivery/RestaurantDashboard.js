@@ -97,7 +97,10 @@ const RestaurantDashboard = () => {
         is_veg: true,
         is_available: true,
         prep_time: "15-20",
-        spice_level: "medium"
+        spice_level: "medium",
+        has_offer: false,
+        discount_price: "",
+        offer_text: ""
     });
 
     // Restaurant Profile Form State
@@ -191,7 +194,8 @@ const RestaurantDashboard = () => {
                 },
                 body: JSON.stringify({
                     ...menuForm,
-                    price: parseFloat(menuForm.price)
+                    price: (menuForm.has_offer && menuForm.discount_price) ? parseFloat(menuForm.discount_price) : parseFloat(menuForm.price),
+                    original_price: (menuForm.has_offer && menuForm.discount_price) ? parseFloat(menuForm.price) : null
                 })
             });
 
@@ -218,7 +222,8 @@ const RestaurantDashboard = () => {
                 },
                 body: JSON.stringify({
                     ...menuForm,
-                    price: parseFloat(menuForm.price)
+                    price: (menuForm.has_offer && menuForm.discount_price) ? parseFloat(menuForm.discount_price) : parseFloat(menuForm.price),
+                    original_price: (menuForm.has_offer && menuForm.discount_price) ? parseFloat(menuForm.price) : null
                 })
             });
 
@@ -328,7 +333,10 @@ const RestaurantDashboard = () => {
             is_veg: true,
             is_available: true,
             prep_time: "15-20",
-            spice_level: "medium"
+            spice_level: "medium",
+            has_offer: false,
+            discount_price: "",
+            offer_text: ""
         });
     };
 
@@ -337,13 +345,16 @@ const RestaurantDashboard = () => {
         setMenuForm({
             name: item.name,
             description: item.description || "",
-            price: item.price.toString(),
+            price: (item.original_price ? item.original_price : item.price).toString(),
             category: item.category,
             image: item.image || "",
-            is_veg: item.is_veg,
-            is_available: item.is_available,
+            is_veg: item.is_veg ?? true,
+            is_available: item.is_available ?? true,
             prep_time: item.prep_time || "15-20",
-            spice_level: item.spice_level || "medium"
+            spice_level: item.spice_level || "medium",
+            has_offer: item.has_offer || false,
+            discount_price: item.original_price ? item.price.toString() : "",
+            offer_text: item.offer_text || ""
         });
     };
 
@@ -1196,6 +1207,41 @@ const RestaurantDashboard = () => {
                                     <option value="extra_spicy">Extra Spicy</option>
                                 </select>
                             </div>
+                        </div>
+
+                        <div className="border border-gray-100 rounded-xl p-4 bg-gray-50 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label>Special Offer</Label>
+                                    <p className="text-sm text-gray-500">Enable to add a discount or special text</p>
+                                </div>
+                                <Switch
+                                    checked={menuForm.has_offer}
+                                    onCheckedChange={(checked) => setMenuForm({ ...menuForm, has_offer: checked })}
+                                />
+                            </div>
+                            
+                            {menuForm.has_offer && (
+                                <div className="grid grid-cols-2 gap-4 pt-2">
+                                    <div className="space-y-2">
+                                        <Label>Discount Price (₹)</Label>
+                                        <Input
+                                            type="number"
+                                            value={menuForm.discount_price}
+                                            onChange={(e) => setMenuForm({ ...menuForm, discount_price: e.target.value })}
+                                            placeholder="e.g., 149"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Offer Text</Label>
+                                        <Input
+                                            value={menuForm.offer_text}
+                                            onChange={(e) => setMenuForm({ ...menuForm, offer_text: e.target.value })}
+                                            placeholder="e.g., 20% OFF"
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex items-center gap-6">

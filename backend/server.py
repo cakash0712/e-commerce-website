@@ -3388,11 +3388,15 @@ class MenuItemCreate(BaseModel):
     description: Optional[str] = None
     price: float
     category: str
+    category_name: Optional[str] = None
     image: Optional[str] = None
     is_veg: bool = True
     is_available: bool = True
     prep_time: Optional[str] = "15-20"
     spice_level: Optional[str] = "medium"
+    has_offer: bool = False
+    original_price: Optional[float] = None
+    offer_text: Optional[str] = ""
 
 class FoodOrderStatusUpdate(BaseModel):
     status: str
@@ -3684,10 +3688,14 @@ async def add_menu_item(item_data: MenuItemCreate, current_vendor: Annotated[dic
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
     
+    dumped_data = item_data.model_dump()
+    if not dumped_data.get("category_name"):
+        dumped_data["category_name"] = dumped_data["category"].replace("-", " ").title()
+        
     item_doc = {
         "id": str(uuid.uuid4()),
         "restaurant_id": restaurant['id'],
-        **item_data.model_dump(),
+        **dumped_data,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -3704,9 +3712,13 @@ async def update_menu_item(item_id: str, item_data: MenuItemCreate, current_vend
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
     
+    dumped_data = item_data.model_dump()
+    if not dumped_data.get("category_name"):
+        dumped_data["category_name"] = dumped_data["category"].replace("-", " ").title()
+        
     result = await food_db.food_items.update_one(
         {"id": item_id, "restaurant_id": restaurant['id']},
-        {"$set": item_data.model_dump()}
+        {"$set": dumped_data}
     )
     
     if result.matched_count == 0:
