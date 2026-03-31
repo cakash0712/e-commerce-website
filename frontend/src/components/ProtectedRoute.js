@@ -36,6 +36,7 @@ const ProtectedRoute = ({ children, requiredRole }) => {
         if (user.user_type === "admin") redirectPath = "/admin";
         else if (user.user_type === "food_vendor" || user.user_type === "restaurant") redirectPath = "/food/vendor/dashboard";
         else if (user.user_type?.startsWith("vendor")) redirectPath = "/vendor";
+        else if (user.user_type === "delivery_partner") redirectPath = "/delivery";
 
         return <Navigate to={redirectPath} replace />;
     }

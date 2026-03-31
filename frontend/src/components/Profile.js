@@ -6,24 +6,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Settings, ShoppingBag, Bell, Shield, CreditCard, LogIn, UserPlus, LogOut, Mail, Lock, Camera, Heart, Star, MapPin, Package, ChevronRight, Wallet, Box, Plus, Trash2, Phone, CheckCircle, FileText, Upload, Clock, Smartphone, ArrowLeft, LayoutDashboard, Laptop } from "lucide-react";
+import { User, Settings, ShoppingBag, Bell, Shield, CreditCard, LogIn, UserPlus, LogOut, Mail, Lock, Camera, Heart, Star, MapPin, Package, ChevronRight, Wallet, Box, Plus, Trash2, Phone, CheckCircle, FileText, Upload, Clock, Smartphone, ArrowLeft, LayoutDashboard, Laptop, Utensils } from "lucide-react";
 import { useAuth, useOrders, useCart } from "../App";
 
 import Navigation from "./Navigation";
 import Footer from "./Footer";
+import FoodNavigation from "./FoodDelivery/FoodNavigation";
+import { FoodCartProvider } from "../context/FoodCartContext";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { user, login, logout, register, updateUser, loading, setUser } = useAuth();
-
-  // If we are in food mode, redirect to the food-specific profile
   const appMode = localStorage.getItem('DACH_app_mode');
-  if (appMode === 'food') {
-    return <Navigate to="/food/profile" replace />;
-  }
+
   const { orders } = useOrders();
   const { addToCart } = useCart();
-  const [activeView, setActiveView] = useState("overview");
+  const [activeView, setActiveView] = useState(() => {
+    const appMode = localStorage.getItem('DACH_app_mode');
+    return appMode === 'food' ? 'food-orders' : 'overview';
+  });
+  const [foodOrders, setFoodOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
@@ -82,12 +84,14 @@ const Profile = () => {
         try {
           const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
           const token = localStorage.getItem('token');
-          const response = await axios.get(`${API_BASE}/api/notifications`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setNotifications(response.data);
+          const [notifRes, foodOrdersRes] = await Promise.all([
+            axios.get(`${API_BASE}/api/notifications`, { headers: { Authorization: `Bearer ${token}` } }),
+            axios.get(`${API_BASE}/api/food/orders`, { headers: { Authorization: `Bearer ${token}` } })
+          ]);
+          setNotifications(notifRes.data);
+          setFoodOrders(foodOrdersRes.data || []);
         } catch (e) {
-          console.error("Failed to fetch notifications in profile", e);
+          console.error("Failed to fetch notification/food-order data in profile", e);
         }
 
         // Fallback to localStorage
@@ -383,9 +387,8 @@ const Profile = () => {
     return <Navigate to="/vendor" />;
   }
 
-  return (
-    <div className="min-h-screen bg-[#f1f3f6] flex flex-col pt-16 lg:pt-20 pb-20 lg:pb-0">
-      <Navigation />
+  const profileContentJSX = (
+    <div className="flex-grow">
       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
 
       <div className="container mx-auto px-4 lg:px-8 py-4 lg:py-8 flex-1">
@@ -442,9 +445,21 @@ const Profile = () => {
               >
                 <div className="flex items-center gap-4">
                   <Package className="w-5 h-5 text-violet-600" />
-                  <span className="font-black text-[10px] uppercase tracking-widest">My Orders</span>
+                  <span className="font-black text-[10px] uppercase tracking-widest">Shop Orders</span>
                 </div>
                 <ChevronRight className={`w-4 h-4 ${activeView === 'orders' ? 'text-violet-600' : 'text-gray-300'}`} />
+              </button>
+
+              {/* FOOD ORDERS */}
+              <button
+                onClick={() => setActiveView("food-orders")}
+                className={`w-full flex items-center justify-between px-6 py-5 border-b border-gray-100 transition-all ${activeView === 'food-orders' ? 'bg-orange-50 text-orange-600' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                <div className="flex items-center gap-4">
+                  <Utensils className="w-5 h-5 text-orange-600" />
+                  <span className="font-black text-[10px] uppercase tracking-widest">Food Orders</span>
+                </div>
+                <ChevronRight className={`w-4 h-4 ${activeView === 'food-orders' ? 'text-orange-600' : 'text-gray-300'}`} />
               </button>
 
               {/* ACCOUNT SETTINGS */}
@@ -784,6 +799,60 @@ const Profile = () => {
                     <p className="text-sm text-gray-400 font-medium italic mb-8">You haven't initiated any material procurement sessions yet.</p>
                     <Link to="/shop">
                       <Button className="bg-gray-900 hover:bg-violet-600 h-12 lg:h-14 px-8 lg:px-10 rounded-xl font-black uppercase text-[10px] tracking-widest text-white transition-all shadow-xl shadow-gray-200">Start Shopping</Button>
+                    </Link>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* FOOD ORDERS */}
+            {activeView === 'food-orders' && (
+              <div className="space-y-10">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter">Culinary Journals</h2>
+                </div>
+
+                {foodOrders.length > 0 ? (
+                  <div className="space-y-6 pb-20">
+                    {foodOrders.map((order) => (
+                      <Card key={order.id} className="border-2 border-gray-50 shadow-none rounded-3xl overflow-hidden hover:border-orange-100 transition-colors group">
+                        <div className="bg-orange-50/50 p-6 flex justify-between items-center border-b border-gray-100">
+                           <div className="space-y-1">
+                             <div className="flex items-center gap-3">
+                               <Badge className="bg-orange-100 text-orange-600 border-none font-bold text-[9px] uppercase tracking-widest px-3 py-1">
+                                 {order.status}
+                               </Badge>
+                               <span className="text-gray-400 text-[10px] font-black uppercase tracking-widest">{new Date(order.created_at).toLocaleDateString()}</span>
+                             </div>
+                             <p className="text-xs text-gray-400 font-bold uppercase">Restaurant: <span className="text-gray-900">{order.restaurant_name}</span></p>
+                           </div>
+                           <div className="text-right">
+                             <p className="text-xl font-black text-gray-900 italic tracking-tighter">₹{order.total_amount}</p>
+                             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Paid</p>
+                           </div>
+                        </div>
+                        <div className="p-6">
+                           <div className="flex items-center gap-4">
+                              <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-orange-200">
+                                <Utensils className="w-8 h-8" />
+                              </div>
+                              <div className="flex-1">
+                                 <p className="font-bold text-gray-800">{order.items?.length} items delivered</p>
+                                 <p className="text-xs text-gray-400 mt-1">{order.items?.map(i => i.name).join(', ')}</p>
+                              </div>
+                              <Button variant="outline" className="border-orange-100 text-orange-600 hover:bg-orange-50 rounded-xl font-black uppercase text-[10px] tracking-widest">Reorder</Button>
+                           </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="border-2 border-dashed border-gray-100 bg-white rounded-[3rem] p-10 lg:p-20 flex flex-col items-center justify-center text-center">
+                    <Utensils className="w-16 h-16 text-gray-200 mb-6" />
+                    <h3 className="text-2xl font-black italic tracking-tighter mb-2">No Food Sessions</h3>
+                    <p className="text-sm text-gray-400 font-medium italic mb-8">Your culinary history is currently blank. Start your first order!</p>
+                    <Link to="/food">
+                      <Button className="bg-orange-600 hover:bg-orange-700 h-14 px-10 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white transition-all shadow-xl shadow-orange-100">Order Food</Button>
                     </Link>
                   </Card>
                 )}
@@ -1307,9 +1376,29 @@ const Profile = () => {
           </button>
         </div>
       </div>
+    </div>
+  );
 
-      <Footer />
-    </div >
+  if (loading) return null;
+
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-50/30">
+      {appMode === 'food' ? (
+        <FoodCartProvider>
+          <FoodNavigation onSwitchApp={() => {
+            localStorage.setItem('DACH_app_mode', 'ecommerce');
+            window.location.reload();
+          }} />
+          {profileContentJSX}
+        </FoodCartProvider>
+      ) : (
+        <>
+          <Navigation />
+          {profileContentJSX}
+          <Footer />
+        </>
+      )}
+    </div>
   );
 };
 

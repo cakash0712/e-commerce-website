@@ -24,9 +24,10 @@ const Auth = () => {
     if (path.includes('/admin')) return "admin";
     if (path.includes('/vendor/ecommerce')) return "vendor_ecommerce";
     if (path.includes('/vendor/food')) return "vendor_food";
+    if (path.includes('/delivery')) return "delivery_partner";
     if (path.includes('/vendor')) return "vendor"; // Fallback
     return "user";
-  }); // user, vendor_ecommerce, vendor_food, or admin
+  }); // user, vendor_ecommerce, vendor_food, delivery_partner, or admin
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,6 +60,7 @@ const Auth = () => {
     if (path.includes('/admin')) type = "admin";
     else if (path.includes('/vendor/ecommerce')) type = "vendor_ecommerce";
     else if (path.includes('/vendor/food')) type = "vendor_food";
+    else if (path.includes('/delivery')) type = "delivery_partner";
     else if (path.includes('/vendor')) type = "vendor";
 
     setUserType(type);
@@ -96,7 +98,7 @@ const Auth = () => {
       const userData = await login(identifier, password, userType);
       const redirectPath = userData.user_type === "admin"
         ? "/admin/dashboard"
-        : (userData.user_type.startsWith("vendor") ? "/vendor/dashboard" : "/profile");
+        : (userData.user_type === 'delivery_partner' ? "/delivery" : (userData.user_type.startsWith("vendor") ? "/vendor/dashboard" : "/profile"));
       navigate(redirectPath);
     } catch (err) {
       // Special case for local admin demo login if backend is not available
@@ -185,7 +187,7 @@ const Auth = () => {
       localStorage.setItem('signup_data', JSON.stringify(signupProfileData));
 
       await login(loginMethod === "phone" ? signupData.email : email, signupData.password, userType);
-      const redirectPath = userType.startsWith("vendor") ? "/vendor/dashboard" : "/profile";
+      const redirectPath = userType === 'delivery_partner' ? "/delivery" : (userType.startsWith("vendor") ? "/vendor/dashboard" : "/profile");
       navigate(redirectPath);
     } catch (err) {
       // Show specific error message from backend
@@ -251,9 +253,11 @@ const Auth = () => {
                 {userType === "admin" && "Access admin dashboard"}
                 {userType === "vendor_ecommerce" && "Manage your shop and inventory"}
                 {userType === "vendor_food" && "Manage your kitchen, menu and deliveries"}
+                {userType === "delivery_partner" && "View assignments and deliver happiness"}
                 {userType === "vendor" && "Manage your products"}
                 {userType === "user" && authStep === "credentials" && "Enter your login details"}
                 {userType === "user" && authStep === "details" && (authMode === "signup" ? "Complete your profile information" : "Complete your profile")}
+                {userType === "delivery_partner" && authStep === "details" && "Register as an official DACH Rider"}
               </p>
             </div>
           </div>
@@ -608,6 +612,35 @@ const Auth = () => {
                     />
                   </div>
 
+                  {userType === 'delivery_partner' && (
+                    <div className="space-y-4 pt-4 border-t border-gray-100">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-black uppercase tracking-widest text-gray-400">Vehicle Type</Label>
+                          <select
+                            value={signupData.vehicle_type || ""}
+                            onChange={(e) => setSignupData({ ...signupData, vehicle_type: e.target.value })}
+                            className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium"
+                          >
+                            <option value="">Select</option>
+                            <option value="bike">Two Wheeler (Bike/Scooter)</option>
+                            <option value="cycle">Cycle</option>
+                            <option value="car">Four Wheeler</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-black uppercase tracking-widest text-gray-400">License Number</Label>
+                          <Input
+                            placeholder="DL-XXXXXXXXXX"
+                            value={signupData.license_number || ""}
+                            onChange={(e) => setSignupData({ ...signupData, license_number: e.target.value })}
+                            className="h-11 rounded-lg border-gray-200 bg-white shadow-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <Button
                     onClick={handleCompleteSignup}
                     className="w-full h-12 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold shadow-lg shadow-violet-100"
@@ -649,6 +682,8 @@ const Auth = () => {
                     <Link to="/auth/vendor/ecommerce" className="text-indigo-600 font-bold hover:underline">E-commerce Portal</Link>
                     <span className="text-gray-300">|</span>
                     <Link to="/food/vendor/login" className="text-orange-600 font-bold hover:underline">Food Portal</Link>
+                    <span className="text-gray-300">|</span>
+                    <Link to="/auth/delivery" className="text-emerald-600 font-bold hover:underline">Rider Portal</Link>
                   </div>
                 ) : (
                   <Link to="/auth" className="text-indigo-600 font-bold hover:underline">Go to Customer Login</Link>

@@ -598,6 +598,19 @@ class Notification(BaseModel):
     is_read: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+async def create_notification(user_id: str, title: str, message: str, notification_type: str = "info"):
+    notification = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "title": title,
+        "message": message,
+        "type": notification_type,
+        "is_read": False,
+        "created_at": datetime.now(timezone.utc)
+    }
+    await db.notifications.insert_one(notification)
+    return notification
+
 class Category(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -713,8 +726,11 @@ class Order(BaseModel):
     delivery_date: Optional[datetime] = None
     delivery_time_slot: Optional[str] = None  # e.g., "9AM-11AM", "2PM-4PM"
     tracking_number: Optional[str] = None
-    delivery_status: str = "pending"  # pending, scheduled, out_for_delivery, delivered
+    delivery_status: str = "pending"  # pending, scheduled, accepted, picked, on_the_way, delivered
     delivery_notes: Optional[str] = None
+    assigned_rider_id: Optional[str] = None
+    rider_name: Optional[str] = None
+    rider_phone: Optional[str] = None
 
 class OrderCreate(BaseModel):
     customer_name: str
@@ -2277,6 +2293,176 @@ async def update_order_delivery(order_id: str, delivery_data: DeliveryUpdate, cu
 
     return {"message": "Delivery information updated successfully."}
 
+# --- Delivery Partner Workflows ---
+
+@api_router.post("/rider/toggle-status")
+async def toggle_rider_status(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'delivery_partner':
+        raise HTTPException(status_code=403, detail="Rider credentials required.")
+    
+    new_status = "online" if current_user.get('availability_status') == "offline" else "offline"
+    await db.users.update_one({"id": current_user['id']}, {"$set": {"availability_status": new_status}})
+    return {"status": new_status}
+
+@api_router.get("/rider/stats")
+async def get_rider_stats(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'delivery_partner':
+        raise HTTPException(status_code=403, detail="Rider credentials required.")
+    
+    # Calculate today's earnings and deliveries
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    today_orders = await db.orders.count_documents({
+        "assigned_rider_id": current_user['id'],
+        "delivery_status": "delivered",
+        "created_at": {"$gte": today_start}
+    })
+    
+    total_completed = await db.orders.count_documents({
+        "assigned_rider_id": current_user['id'],
+        "delivery_status": "delivered"
+    })
+    
+    # Placeholder earnings logic (e.g. ₹50 per delivery)
+    today_earnings = today_orders * 50
+    total_earnings = total_completed * 50
+    
+    return {
+        "today_orders": today_orders,
+        "total_completed": total_completed,
+        "today_earnings": today_earnings,
+        "total_earnings": total_earnings,
+        "wallet_balance": current_user.get('wallet_balance', 0.0),
+        "status": current_user.get('availability_status', 'offline')
+    }
+
+@api_router.get("/rider/history")
+async def get_rider_history(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'delivery_partner':
+        raise HTTPException(status_code=403, detail="Rider credentials required.")
+    
+    history = await db.orders.find(
+        {"assigned_rider_id": current_user['id'], "delivery_status": "delivered"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return history
+
+@api_router.post("/rider/withdraw")
+async def rider_withdraw_request(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'delivery_partner':
+        raise HTTPException(status_code=403, detail="Rider credentials required.")
+    
+    if current_user.get('wallet_balance', 0) < 100:
+        raise HTTPException(status_code=400, detail="Minimum withdrawal threshold is ₹100.")
+    
+    # Logic to record payout request
+    await db.payout_requests.insert_one({
+        "entity_id": current_user['id'],
+        "entity_type": "delivery_partner",
+        "amount": current_user['wallet_balance'],
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc)
+    })
+    
+    await db.users.update_one({"id": current_user['id']}, {"$set": {"wallet_balance": 0.0}})
+    return {"message": "Withdrawal request authenticated and queued for processing."}
+
+@api_router.get("/admin/riders")
+async def get_all_riders(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Management access required.")
+    
+    riders = await db.users.find(
+        {"user_type": "delivery_partner", "status": "active"}, 
+        {"_id": 0, "password": 0}
+    ).to_list(100)
+    return riders
+
+@api_router.post("/admin/orders/{order_id}/assign")
+async def assign_rider_to_order(order_id: str, data: dict, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Management access required.")
+    
+    rider_id = data.get('rider_id')
+    if not rider_id:
+        raise HTTPException(status_code=400, detail="Assignment failed: Rider ID not provided.")
+    
+    rider = await db.users.find_one({"id": rider_id, "user_type": "delivery_partner"})
+    if not rider:
+        raise HTTPException(status_code=404, detail="Rider not found in active fleet.")
+    
+    # Update Order
+    await db.orders.update_one(
+        {"id": order_id},
+        {"$set": {
+            "assigned_rider_id": rider_id,
+            "rider_name": rider['name'],
+            "rider_phone": rider.get('phone', ""),
+            "delivery_status": "assigned"
+        }}
+    )
+    
+    # Notify Rider
+    await create_notification(
+        rider_id,
+        "New Delivery Assignment",
+        f"Protocol Alert: A new order (#{order_id[:8]}) has been assigned to you. Please review and accept immediately.",
+        "warning"
+    )
+    
+    return {"message": f"Order successfully assigned to {rider['name']}."}
+
+@api_router.get("/rider/orders")
+async def get_rider_orders(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'delivery_partner':
+        raise HTTPException(status_code=403, detail="Rider credentials required.")
+    
+    orders = await db.orders.find(
+        {"assigned_rider_id": current_user['id']},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    return orders
+
+@api_router.post("/rider/orders/{order_id}/status")
+async def update_rider_order_status(order_id: str, data: dict, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'delivery_partner':
+        raise HTTPException(status_code=403, detail="Rider credentials required.")
+    
+    new_status = data.get('status') # accepted, picked, on_the_way, delivered
+    if not new_status:
+        raise HTTPException(status_code=400, detail="Status update failed: New status missing.")
+    
+    order = await db.orders.find_one({"id": order_id, "assigned_rider_id": current_user['id']})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order mapping not found.")
+    
+    await db.orders.update_one(
+        {"id": order_id},
+        {"$set": {"delivery_status": new_status}}
+    )
+    
+    # Notify Customer of Major Milestones
+    title = ""
+    message = ""
+    
+    if new_status == 'accepted':
+        title = "Rider Assigned"
+        message = f"Greetings! {current_user['name']} has accepted your delivery and is proceeding to the merchant."
+    elif new_status == 'picked':
+        title = "Order Picked Up"
+        message = f"Success! Your order #{order_id[:8]} has been collected by our partner and is being secured for transit."
+    elif new_status == 'on_the_way':
+        title = "Out for Delivery"
+        message = f"On the move! Your order #{order_id[:8]} is currently on the way to your location. Please remain reachable."
+    elif new_status == 'delivered':
+        title = "Mission Complete: Delivered"
+        message = f"Namaste! Your order #{order_id[:8]} has been successfully handed over. Thank you for using our service!"
+    
+    if title:
+        await create_notification(order['user_id'], title, message, "success" if new_status == 'delivered' else "info")
+        
+    return {"message": f"Protocol updated: Order is now '{new_status}'."}
+
 @api_router.get("/vendor/stats")
 async def get_vendor_stats(current_user: Annotated[dict, Depends(get_current_user)]):
     if current_user['user_type'] != 'vendor':
@@ -2501,6 +2687,55 @@ async def get_tickets(current_user: Annotated[dict, Depends(get_current_user)]):
         if '_id' in t: del t['_id']
         tickets.append(t)
     return tickets
+
+@api_router.get("/admin/permissions")
+async def get_permissions(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    permissions = await db.permissions.find().to_list(100)
+    for p in permissions:
+        if '_id' in p: del p['_id']
+    return permissions
+
+@api_router.put("/admin/permissions")
+async def update_permissions(perm_data: list, current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user['user_type'] != 'admin':
+        raise HTTPException(status_code=403, detail="Unauthorized.")
+    
+    for p in perm_data:
+        role = p.get('role')
+        modules = p.get('modules', [])
+        await db.permissions.update_one({"role": role}, {"$set": {"modules": modules}}, upsert=True)
+    
+    return {"message": "Permissions updated successfully."}
+
+@api_router.get("/user/permissions")
+async def get_user_permissions(current_user: Annotated[dict, Depends(get_current_user)]):
+    role = current_user.get('user_type', 'user')
+    
+    # Standard default modules for first-time setup or recovery
+    default_modules = {
+        "admin": ["dashboard", "users", "vendors", "access-control", "catalog", "orders", "inventory", "payments", "food-delivery", "restaurants", "delivery-partners", "marketing", "support", "system-logs", "settings"],
+        "vendor_ecommerce": ["dashboard", "catalog", "orders", "inventory", "payments", "support"],
+        "delivery_partner": ["dashboard", "orders", "support"],
+        "user": ["dashboard", "support"]
+    }
+    
+    existing = await db.permissions.find_one({"role": role})
+    if not existing or not existing.get('modules'):
+        # Auto-seed if missing or empty to ensure user doesn't see an empty panel
+        initial_modules = default_modules.get(role, ["dashboard", "support"])
+        await db.permissions.update_one({"role": role}, {"$set": {"modules": initial_modules, "role": role}}, upsert=True)
+        return {"role": role, "modules": initial_modules}
+
+    if role == 'admin':
+        perm = await db.permissions.find_one({"role": "admin"})
+    else:
+        perm = await db.permissions.find_one({"role": role})
+    
+    if perm and '_id' in perm: del perm['_id']
+    return perm or {"role": role, "modules": default_modules.get(role, ["dashboard"])}
 
 @api_router.get("/admin/support/tickets")
 async def get_all_tickets(current_user: Annotated[dict, Depends(get_current_user)]):
@@ -4153,6 +4388,78 @@ async def update_rider_location(location: dict, current_user: Annotated[dict, De
         {"$set": {"live_location": location, "availability_status": "online"}}
     )
     return {"status": "success", "location": location}
+
+@api_router.get("/delivery/orders")
+async def get_rider_orders(status: str = "assigned", current_user: Annotated[dict, Depends(get_current_user)] = None):
+    if current_user.get('user_type') != "delivery_partner":
+        raise HTTPException(status_code=403, detail="Not authorized as delivery partner")
+    
+    # In a real app, we'd filter by rider_id. 
+    # For this demo, let's show all processing/shipped orders as 'assigned'
+    # and all delivered ones as 'history'
+    query = {}
+    if status == "assigned":
+        query["status"] = {"$in": ["processing", "shipped", "confirmed", "out_for_delivery"]}
+    else:
+        query["status"] = "delivered"
+        
+    orders_cursor = db.orders.find(query).sort("created_at", -1)
+    orders = []
+    async for o in orders_cursor:
+        o['id'] = o.get('id') or str(o['_id'])
+        if '_id' in o: del o['_id']
+        orders.append(o)
+    return orders
+
+@api_router.put("/delivery/orders/{order_id}/status")
+async def update_rider_order_status(order_id: str, status_update: dict, current_user: Annotated[dict, Depends(get_current_user)] = None):
+    if current_user.get('user_type') != "delivery_partner":
+        raise HTTPException(status_code=403, detail="Not authorized as delivery partner")
+    
+    new_status = status_update.get('status')
+    if not new_status:
+        raise HTTPException(status_code=400, detail="Status required")
+
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Update order
+    await db.orders.update_one({"id": order_id}, {"$set": {"status": new_status, "delivery_partner_id": current_user['id']}})
+    
+    # Notify Vendor and Admin and Customer if Delivered
+    if new_status == 'delivered':
+        # Notification logic
+        vendor_id = order['items'][0]['vendor_id'] if order['items'] else None
+        if vendor_id:
+            await create_notification(
+                vendor_id, 
+                "Rider Completed Delivery", 
+                f"Rider {current_user['name']} has successfully delivered order {order_id[:8]}.",
+                "success"
+            )
+            
+        # Notify Admins
+        admins_cursor = db.users.find({"user_type": "admin"})
+        async for admin in admins_cursor:
+            await create_notification(
+                admin['id'], 
+                "Delivery Completed", 
+                f"Order {order_id[:8]} delivered by {current_user['name']}.",
+                "success"
+            )
+            
+        # Notify Customer
+        customer_id = order.get('user_id')
+        if customer_id:
+            await create_notification(
+                customer_id,
+                "Order Delivered",
+                f"Your order {order_id[:8]} is here! Delivery by {current_user['name']}.",
+                "success"
+            )
+
+    return {"message": f"Order status updated to {new_status}"}
 
 @api_router.get("/food/orders/{order_id}/tracking")
 async def track_food_order(order_id: str):

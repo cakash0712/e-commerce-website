@@ -58,10 +58,71 @@ const Admin = () => {
     totalPartners: 0, onlineNow: 0, onDelivery: 0, avgDeliveryTime: '0 min'
   });
 
-  const [pendingVendors, setPendingVendors] = useState([]);
   const [rejectionReasons, setRejectionReasons] = useState({});
   const [replyingTo, setReplyingTo] = useState(null);
+  const [allPermissions, setAllPermissions] = useState([]);
+
+  useEffect(() => {
+    if (activeSubMenu === 'permissions') fetchAllPermissions();
+  }, [activeSubMenu]);
+
+  const fetchAllPermissions = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/admin/permissions`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setAllPermissions(response.data);
+    } catch (e) {
+      console.error("Failed to fetch all permissions:", e);
+    }
+  };
+
+  const handleTogglePermission = (role, moduleId) => {
+    setAllPermissions(prev => prev.map(p => {
+      if (p.role === role) {
+        const modules = p.modules || [];
+        if (modules.includes(moduleId)) {
+          return { ...p, modules: modules.filter(m => m !== moduleId) };
+        } else {
+          return { ...p, modules: [...modules, moduleId] };
+        }
+      }
+      return p;
+    }));
+  };
+
+  const savePermissions = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      await axios.put(`${API_BASE}/api/admin/permissions`, allPermissions, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      alert("Permissions updated successfully across the network.");
+    } catch (e) {
+      alert("Failed to save changes. Protocol error.");
+    }
+  };
   const [adminReply, setAdminReply] = useState('');
+  const [userPermissions, setUserPermissions] = useState(null);
+
+  useEffect(() => {
+    fetchUserPermissions();
+  }, []);
+
+  const fetchUserPermissions = async () => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await axios.get(`${API_BASE}/api/user/permissions`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setUserPermissions(response.data);
+    } catch (e) {
+      console.error("Failed to fetch user permissions:", e);
+      // Fallback if API fails
+      setUserPermissions({ modules: ["dashboard", "support"] });
+    }
+  };
 
   useEffect(() => {
     if (activeSubMenu === 'product-approvals') fetchPendingProducts();
@@ -162,11 +223,28 @@ const Admin = () => {
   const fetchDeliveryPartners = async () => {
     try {
       const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-      const response = await axios.get(`${API_BASE}/api/admin/food/partners`, {
+      const response = await axios.get(`${API_BASE}/api/admin/riders`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setDeliveryPartners(response.data);
-    } catch (e) { console.error("Partners fetch fail", e); }
+    } catch (e) { 
+      console.error("Partners fetch fail", e); 
+      setDeliveryPartners([]); 
+    }
+  };
+
+  const assignRiderToOrder = async (orderId, riderId) => {
+    try {
+      const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      await axios.post(`${API_BASE}/api/admin/orders/${orderId}/assign`, { rider_id: riderId }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      alert("Rider successfully assigned to order protocol.");
+      fetchLiveFoodOrders();
+    } catch (e) {
+      console.error("Assignment failure:", e);
+      alert("Failed to assign rider.");
+    }
   };
 
   const fetchDeliveryPartnersSummary = async () => {
@@ -1850,16 +1928,37 @@ const Admin = () => {
                 <span className="text-gray-500">📍 {order.address.split(',')[0]}</span>
                 <span className="font-bold text-orange-600">₹{order.amount}</span>
               </div>
-              {order.partner && (
+              {order.delivery_status === 'assigned' || order.rider_name ? (
                 <div className="flex items-center gap-2 text-sm text-blue-600">
                   <Bike className="w-4 h-4" />
-                  <span className="font-medium">{order.partner}</span>
+                  <span className="font-medium">{order.rider_name || order.partner}</span>
                 </div>
-              )}
+              ) : null}
               <div className="flex gap-2 pt-2">
                 <Button size="sm" className="flex-1 bg-gray-900 text-white">View Details</Button>
-                {!order.partner && order.status === 'Order Placed' && (
-                  <Button size="sm" variant="outline" className="flex-1">Assign Partner</Button>
+                {(!order.assigned_rider_id && order.delivery_status === 'pending') && (
+                  <div className="flex-1 relative group/assign">
+                    <Button size="sm" variant="outline" className="w-full">Assign Partner</Button>
+                    <div className="absolute bottom-full left-0 w-48 bg-white border border-slate-100 shadow-2xl rounded-xl p-2 hidden group-hover/assign:block z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                      <p className="text-[9px] font-black uppercase text-slate-400 mb-2 px-2">Online Partners</p>
+                      <div className="max-h-40 overflow-y-auto space-y-1">
+                        {deliveryPartners.length === 0 ? (
+                          <p className="text-[10px] px-2 py-2 text-slate-400 italic">No partners online</p>
+                        ) : deliveryPartners.map(rider => (
+                          <button 
+                            key={rider.id}
+                            onClick={() => assignRiderToOrder(order.id, rider.id)}
+                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2"
+                          >
+                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] text-blue-600 font-bold">
+                              {rider.name[0]}
+                            </div>
+                            <span className="text-xs font-bold text-slate-700">{rider.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -1969,6 +2068,55 @@ const Admin = () => {
     );
   };
 
+  const renderPermissions = () => (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 flex justify-between items-center">
+        <div>
+          <h3 className="text-4xl font-black italic tracking-tighter">Access <span className="text-violet-600">Rights.</span></h3>
+          <p className="text-slate-500 font-medium mt-2">Manage and adjust the visibility of system modules for different personnel roles.</p>
+        </div>
+        <Button 
+          onClick={savePermissions}
+          className="bg-violet-600 hover:bg-violet-700 text-white h-16 px-10 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-violet-100"
+        >
+          Update Privileges
+        </Button>
+      </div>
+
+      <div className="grid gap-6">
+        {['vendor_ecommerce', 'delivery_partner', 'user'].map(role => {
+          const roleData = allPermissions.find(p => p.role === role) || { role, modules: [] };
+          return (
+            <Card key={role} className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden">
+              <CardHeader className="bg-slate-50 border-b border-slate-100 p-8">
+                <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
+                  <ShieldCheck className="w-6 h-6 text-violet-600" />
+                  {role.replace('_', ' ')} Access Rights
+                </CardTitle>
+                <CardDescription>Kindly select the specific modules that this role is authorized to view in the management panel.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-8">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {menuItems.map(item => (
+                    <label key={item.id} className="flex items-center gap-3 p-4 rounded-xl border border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="w-5 h-5 rounded-md border-slate-200 text-violet-600 focus:ring-violet-500"
+                        checked={roleData.modules?.includes(item.id)}
+                        onChange={() => handleTogglePermission(role, item.id)}
+                      />
+                      <span className="text-sm font-bold text-slate-700">{item.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
     // Dashboard
     if (activeMenu === 'dashboard' && activeSubMenu === 'overview') return renderDashboard();
@@ -1976,7 +2124,8 @@ const Admin = () => {
     if (activeSubMenu === 'recent-activity') return renderPlaceholder('System Activity', 'Real-time logs of system-wide actions and security events.', History);
 
     // Access Control (NEW)
-    if (['roles', 'permissions', 'role-assignment'].includes(activeSubMenu)) {
+    if (activeSubMenu === 'permissions') return renderPermissions();
+    if (['roles', 'role-assignment'].includes(activeSubMenu)) {
       return renderPlaceholder('Access Control', 'Granular permission settings and role assignment matrix.', Lock);
     }
 
@@ -2293,33 +2442,41 @@ const Admin = () => {
           </div>
 
           <div className="flex-1 py-1">
-            {menuItems.map((menu) => (
-              <div key={menu.id}>
-                <button
-                  onClick={() => handleMenuClick(menu.id)}
-                  className={`w-full flex items-center justify-between px-4 py-2 transition-all ${activeMenu === menu.id ? 'bg-violet-600 text-white' : 'hover:bg-gray-800'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <menu.icon className={`w-4 h-4 shrink-0 ${activeMenu === menu.id ? 'text-white' : 'text-gray-400'}`} />
-                    <span className="text-sm font-medium">{menu.label}</span>
-                  </div>
-                  {menu.subItems && <ChevronDown className={`w-4 h-4 transition-transform shrink-0 ${expandedMenus.includes(menu.id) ? 'rotate-180' : ''}`} />}
-                </button>
-                {menu.subItems && expandedMenus.includes(menu.id) && (
-                  <div className="bg-gray-800/50 py-1">
-                    {menu.subItems.map((sub) => (
-                      <button
-                        key={sub.id}
-                        onClick={() => setActiveSubMenu(sub.id)}
-                        className={`w-full text-left pl-10 pr-4 py-1.5 text-sm transition-colors ${activeSubMenu === sub.id ? 'text-violet-400 font-medium bg-gray-800/30' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/20'}`}
-                      >
-                        {sub.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+            {!userPermissions ? (
+              <div className="p-10 text-center text-[10px] uppercase font-black tracking-widest text-gray-500 animate-pulse">
+                Kindly wait while we fetch your access protocols...
               </div>
-            ))}
+            ) : (
+              menuItems
+                .filter(menu => user?.user_type === 'admin' || userPermissions.modules?.includes(menu.id))
+                .map((menu) => (
+                <div key={menu.id}>
+                  <button
+                    onClick={() => handleMenuClick(menu.id)}
+                    className={`w-full flex items-center justify-between px-4 py-2 transition-all ${activeMenu === menu.id ? 'bg-violet-600 text-white' : 'hover:bg-gray-800'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <menu.icon className={`w-4 h-4 shrink-0 ${activeMenu === menu.id ? 'text-white' : 'text-gray-400'}`} />
+                      <span className="text-sm font-medium">{menu.label}</span>
+                    </div>
+                    {menu.subItems && <ChevronDown className={`w-4 h-4 transition-transform shrink-0 ${expandedMenus.includes(menu.id) ? 'rotate-180' : ''}`} />}
+                  </button>
+                  {menu.subItems && expandedMenus.includes(menu.id) && (
+                    <div className="bg-gray-800/50 py-1">
+                      {menu.subItems.map((sub) => (
+                        <button
+                          key={sub.id}
+                          onClick={() => setActiveSubMenu(sub.id)}
+                          className={`w-full text-left pl-10 pr-4 py-1.5 text-sm transition-colors ${activeSubMenu === sub.id ? 'text-violet-400 font-medium bg-gray-800/30' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/20'}`}
+                        >
+                          {sub.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
 
           <div className="p-4 border-t border-gray-800 mt-auto whitespace-nowrap overflow-hidden">

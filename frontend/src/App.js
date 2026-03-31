@@ -1,6 +1,6 @@
 import { useEffect, useState, createContext, useContext, useRef, useCallback } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import axios from "axios";
 import LandingSelector from "./components/LandingSelector";
 import FoodApp from "./components/FoodDelivery/FoodApp";
@@ -26,6 +26,7 @@ import PrivacyPolicy from "./components/PrivacyPolicy";
 import TermsOfService from "./components/TermsOfService";
 import Cookies from "./components/Cookies";
 import DetailsView from "./components/DetailsView";
+import DeliveryDashboard from "./components/DeliveryDashboard";
 import Auth from "./components/Auth";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
@@ -863,8 +864,8 @@ const HeroSection = ({ stats }) => {
       <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="grid lg:grid-cols-12 gap-6 lg:gap-10 items-center">
 
-          {/* Left Content - Text & CTA */}
-          <div className="lg:col-span-6 text-center lg:text-left space-y-6 order-2 lg:order-1 hidden lg:block">
+          {/* Left Content - Text & CTA (Responsive) */}
+          <div className="lg:col-span-6 text-center lg:text-left space-y-6 order-2 lg:order-1 px-4 lg:px-0 pb-10 lg:pb-0">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mt-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-white/80">New Season</span>
@@ -918,7 +919,7 @@ const HeroSection = ({ stats }) => {
                 <Carousel className="relative rounded-none lg:rounded-[2rem] overflow-hidden">
                   <CarouselContent>
                     <CarouselItem>
-                      <div className="relative h-[220px] sm:h-[350px] lg:h-[400px]">
+                      <div className="relative h-[300px] sm:h-[450px] lg:h-[500px]">
                         <img
                           src="assets/slider1.jpeg"
                           alt="Modern fashion collection"
@@ -931,7 +932,7 @@ const HeroSection = ({ stats }) => {
                       </div>
                     </CarouselItem>
                     <CarouselItem>
-                      <div className="relative h-[220px] sm:h-[350px] lg:h-[400px]">
+                      <div className="relative h-[300px] sm:h-[450px] lg:h-[500px]">
                         <img
                           src="assets/slider2.jpeg"
                           alt="Premium tech products"
@@ -944,7 +945,7 @@ const HeroSection = ({ stats }) => {
                       </div>
                     </CarouselItem>
                     <CarouselItem>
-                      <div className="relative h-[220px] sm:h-[350px] lg:h-[400px]">
+                      <div className="relative h-[300px] sm:h-[450px] lg:h-[500px]">
                         <img
                           src="assets/slider3.jpeg"
                           alt="Luxury watches"
@@ -2235,6 +2236,87 @@ const fallbackViews = [
 ];
 
 // Home Page Component
+// Modern Mobile Home Component - Premium & Immersive (Mirrors Website Sections)
+const ModernMobileHome = ({ stats, displayPickupItems }) => {
+  return (
+    <div className="lg:hidden bg-white min-h-screen">
+      {/* Mobile-Only Header Strip */}
+      <div className="pt-[140px] px-1 py-2">
+        <MobileCategoryStrip />
+      </div>
+
+      {/* Hero Section */}
+      <HeroSection stats={stats} />
+
+      {/* Standard Website Sections (Responsive) */}
+      <div className="space-y-0">
+        <FeaturesSection />
+        <CategoriesSection />
+        <ModernBentoGrid />
+
+        {/* Pickup where you left off - Integrated into the flow */}
+        {displayPickupItems.length > 0 && (
+          <div className="py-12 bg-gray-50 border-y border-gray-200/50">
+            <div className="px-5 flex items-center justify-between mb-8">
+              <div className="space-y-1">
+                <h2 className="text-2xl font-black text-gray-900 tracking-tighter uppercase italic">Pick up</h2>
+                <div className="w-12 h-1 bg-violet-600 rounded-full" />
+              </div>
+              <Link to="/shop" className="text-[10px] font-black text-violet-600 uppercase tracking-widest border-b-2 border-violet-600">See history</Link>
+            </div>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar px-5 pb-2">
+              {displayPickupItems.map((item, i) => (
+                <Link key={i} to={item.link} className="w-44 flex-shrink-0 bg-white rounded-3xl border border-gray-100 p-4 shadow-sm active:scale-95 transition-all">
+                  <div className="aspect-square rounded-2xl bg-gray-50 mb-4 overflow-hidden p-3 relative">
+                    <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
+                    <div className="absolute inset-0 bg-black/5 opacity-0 active:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="text-[11px] font-bold text-gray-950 line-clamp-1 uppercase tracking-tight">{item.name}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Rest of Website Sections */}
+        <PromoBannerSection />
+        
+        <div className="bg-white px-5 py-16 border-t border-gray-100/50">
+          <div className="flex items-center justify-between mb-10">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter italic">Recommended</h2>
+              <div className="w-16 h-1 bg-violet-600 rounded-full" />
+            </div>
+            <Link to="/shop" className="text-[10px] font-black text-violet-600 uppercase tracking-widest">See All</Link>
+          </div>
+          <FeaturedProductsSection />
+        </div>
+      </div>
+
+      {/* Brand Trust Footer Section */}
+      <div className="bg-slate-950 py-16 px-8 text-center border-t border-white/5">
+        <div className="brightness-0 invert opacity-40 mb-8 max-w-[120px] mx-auto">
+           <img src="/assets/zlogo1.png" alt="DACH" />
+        </div>
+        <h3 className="text-white text-xl font-black tracking-tighter uppercase italic mb-2">The Elite Choice</h3>
+        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-12">Redefining Premium Shopping</p>
+        <div className="grid grid-cols-2 gap-4">
+           <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
+              <Shield className="w-7 h-7 text-violet-500 mx-auto mb-3" />
+              <p className="text-white text-[10px] font-black uppercase tracking-widest">Secure</p>
+           </div>
+           <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
+              <RotateCcw className="w-7 h-7 text-indigo-500 mx-auto mb-3" />
+              <p className="text-white text-[10px] font-black uppercase tracking-widest">Returns</p>
+           </div>
+        </div>
+      </div>
+
+      <Footer />
+    </div>
+  );
+};
+
 const Home = () => {
   const [stats, setStats] = useState({
     happy_customers: 0,
@@ -2284,48 +2366,8 @@ const Home = () => {
     <div className="min-h-screen bg-gray-50 lg:bg-white pb-20 lg:pb-0">
       <Navigation />
 
-      {/* Mobile Layout - User said it's okay */}
-      <div className="lg:hidden">
-        {/* Mobile-Only Strip */}
-        <div className="pt-[145px] mb-1">
-          <MobileCategoryStrip />
-        </div>
-
-        {/* Hero Section */}
-        <HeroSection stats={stats} />
-
-        {/* Mobile Grid Sections */}
-        <div className="space-y-2 mt-2">
-          <AmazonGridCard
-            title="Pick up where you left off"
-            items={displayPickupItems}
-          />
-          <AmazonGridCard
-            title="International Brands"
-            items={[
-              { name: "Electronics", image: "assets/electronics.jpg", link: "/shop?category=electronics" },
-              { name: "Luxury Fashion", image: "assets/urban-style.jpg", link: "/shop?category=fashion" },
-              { name: "Smart Home", image: "assets/smart-home.jpg", link: "/shop?category=home" },
-              { name: "Pro Fitness", image: "assets/active-life.jpg", link: "/shop?category=sports" },
-            ]}
-            link="/categories"
-          />
-        </div>
-
-
-        <PromoBannerSection />
-
-        {/* Electronics Shelf (Mobile) */}
-        <CategoryProductShelf category="electronics" title="Electronics" />
-
-        <div className="bg-white px-4 py-6 mt-1">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900 uppercase tracking-tighter">Recommended For You</h2>
-            <Link to="/shop" className="text-xs font-bold text-violet-600">View All</Link>
-          </div>
-          <FeaturedProductsSection />
-        </div>
-      </div>
+      {/* Mobile Layout - Premium & Modern */}
+      <ModernMobileHome stats={stats} displayPickupItems={displayPickupItems} />
 
       {/* Desktop Layout - RESTORED OLD STYLE */}
       <div className="hidden lg:block">
@@ -2389,11 +2431,19 @@ const EcommerceRoutes = ({ onSwitchApp }) => {
 
 // Main App Router Component
 const AppRouter = () => {
+  const { user, loading } = useAuth();
   const [appMode, setAppMode] = useState(() => {
     // Check localStorage for saved preference
     return localStorage.getItem('DACH_app_mode') || null;
   });
   const navigate = useNavigate();
+
+  if (loading) return (
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-900">
+      <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+      <p className="text-white/40 font-black uppercase text-[10px] tracking-[0.3em] animate-pulse">Syncing Secure Network Protocol...</p>
+    </div>
+  );
 
   const handleSelectApp = (mode) => {
     setAppMode(mode);
@@ -2427,13 +2477,18 @@ const AppRouter = () => {
   const commonRoutes = (
     <>
       <Route path="/admin/*" element={
-        <ProtectedRoute requiredRole="admin">
+        <ProtectedRoute>
           <Admin />
         </ProtectedRoute>
       } />
       <Route path="/vendor/*" element={
         <ProtectedRoute requiredRole="vendor">
           <Vendor />
+        </ProtectedRoute>
+      } />
+      <Route path="/delivery/*" element={
+        <ProtectedRoute requiredRole="delivery_partner">
+          <DeliveryDashboard />
         </ProtectedRoute>
       } />
       {/* Restaurant Owner Routes */}
@@ -2461,6 +2516,34 @@ const AppRouter = () => {
       } />
     </>
   );
+
+  // --- Role-Based Strict Redirection (FORCED ISOLATION) ---
+  if (user && user.user_type !== 'user') {
+    if (user.user_type === 'vendor_ecommerce' || user.user_type === 'restaurant') {
+      return (
+        <Routes>
+          <Route path="/vendor/*" element={<VendorDashboard />} />
+          <Route path="*" element={<Navigate to="/vendor" replace />} />
+        </Routes>
+      );
+    }
+    if (user.user_type === 'delivery_partner') {
+      return (
+        <Routes>
+          <Route path="/delivery/*" element={<DeliveryDashboard />} />
+          <Route path="*" element={<Navigate to="/delivery" replace />} />
+        </Routes>
+      );
+    }
+    if (user.user_type === 'admin') {
+      return (
+        <Routes>
+          <Route path="/admin/*" element={<Admin />} />
+          <Route path="*" element={<Navigate to="/admin" replace />} />
+        </Routes>
+      );
+    }
+  }
 
   // If no app mode selected, show landing selector
   if (!appMode) {

@@ -19,8 +19,6 @@ const LandingSelector = ({ onSelect }) => {
             icon: ShoppingBag,
             gradient: 'from-violet-600 via-purple-600 to-indigo-700',
             accentColor: 'violet',
-            features: ['50K+ Products', 'Free Shipping', 'Easy Returns'],
-            stats: { label: 'Happy Customers', value: '99%' },
             image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&h=400&fit=crop',
             floatingIcons: [Package, Star, Heart]
         },
@@ -32,8 +30,6 @@ const LandingSelector = ({ onSelect }) => {
             icon: Utensils,
             gradient: 'from-orange-500 via-red-500 to-pink-600',
             accentColor: 'orange',
-            features: ['500+ Restaurants', '30 Min Delivery', 'Live Tracking'],
-            stats: { label: 'Delivery Time', value: '~25m' },
             image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&h=400&fit=crop',
             floatingIcons: [Clock, Star, Zap]
         }
@@ -76,24 +72,24 @@ const LandingSelector = ({ onSelect }) => {
             {/* Main Content */}
             <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-12">
                 {/* Header */}
-                <div className={`text-center mb-16 transition-all duration-1000 ${animationComplete ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-6 backdrop-blur-sm">
-                        <Sparkles className="w-4 h-4 text-amber-400" />
-                        <span className="text-sm text-gray-300 font-medium">Welcome to DACH</span>
+                <div className={`text-center mb-6 sm:mb-16 transition-all duration-1000 ${animationComplete ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+                    <div className="inline-flex items-center gap-1 sm:gap-2 px-3 py-1 sm:px-4 sm:py-2 rounded-full bg-white/5 border border-white/10 mb-4 sm:mb-6 backdrop-blur-sm">
+                        <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400" />
+                        <span className="text-[10px] sm:text-sm text-gray-300 font-medium lowercase italic">Welcome to DACH</span>
                     </div>
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-4 tracking-tight">
+                    <h1 className="text-2xl sm:text-5xl lg:text-6xl font-black text-white mb-2 sm:mb-4 tracking-tight leading-none">
                         What are you
-                        <span className="block bg-gradient-to-r from-violet-400 via-pink-400 to-orange-400 bg-clip-text text-transparent">
-                            looking for today?
+                        <span className="block bg-gradient-to-r from-violet-400 via-pink-400 to-orange-400 bg-clip-text text-transparent italic lowercase">
+                            looking for?
                         </span>
                     </h1>
-                    <p className="text-lg text-gray-400 max-w-xl mx-auto">
+                    <p className="text-xs sm:text-lg text-gray-400 max-w-xl mx-auto hidden sm:block">
                         Choose your experience. Shop premium products or order delicious food — all in one place.
                     </p>
                 </div>
 
-                {/* Selection Cards */}
-                <div className="grid md:grid-cols-2 gap-6 lg:gap-10 w-full max-w-5xl">
+                {/* Selection Cards - 2 Columns on Mobile */}
+                <div className="grid grid-cols-2 gap-3 lg:gap-10 w-full max-w-5xl px-0 sm:px-4">
                     {options.map((option, index) => (
                         <div
                             key={option.id}
@@ -133,50 +129,28 @@ const LandingSelector = ({ onSelect }) => {
                                 </div>
 
                                 {/* Content */}
-                                <div className="relative p-8 lg:p-10 flex flex-col h-full min-h-[400px]">
+                                <div className="relative p-3 sm:p-8 lg:p-10 flex flex-col h-full min-h-[200px] sm:min-h-[400px]">
                                     {/* Icon */}
-                                    <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${option.gradient} flex items-center justify-center mb-6 shadow-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
-                                        <option.icon className="w-10 h-10 text-white" />
+                                    <div className={`w-10 h-10 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-gradient-to-br ${option.gradient} flex items-center justify-center mb-3 sm:mb-6 shadow-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
+                                        <option.icon className="w-5 h-5 sm:w-10 sm:h-10 text-white" />
                                     </div>
+                                    
+                                    {/* Subtitle */}
+                                    <span className={`text-[8px] sm:text-sm font-black uppercase tracking-widest text-${option.accentColor}-400 mb-1 lg:mb-2 italic`}>
+                                        {option.subtitle}
+                                    </span>
 
-                                    {/* Title & Subtitle */}
-                                    <div className="mb-4">
-                                        <span className={`text-sm font-semibold uppercase tracking-wider text-${option.accentColor}-400`}>
-                                            {option.subtitle}
-                                        </span>
-                                        <h2 className="text-3xl lg:text-4xl font-bold text-white mt-1">
-                                            {option.title}
-                                        </h2>
-                                    </div>
+                                    {/* Title */}
+                                    <h2 className="text-lg sm:text-4xl font-black text-white tracking-tighter leading-none mb-3">
+                                        {option.title}
+                                    </h2>
 
-                                    {/* Description */}
-                                    <p className="text-gray-400 mb-6 flex-grow">
-                                        {option.description}
-                                    </p>
-
-                                    {/* Features */}
-                                    <div className="flex flex-wrap gap-2 mb-6">
-                                        {option.features.map((feature, i) => (
-                                            <span
-                                                key={i}
-                                                className="px-3 py-1.5 rounded-full bg-white/5 text-gray-300 text-sm font-medium border border-white/10"
-                                            >
-                                                {feature}
-                                            </span>
-                                        ))}
-                                    </div>
-
-                                    {/* Stats badge */}
-                                    <div className="flex items-center justify-between">
-                                        <div className={`px-4 py-2 rounded-xl bg-gradient-to-r ${option.gradient} bg-opacity-20`}>
-                                            <span className="text-white font-bold text-lg">{option.stats.value}</span>
-                                            <span className="text-white/70 text-sm ml-2">{option.stats.label}</span>
-                                        </div>
-
+                                    {/* Stats & CTA */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3 mt-auto">
                                         {/* CTA Button */}
-                                        <button className={`flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-slate-900 font-semibold transform group-hover:translate-x-1 transition-all duration-300 shadow-lg hover:shadow-xl`}>
+                                        <button className={`flex items-center justify-center gap-2 px-3 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl bg-white text-slate-900 font-black text-[10px] sm:text-base uppercase tracking-widest transform group-hover:translate-x-1 transition-all duration-300 shadow-lg`}>
                                             Enter
-                                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                            <ArrowRight className="w-3 h-3 sm:w-5 sm:h-5" />
                                         </button>
                                     </div>
                                 </div>
