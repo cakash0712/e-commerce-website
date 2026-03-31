@@ -4044,19 +4044,32 @@ async def update_food_order_status(
     return {"message": f"Order status updated to {new_status}"}
 
 @api_router.get("/food/items")
-async def get_all_food_items(limit: int = 20, category: Optional[str] = None):
+async def get_all_food_items(limit: int = 20, category: Optional[str] = None, offers_only: bool = False):
     query = {"is_available": True}
     
+    if offers_only:
+        query["$or"] = [
+            {"has_offer": True},
+            {"discount_price": {"$exists": True, "$ne": None}},
+            {"offer_text": {"$exists": True, "$ne": ""}}
+        ]
+    
     if category:
-        # Handle hyphenated category names (e.g., "south-indian" -> "South Indian")
         category_variants = [category]
         if '-' in category:
             converted = category.replace('-', ' ').title()
             category_variants.append(converted)
             category_variants.append(category.replace('-', ' '))
+            
+        category_query = {"$or": [{"category_name": {"$regex": v, "$options": "i"}} for v in category_variants]}
         
-        # Use $or to match any variant (MongoDB doesn't allow $regex inside $in)
-        query["$or"] = [{"category_name": {"$regex": v, "$options": "i"}} for v in category_variants]
+        # Combine with existing query (especially if offers_only is true)
+        if "$or" in query:
+             existing_or = query["$or"]
+             # If we have multiple $or, we need $and of $ors
+             query = {"$and": [{"is_available": True}, {"$or": existing_or}, category_query]}
+        else:
+             query["$or"] = category_query["$or"]
     
     items = await food_db.food_items.find(query).limit(limit).to_list(None)
     for item in items:

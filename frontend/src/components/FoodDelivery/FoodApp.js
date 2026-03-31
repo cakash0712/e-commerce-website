@@ -21,11 +21,7 @@ const cuisines = [
         id: 3,
         name: 'Indian',
         icon: ChefHat,
-        color: 'bg-orange-500',
-        subCategories: [
-            { id: 3.1, name: 'South Indian', icon: Soup, color: 'bg-green-600' },
-            { id: 3.2, name: 'North Indian', icon: ChefHat, color: 'bg-orange-600' }
-        ]
+        color: 'bg-orange-500'
     },
     { id: 4, name: 'Chinese', icon: Soup, color: 'bg-rose-500' },
     { id: 5, name: 'Desserts', icon: IceCream, color: 'bg-pink-500' },
@@ -39,11 +35,16 @@ const cuisines = [
 // Food Home Page
 const FoodHome = () => {
     const navigate = useNavigate();
-    const { location: userLocation } = useFoodCart();
+    const { location: userLocation, handleLocationUpdate, wishlist = [], addToCart } = useFoodCart();
     const [restaurantsList, setRestaurantsList] = useState([]);
     const [trendingDishes, setTrendingDishes] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [activeFilter, setActiveFilter] = useState('All');
+    const [localSearch, setLocalSearch] = useState('');
+    const [showLocationModal, setShowLocationModal] = useState(false);
+    const [offeredItems, setOfferedItems] = useState([]);
+    const [newLocationInput, setNewLocationInput] = useState('');
 
     useEffect(() => {
         const fetchHomeData = async () => {
@@ -57,8 +58,13 @@ const FoodHome = () => {
                 const dishesResponse = await axios.get(`${API_BASE}/api/food/items?limit=8`);
                 setTrendingDishes(dishesResponse.data);
 
+                // Fetch offered items
+                const offeredResponse = await axios.get(`${API_BASE}/api/food/items?offers_only=true&limit=6`);
+                setOfferedItems(offeredResponse.data);
+
             } catch (e) {
                 console.error("Failed to fetch home data:", e);
+                setError("Unable to load the culinary experience. Check your connection.");
             } finally {
                 setLoading(false);
             }
@@ -66,11 +72,7 @@ const FoodHome = () => {
         fetchHomeData();
     }, []);
 
-    const offers = [
-        { id: 1, title: '50% OFF up to ₹150', sub: 'On all orders above ₹499', code: 'DACH50', color: 'from-orange-500 to-red-600' },
-        { id: 2, title: 'FREE Delivery', sub: 'On your first 3 orders', code: 'WELCOME', color: 'from-blue-500 to-indigo-600' },
-        { id: 3, title: 'Extra ₹100 Cashback', sub: 'Pay using DACH Wallet', code: 'CASH100', color: 'from-emerald-500 to-teal-600' },
-    ];
+
 
     const filters = [
         { label: 'All', icon: null },
@@ -88,13 +90,22 @@ const FoodHome = () => {
     ];
 
     const filteredRestaurants = restaurantsList.filter(res => {
-        // Location Filter
-        const userLoc = userLocation.toLowerCase();
-        const resCity = (res.city || "").toLowerCase();
-        const resPincode = (res.pincode || "").toLowerCase();
-        const isNearby = !userLocation || userLoc.includes(resCity) || userLoc.includes(resPincode) || resCity.includes(userLoc);
-
-        if (!isNearby && resCity) return false;
+        // Handle no location or placeholder
+        if (!userLocation || userLocation === 'Select Location') {
+            // Apply other filters if selected
+            if (activeFilter === 'All') return true;
+        } else {
+            // Location Filter
+            const userLoc = userLocation.toLowerCase();
+            const resCity = (res.city || "").toLowerCase();
+            const resPincode = (res.pincode || "").toLowerCase();
+            const resArea = (res.area || "").toLowerCase();
+            
+            const isMatch = userLoc.includes(resCity) || userLoc.includes(resPincode) || userLoc.includes(resArea) ||
+                          resCity.includes(userLoc) || resArea.includes(userLoc);
+                          
+            if (!isMatch && resCity) return false;
+        }
 
         if (activeFilter === 'All') return true;
         if (activeFilter === 'Rating 4.0+') return (res.rating || 4.0) >= 4.0;
@@ -103,6 +114,40 @@ const FoodHome = () => {
         if (activeFilter === 'Offers') return res.offers && res.offers.length > 0;
         return true;
     });
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-white">
+            <div className="flex flex-col items-center gap-6">
+                <div className="relative">
+                    <div className="w-24 h-24 border-8 border-orange-100 rounded-full"></div>
+                    <div className="w-24 h-24 border-8 border-orange-600 border-t-transparent rounded-full animate-spin absolute top-0"></div>
+                    <Utensils className="w-10 h-10 text-orange-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                </div>
+                <div className="text-center">
+                    <h3 className="text-2xl font-black text-gray-900 mb-2">Preparing your menu...</h3>
+                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs animate-pulse">Finding the best local flavors</p>
+                </div>
+            </div>
+        </div>
+    );
+
+    if (error) return (
+        <div className="min-h-screen flex items-center justify-center bg-white p-4">
+            <div className="text-center max-w-md">
+                <div className="w-24 h-24 bg-red-50 rounded-[40px] flex items-center justify-center mx-auto mb-8 border-2 border-dashed border-red-200">
+                    <Zap className="w-12 h-12 text-red-500" />
+                </div>
+                <h3 className="text-3xl font-black text-gray-900 mb-4 tracking-tight">Oops! Something went wrong</h3>
+                <p className="text-gray-500 font-medium text-lg mb-8 leading-relaxed">{error}</p>
+                <button 
+                    onClick={() => window.location.reload()}
+                    className="px-10 py-4 bg-gray-900 text-white font-black rounded-2xl hover:bg-orange-600 transition-all shadow-xl shadow-orange-100 flex items-center gap-3 mx-auto"
+                >
+                    Try Again <ArrowLeft className="w-5 h-5 rotate-90" />
+                </button>
+            </div>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-white">
@@ -133,20 +178,75 @@ const FoodHome = () => {
                             <span className="flex items-center gap-2"><Utensils className="w-5 h-5 text-orange-500" /> Trusted restaurants</span>
                         </p>
 
-                        <div className="flex flex-col sm:flex-row items-center gap-6">
-                            <button
-                                onClick={() => navigate('/food/items')}
-                                className="w-full sm:w-auto px-12 py-5 bg-orange-600 text-white font-black rounded-2xl hover:bg-orange-700 transition-all text-xl shadow-2xl shadow-orange-600/30 hover:scale-105 active:scale-95"
-                            >
-                                Order Now
-                            </button>
-                            <button
-                                onClick={() => navigate('/food/restaurants')}
-                                className="w-full sm:w-auto px-12 py-5 bg-white/10 backdrop-blur-md text-white border-2 border-white/20 font-black rounded-2xl hover:bg-white/20 transition-all text-xl hover:scale-105 active:scale-95"
-                            >
-                                Restaurants
-                            </button>
+                        <div className="max-w-4xl mx-auto">
+                            <div className="flex flex-col md:flex-row items-stretch bg-white rounded-2xl md:rounded-full p-2 gap-2 shadow-2xl mb-10 border border-gray-200/50">
+                                <div 
+                                    className="flex items-center gap-3 px-6 py-4 md:border-r border-gray-100 flex-shrink-0 cursor-pointer hover:bg-gray-50 transition-all rounded-xl md:rounded-l-full group"
+                                    onClick={() => setShowLocationModal(true)}
+                                >
+                                    <MapPin className="w-5 h-5 text-orange-500 group-hover:scale-110 transition-transform" />
+                                    <span className="font-bold text-gray-700 whitespace-nowrap truncate max-w-[150px]">{userLocation || 'Select Location'}</span>
+                                    <ChevronRight className="w-4 h-4 text-gray-400 rotate-90" />
+                                </div>
+                                <div className="flex-grow flex items-center relative">
+                                    <Search className="absolute left-6 w-5 h-5 text-gray-400" />
+                                    <input 
+                                        type="text"
+                                        placeholder="Search for restaurants, cuisines or dishes..."
+                                        className="w-full pl-14 pr-6 py-4 text-base font-bold text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
+                                        value={localSearch}
+                                        onChange={(e) => setLocalSearch(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && navigate(`/food/restaurants?search=${localSearch}`)}
+                                    />
+                                    <button 
+                                        onClick={() => navigate(`/food/restaurants?search=${localSearch}`)}
+                                        className="hidden sm:block absolute right-2 px-8 py-3 bg-orange-600 text-white font-black rounded-full hover:bg-orange-700 transition-all shadow-lg active:scale-95"
+                                    >
+                                        Search
+                                    </button>
+                                </div>
+                                <button 
+                                    onClick={() => navigate(`/food/restaurants?search=${localSearch}`)}
+                                    className="sm:hidden w-full py-4 bg-orange-600 text-white font-black rounded-xl hover:bg-orange-700 transition-all shadow-lg mt-2"
+                                >
+                                    Search
+                                </button>
+                            </div>
                         </div>
+
+                        {/* Location Select Modal Copy (simplified for Home) */}
+                        {showLocationModal && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 backdrop-blur-sm bg-black/60">
+                                <div className="bg-white w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden p-8 animate-in zoom-in duration-300">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h3 className="text-3xl font-black text-gray-900">Set Delivery Location</h3>
+                                        <button onClick={() => setShowLocationModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="w-6 h-6" /></button>
+                                    </div>
+                                    <div className="space-y-6">
+                                        <div className="relative">
+                                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-orange-500" />
+                                            <input 
+                                                type="text" 
+                                                className="w-full pl-14 pr-4 py-5 bg-gray-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl font-black text-lg outline-none transition-all"
+                                                placeholder="Enter your area or city..."
+                                                value={newLocationInput}
+                                                onChange={(e) => setNewLocationInput(e.target.value)}
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <button 
+                                            onClick={() => {
+                                                handleLocationUpdate(newLocationInput);
+                                                setShowLocationModal(false);
+                                            }}
+                                            className="w-full py-5 bg-orange-600 text-white font-black rounded-2xl hover:bg-orange-700 shadow-xl transition-all text-xl"
+                                        >
+                                            Confirm Location
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>
@@ -192,6 +292,114 @@ const FoodHome = () => {
                 </div>
             </section>
 
+            {/* Favorites Section (Conditional) */}
+            {wishlist.length > 0 && (
+                <section className="py-16 bg-gray-50/50 overflow-hidden">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex items-center justify-between mb-10">
+                            <div>
+                                <h2 className="text-3xl font-black text-gray-900 mb-2 flex items-center gap-3">
+                                    Your Favorites <Heart className="w-6 h-6 text-red-500 fill-red-500" />
+                                </h2>
+                                <p className="text-gray-500 font-bold">Quick access to the places you love</p>
+                            </div>
+                            <Link to="/food/wishlist" className="text-orange-600 font-black uppercase tracking-widest text-xs hover:text-orange-700 transition-colors">View All Wishlist</Link>
+                        </div>
+                        <div className="flex gap-8 overflow-x-auto pb-8 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide snap-x">
+                            {restaurantsList.filter(r => wishlist.includes(r.id)).map(restaurant => (
+                                <div key={restaurant.id} className="min-w-[320px] sm:min-w-[400px] snap-start">
+                                    <RestaurantCard restaurant={restaurant} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Offers Section */}
+            {offeredItems.length > 0 && (
+                <section className="py-20 bg-white">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex items-center justify-between mb-12">
+                            <div>
+                                <h2 className="text-4xl font-black text-gray-900 mb-2">Unmissable Deals</h2>
+                                <p className="text-gray-500 font-bold text-lg">Grab the best offers from top restaurants</p>
+                            </div>
+                            <div className="hidden sm:flex gap-4">
+                                <Link to="/food/restaurants?filter=Offers" className="px-6 py-3 bg-gray-100 text-gray-900 font-black rounded-xl hover:bg-orange-600 hover:text-white transition-all text-sm uppercase tracking-widest">View All Offers</Link>
+                            </div>
+                        </div>
+                        
+                        <div className="flex gap-6 overflow-x-auto pb-10 scrollbar-hide no-scrollbar snap-x snap-mandatory">
+                            {offeredItems.map((item, idx) => (
+                                <div 
+                                    key={item.id} 
+                                    className={`min-w-[320px] sm:min-w-[420px] bg-gradient-to-br ${idx % 3 === 0 ? 'from-orange-500 to-red-600' : idx % 3 === 1 ? 'from-blue-500 to-indigo-600' : 'from-emerald-500 to-teal-600'} rounded-[48px] p-8 text-white relative overflow-hidden shadow-2xl hover:scale-[1.02] transition-all cursor-pointer snap-start group`}
+                                    onClick={() => navigate(`/food/restaurant/${item.restaurant_id}`)}
+                                >
+                                    <div className="relative z-10 flex flex-col h-full">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-md rounded-full border border-white/30">
+                                                <Percent className="w-4 h-4 text-white" />
+                                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{item.offer_text || 'Limited Offer'}</span>
+                                            </div>
+                                            <div className="bg-white/20 backdrop-blur-md p-2 rounded-xl group-hover:bg-white transition-colors">
+                                                <TrendingUp className="w-5 h-5 text-white group-hover:text-gray-900 transition-colors" />
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex gap-6 mb-8">
+                                            <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-white/20 shadow-lg shrink-0">
+                                                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-2xl font-black mb-1 group-hover:text-orange-200 transition-colors">{item.name}</h3>
+                                                <p className="text-white/80 font-bold text-sm mb-2">{item.restaurant_name}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-2xl font-black">₹{item.price}</span>
+                                                    {item.original_price && (
+                                                        <span className="text-sm font-medium text-white/50 line-through">₹{item.original_price}</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center justify-between mt-auto">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Status</span>
+                                                <div className="px-4 py-2 bg-black/20 backdrop-blur-md border border-white/20 rounded-xl font-black text-xs tracking-widest uppercase">
+                                                    Available Now
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    addToCart({
+                                                        id: item.id,
+                                                        name: item.name,
+                                                        price: item.price,
+                                                        image: item.image,
+                                                        restaurantId: item.restaurant_id,
+                                                        restaurantName: item.restaurant_name
+                                                    });
+                                                }}
+                                                className="w-14 h-14 bg-white text-gray-900 rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform hover:bg-orange-100"
+                                            >
+                                                <Plus className="w-6 h-6 " />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Aesthetic elements */}
+                                    <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all" />
+                                    <div className="absolute top-1/2 right-0 -translate-y-1/2 h-full w-32 bg-gradient-to-l from-white/5 to-transparent blur-xl" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
             {/* Trending Dishes */}
             <section className="py-16 bg-gray-50 overflow-hidden">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -233,10 +441,17 @@ const FoodHome = () => {
                                 <div className="flex items-center justify-between">
                                     <span className="text-xl font-black text-gray-900">₹{dish.base_price || dish.price}</span>
                                     <button
-                                        onClick={() => navigate(`/food/restaurant/${dish.restaurant_id}`)}
-                                        className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700 transition-all shadow-md shadow-orange-200"
+                                        onClick={() => addToCart({
+                                            id: dish.id,
+                                            name: dish.name,
+                                            price: dish.base_price || dish.price,
+                                            image: dish.image,
+                                            restaurantId: dish.restaurant_id,
+                                            restaurantName: dish.restaurant_name
+                                        })}
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-orange-600 transition-all shadow-md shadow-orange-100 active:scale-95 group/btn"
                                     >
-                                        <Plus className="w-4 h-4" /> View
+                                        <Plus className="w-4 h-4 group-hover/btn:rotate-90 transition-transform" /> ADD
                                     </button>
                                 </div>
                             </div>
@@ -254,7 +469,15 @@ const FoodHome = () => {
             <section className="py-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
-                        <h2 className="text-3xl font-black text-gray-900">Restaurants Near You</h2>
+                        <div>
+                            <h2 className="text-3xl font-black text-gray-900">Restaurants Near You</h2>
+                            <p className="text-gray-500 font-bold text-sm tracking-tight italic mt-1 leading-none outline-none">
+                                {userLocation !== 'Select Location' 
+                                    ? `Found ${filteredRestaurants.length} best places in ${userLocation}`
+                                    : `Showing ${filteredRestaurants.length} popular restaurants near you`
+                                }
+                            </p>
+                        </div>
 
                         {/* Quick Filters */}
                         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -421,12 +644,14 @@ const FoodHome = () => {
 // Restaurant Card Component
 const RestaurantCard = ({ restaurant }) => {
     const navigate = useNavigate();
+    const { toggleWishlist, isWishlisted } = useFoodCart();
     const isOpen = restaurant.is_open ?? true;
+    const wishlisted = isWishlisted(restaurant.id);
 
     return (
         <div
             onClick={() => navigate(`/food/restaurant/${restaurant.id}`)}
-            className="group bg-white rounded-[40px] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer border border-gray-100 flex flex-col h-full"
+            className="group bg-white rounded-[40px] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer border border-gray-100 flex flex-col h-full active:scale-[0.98]"
         >
             {/* Image Section */}
             <div className="relative h-64 overflow-hidden bg-orange-50">
@@ -442,9 +667,9 @@ const RestaurantCard = ({ restaurant }) => {
                     </div>
                 )}
 
-                {/* Offer Badge */}
+                {/* Offer Badge (Optional) */}
                 {restaurant.offers && restaurant.offers.length > 0 && (
-                    <div className="absolute bottom-4 left-4 right-4 bg-gradient-to-r from-orange-600 to-red-600 text-white p-3 rounded-2xl shadow-xl flex items-center justify-between">
+                    <div className="absolute bottom-4 left-4 right-4 bg-gradient-to-r from-orange-600 to-red-600 text-white p-3 rounded-2xl shadow-xl flex items-center justify-between pointer-events-none">
                         <div className="flex items-center gap-2">
                             <Percent className="w-5 h-5" />
                             <span className="font-black text-sm uppercase tracking-tight">{restaurant.offers[0]}</span>
@@ -454,13 +679,19 @@ const RestaurantCard = ({ restaurant }) => {
 
                 {/* Status Badge */}
                 {!isOpen && (
-                    <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-[2px] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
                         <span className="px-6 py-2 bg-white text-gray-900 font-black rounded-full uppercase tracking-widest text-sm shadow-xl">Currently Closed</span>
                     </div>
                 )}
 
-                <button className="absolute top-4 right-4 w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white shadow-lg group/btn">
-                    <Heart className="w-6 h-6 text-gray-400 group-hover/btn:text-red-500 group-hover/btn:fill-red-500 transition-all" />
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        toggleWishlist(restaurant.id);
+                    }}
+                    className="absolute top-4 right-4 w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white shadow-lg group/btn z-10"
+                >
+                    <Heart className={`w-6 h-6 transition-all ${wishlisted ? 'text-red-500 fill-red-500 scale-110' : 'text-gray-400 group-hover/btn:text-red-500'}`} />
                 </button>
             </div>
 
@@ -469,7 +700,11 @@ const RestaurantCard = ({ restaurant }) => {
                 <div className="flex items-start justify-between mb-4">
                     <div>
                         <h3 className="text-2xl font-black text-gray-900 mb-1 group-hover:text-orange-600 transition-colors leading-tight">{restaurant.name}</h3>
-                        <p className="text-gray-500 font-bold text-sm uppercase tracking-wider">{restaurant.cuisine_type || restaurant.cuisine}</p>
+                        <p className="text-gray-500 font-bold text-xs uppercase tracking-wider mb-2">{restaurant.cuisine_type || restaurant.cuisine}</p>
+                        <div className="flex items-center gap-1.5 text-gray-400 font-black text-[10px] uppercase tracking-widest italic leading-none outline-none">
+                            <MapPin className="w-3 h-3 text-orange-500" />
+                            <span>{restaurant.area || restaurant.city || "Nearby"}</span>
+                        </div>
                     </div>
                     <div className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm font-black rounded-xl shadow-lg shadow-green-100">
                         {restaurant.rating || "4.0"}
@@ -1124,25 +1359,42 @@ const FoodItemsList = () => {
 const FoodCart = () => {
     const { cartItems, updateQuantity, removeFromCart, getTotal, clearCart } = useFoodCart();
     const navigate = useNavigate();
+    const [couponCode, setCouponCode] = useState('');
+    const [discount, setDiscount] = useState(0);
+
     const deliveryFee = 40;
     const taxRate = 0.05;
-
     const subtotal = getTotal();
     const tax = subtotal * taxRate;
-    const total = subtotal + deliveryFee + tax;
+    const total = subtotal + deliveryFee + tax - discount;
+
+    const applyCoupon = () => {
+        if (couponCode.toUpperCase() === 'DACH50') {
+            setDiscount(Math.min(subtotal * 0.5, 150));
+            alert('Coupon applied successfully!');
+        } else if (couponCode.toUpperCase() === 'WELCOME') {
+            setDiscount(40);
+            alert('Free delivery applied!');
+        } else {
+            alert('Invalid coupon code');
+            setDiscount(0);
+        }
+    };
 
     if (cartItems.length === 0) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <ShoppingCart className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
-                    <p className="text-gray-500 mb-6">Add some delicious food to get started!</p>
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="text-center max-w-md">
+                    <div className="w-32 h-32 bg-orange-100 rounded-[48px] flex items-center justify-center mx-auto mb-8 shadow-xl shadow-orange-100/50 scale-110">
+                        <ShoppingBag className="w-16 h-16 text-orange-600" />
+                    </div>
+                    <h2 className="text-4xl font-black text-gray-900 mb-4">Your cart is empty</h2>
+                    <p className="text-gray-500 font-medium text-lg mb-10 leading-relaxed tracking-tight">Looks like you haven't added anything to your cart yet. Let's find you some delicious food!</p>
                     <button
                         onClick={() => navigate('/food')}
-                        className="px-6 py-3 bg-orange-500 text-white font-medium rounded-xl hover:bg-orange-600 transition-colors"
+                        className="w-full py-5 bg-gray-900 text-white font-black rounded-2xl hover:bg-orange-600 transition-all shadow-xl shadow-orange-100 flex items-center justify-center gap-3 active:scale-95"
                     >
-                        Browse Restaurants
+                        <Utensils className="w-6 h-6" /> START EXPLORING
                     </button>
                 </div>
             </div>
@@ -1150,111 +1402,296 @@ const FoodCart = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Your Cart</h1>
-                {cartItems.length > 0 && (
-                    <p className="text-gray-500 mb-6">From {cartItems[0].restaurantName}</p>
-                )}
-
-                {/* Cart Items */}
-                <div className="bg-white rounded-2xl shadow-sm mb-6">
-                    {cartItems.map(item => (
-                        <div key={item.id} className="flex items-center gap-4 p-4 border-b border-gray-100 last:border-0">
-                            <img
-                                src={item.image}
-                                alt={item.name}
-                                className="w-20 h-20 rounded-xl object-cover"
-                            />
-                            <div className="flex-grow">
-                                <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                                <p className="text-gray-500 text-sm">₹{item.price}</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2 bg-gray-100 rounded-xl">
-                                    <button
-                                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                        className="p-2 text-gray-600 hover:text-orange-500"
-                                    >
-                                        <Minus className="w-4 h-4" />
-                                    </button>
-                                    <span className="font-medium w-8 text-center">{item.quantity}</span>
-                                    <button
-                                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                        className="p-2 text-gray-600 hover:text-orange-500"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                    </button>
-                                </div>
-                                <button
-                                    onClick={() => removeFromCart(item.id)}
-                                    className="p-2 text-gray-400 hover:text-red-500"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                            <p className="font-bold text-gray-900 w-20 text-right">
-                                ₹{item.price * item.quantity}
-                            </p>
+        <div className="min-h-screen bg-gray-50 pt-32 pb-24 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12 items-start">
+                {/* Left Column: Items */}
+                <div className="lg:col-span-8 space-y-8">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-4xl font-black text-gray-900 tracking-tight">My Order</h1>
+                            <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-2">Items from {cartItems[0].restaurantName}</p>
                         </div>
-                    ))}
+                        <button onClick={clearCart} className="text-red-500 font-black text-xs uppercase tracking-widest hover:text-red-600 transition-colors">Clear Cart</button>
+                    </div>
+
+                    <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
+                        {cartItems.map((item, idx) => (
+                            <div key={item.id} className={`flex items-center gap-6 p-8 group transition-colors hover:bg-gray-50/50 ${idx !== cartItems.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                                <div className="w-24 h-24 rounded-3xl overflow-hidden bg-gray-100 shadow-lg group-hover:scale-105 transition-transform duration-500">
+                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                </div>
+                                <div className="flex-grow">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className={`w-3 h-3 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`} />
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.is_veg ? 'Veg' : 'Non-Veg'}</span>
+                                    </div>
+                                    <h3 className="font-black text-gray-900 text-xl mb-1">{item.name}</h3>
+                                    <p className="text-gray-400 font-bold text-sm tracking-tight italic">₹{item.price}</p>
+                                </div>
+                                <div className="flex items-center gap-2 bg-gray-100 rounded-2xl p-1 shadow-inner group/controls">
+                                    <button onClick={() => updateQuantity(item.id, -1)} className="p-2.5 hover:bg-white rounded-xl transition-all"><Minus className="w-4 h-4 text-gray-600" /></button>
+                                    <span className="w-8 text-center font-black text-gray-900">{item.quantity}</span>
+                                    <button onClick={() => updateQuantity(item.id, 1)} className="p-2.5 hover:bg-white rounded-xl transition-all"><Plus className="w-4 h-4 text-gray-600" /></button>
+                                </div>
+                                <div className="text-right min-w-[80px]">
+                                    <p className="font-black text-gray-900 text-xl">₹{item.price * item.quantity}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Safe for delivery check */}
+                    <div className="bg-green-50 border border-green-100 rounded-3xl p-6 flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                            <Check className="w-6 h-6 text-green-600" />
+                        </div>
+                        <div>
+                            <p className="font-black text-green-900 text-sm italic">Safe Hygiene & Non-Toxic Packaging</p>
+                            <p className="text-green-700 text-xs font-medium">FoodBites ensures all items are packed following strict guidelines.</p>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Order Summary */}
-                <div className="bg-white rounded-2xl shadow-sm p-6">
-                    <h3 className="font-bold text-gray-900 mb-4">Order Summary</h3>
-                    <div className="space-y-3 text-sm">
-                        <div className="flex justify-between">
-                            <span className="text-gray-500">Subtotal</span>
-                            <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+                {/* Right Column: Checkout Summary */}
+                <div className="lg:col-span-4 space-y-6">
+                    <div className="bg-white rounded-[40px] shadow-2xl border border-gray-100 p-8 pt-10 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-orange-500 to-red-600" />
+                        
+                        {/* Coupon Section */}
+                        <div className="mb-10">
+                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Promotions & Coupons</h4>
+                            <div className="flex gap-2">
+                                <div className="relative flex-grow">
+                                    <Percent className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-500" />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Enter coupon code" 
+                                        className="w-full pl-11 pr-4 py-4 bg-gray-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl text-sm font-black outline-none transition-all shadow-inner uppercase"
+                                        value={couponCode}
+                                        onChange={(e) => setCouponCode(e.target.value)}
+                                    />
+                                </div>
+                                <button onClick={applyCoupon} className="px-6 py-4 bg-gray-900 text-white font-black text-sm rounded-2xl hover:bg-orange-600 transition-all shadow-xl shadow-orange-100">APPLY</button>
+                            </div>
+                            {discount > 0 && <p className="mt-3 text-green-600 font-bold text-xs">✓ Applied - You saved ₹{discount}!</p>}
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-500">Delivery Fee</span>
-                            <span className="font-medium">₹{deliveryFee}</span>
+
+                        {/* Bill Breakdown */}
+                        <div className="space-y-6 mb-10">
+                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">Bill Summary</h4>
+                            <div className="space-y-4">
+                                <div className="flex justify-between text-gray-600 font-medium">
+                                    <span className="flex items-center gap-2">Subtotal</span>
+                                    <span>₹{subtotal}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-600 font-medium">
+                                    <span className="flex items-center gap-2">Delivery Fee <Clock className="w-3 h-3" /></span>
+                                    <span className={discount === 40 || couponCode === 'WELCOME' ? 'line-through text-gray-300' : ''}>₹{deliveryFee}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-600 font-medium">
+                                    <span className="flex items-center gap-2">Tax & Charges (5%) <Sparkles className="w-3 h-3" /></span>
+                                    <span>₹{tax.toFixed(0)}</span>
+                                </div>
+                                {discount > 0 && (
+                                    <div className="flex justify-between text-green-600 font-black italic">
+                                        <span>Discount Applied</span>
+                                        <span>-₹{discount}</span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="border-t border-gray-100 pt-6 flex justify-between items-end">
+                                <div>
+                                    <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">Total Payable</p>
+                                    <p className="text-4xl font-black text-gray-900">₹{total.toFixed(0)}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-orange-600 font-black text-xs italic">Inclusive of taxes</p>
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-500">Taxes & Charges</span>
-                            <span className="font-medium">₹{tax.toFixed(2)}</span>
+
+                        {/* Payment Selection (Mock) */}
+                        <div className="mb-10">
+                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Payment Method</h4>
+                            <div className="grid grid-cols-3 gap-2">
+                                <button className="p-3 bg-orange-50 border-2 border-orange-500 rounded-2xl flex flex-col items-center gap-1">
+                                    <Check className="w-4 h-4 text-orange-600" />
+                                    <span className="text-[10px] font-black text-orange-600 uppercase">COD</span>
+                                </button>
+                                <button className="p-3 bg-gray-50 border-2 border-transparent rounded-2xl flex flex-col items-center gap-1 opacity-50 grayscale">
+                                    <CreditCard className="w-4 h-4 text-gray-400" />
+                                    <span className="text-[10px] font-black text-gray-400 uppercase">UPI</span>
+                                </button>
+                                <button className="p-3 bg-gray-50 border-2 border-transparent rounded-2xl flex flex-col items-center gap-1 opacity-50 grayscale">
+                                    <Building2 className="w-4 h-4 text-gray-400" />
+                                    <span className="text-[10px] font-black text-gray-400 uppercase">CARD</span>
+                                </button>
+                            </div>
                         </div>
-                        <div className="border-t border-gray-100 pt-3 flex justify-between text-lg">
-                            <span className="font-bold text-gray-900">Total</span>
-                            <span className="font-bold text-gray-900">₹{total.toFixed(2)}</span>
+
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+                                    const token = localStorage.getItem('token');
+                                    if (!token) {
+                                        alert("Please login to place an order");
+                                        navigate('/auth');
+                                        return;
+                                    }
+
+                                    await axios.post(`${API_BASE}/api/food/orders`, {
+                                        restaurant_id: cartItems[0].restaurantId,
+                                        restaurant_name: cartItems[0].restaurantName,
+                                        items: cartItems,
+                                        total: total,
+                                        delivery_address: "" 
+                                    }, {
+                                        headers: { Authorization: `Bearer ${token}` }
+                                    });
+
+                                    clearCart();
+                                    navigate('/food/orders');
+                                } catch (e) {
+                                    console.error(e);
+                                    alert("Failed to place order. Please try again.");
+                                }
+                            }}
+                            className="w-full py-6 bg-gradient-to-r from-orange-500 to-red-600 text-white font-black rounded-3xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-lg"
+                        >
+                            CONFIRM ORDER <ArrowRight className="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    <p className="text-center text-gray-400 font-bold text-[10px] uppercase tracking-widest px-8">
+                        By placing the order, you agree to our Terms of Use and Privacy Policy.
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Live Order Tracking Component (Simulated)
+const LiveTracking = ({ order, onBack }) => {
+    const [step, setStep] = useState(1);
+    const [progress, setProgress] = useState(25);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setStep(prev => (prev < 4 ? prev + 1 : prev));
+            setProgress(prev => (prev < 100 ? prev + 25 : prev));
+        }, 8000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const steps = [
+        { id: 1, label: 'Order Confirmed', sub: 'The restaurant has received your order', icon: Check },
+        { id: 2, label: 'Preparing', sub: 'Your food is being cooked with care', icon: ChefHat },
+        { id: 3, label: 'Out for Delivery', sub: 'A rider is on their way with your food', icon: Bike },
+        { id: 4, label: 'Delivered', sub: 'Enjoy your delicious meal!', icon: HomeIcon },
+    ];
+
+    return (
+        <div className="min-h-screen bg-white">
+            {/* Tracking Header */}
+            <header className="p-6 border-b border-gray-100 flex items-center gap-4">
+                <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft className="w-6 h-6 text-gray-900" /></button>
+                <div>
+                    <h2 className="text-xl font-black text-gray-900 leading-tight">Tracking Order #{order.id}</h2>
+                    <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">{order.restaurant_name}</p>
+                </div>
+            </header>
+
+            <div className="max-w-7xl mx-auto grid lg:grid-cols-2">
+                {/* Visual Tracking (Mock Map) */}
+                <div className="bg-gray-100 h-96 lg:h-[calc(100vh-80px)] relative overflow-hidden">
+                    {/* Mock Map Background */}
+                    <div className="absolute inset-0 opacity-20">
+                        <svg width="100%" height="100%" className="text-gray-400">
+                            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5" />
+                            </pattern>
+                            <rect width="100%" height="100%" fill="url(#grid)" />
+                        </svg>
+                    </div>
+
+                    {/* Animated Path */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="relative w-full max-w-lg p-12">
+                            {/* Road Line */}
+                            <div className="absolute left-10 right-10 top-1/2 -translate-y-1/2 h-1 bg-gray-200 rounded-full " />
+                            <div 
+                                className="absolute left-10 top-1/2 -translate-y-1/2 h-1 bg-orange-500 rounded-full transition-all duration-[8000ms] ease-linear" 
+                                style={{ width: `calc(${progress}% - 80px)` }}
+                            />
+
+                            {/* Icons */}
+                            <div className="relative flex justify-between">
+                                <div className="w-16 h-16 bg-white rounded-3xl shadow-xl border-4 border-orange-50 flex items-center justify-center z-10">
+                                    <ChefHat className="w-8 h-8 text-orange-600" />
+                                </div>
+                                <div 
+                                    className="w-16 h-16 bg-orange-600 rounded-3xl shadow-2xl flex items-center justify-center z-20 absolute top-0 -translate-x-1/2 transition-all duration-[8000ms] ease-linear"
+                                    style={{ left: `${progress}%` }}
+                                >
+                                    <Bike className="w-8 h-8 text-white animate-bounce" />
+                                </div>
+                                <div className="w-16 h-16 bg-white rounded-3xl shadow-xl border-4 border-green-50 flex items-center justify-center z-10">
+                                    <HomeIcon className="w-8 h-8 text-green-600" />
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <button
-                        onClick={async () => {
-                            try {
-                                const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-                                const token = localStorage.getItem('token');
-                                if (!token) {
-                                    alert("Please login to place an order");
-                                    navigate('/auth');
-                                    return;
-                                }
+                    {/* Rider Info Card */}
+                    <div className="absolute bottom-8 left-8 right-8 bg-white/90 backdrop-blur-xl p-6 rounded-[32px] shadow-2xl border border-white/50 flex items-center gap-6 animate-in slide-in-from-bottom duration-500 delay-300">
+                        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center font-black text-2xl text-orange-600">JS</div>
+                        <div className="flex-grow">
+                            <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest leading-none outline-none">Delivery Partner</p>
+                            <h4 className="text-xl font-black text-gray-900 mb-1">John S.</h4>
+                            <div className="flex items-center gap-2 text-sm text-gray-500 font-bold">
+                                <Star className="w-4 h-4 text-orange-500 fill-orange-500" /> 4.9 • Superfast Partner
+                            </div>
+                        </div>
+                        <button className="p-4 bg-gray-900 text-white rounded-2xl hover:bg-orange-600 transition-all shadow-lg active:scale-95"><Phone className="w-6 h-6" /></button>
+                    </div>
+                </div>
 
-                                await axios.post(`${API_BASE}/api/food/orders`, {
-                                    restaurant_id: cartItems[0].restaurantId,
-                                    restaurant_name: cartItems[0].restaurantName,
-                                    items: cartItems,
-                                    total: total,
-                                    delivery_address: "" // Backend will use user profile address if empty
-                                }, {
-                                    headers: { Authorization: `Bearer ${token}` }
-                                });
+                {/* Status List */}
+                <div className="p-8 lg:p-16 bg-white space-y-12 overflow-y-auto">
+                    <div>
+                        <h3 className="text-3xl font-black text-gray-900 mb-2">Order Status</h3>
+                        <p className="text-gray-500 font-medium">Estimated arrival in {25 - (step * 5)} mins</p>
+                    </div>
 
-                                alert('Order placed successfully!');
-                                clearCart();
-                                navigate('/food/orders');
-                            } catch (e) {
-                                console.error(e);
-                                alert("Failed to place order. Please try again.");
-                            }
-                        }}
-                        className="w-full mt-6 py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold rounded-xl hover:shadow-lg transition-all"
-                    >
-                        Place Order • ₹{total.toFixed(2)}
-                    </button>
+                    <div className="space-y-10">
+                        {steps.map((s, idx) => {
+                            const isPast = step > s.id;
+                            const isCurrent = step === s.id;
+                            return (
+                                <div key={s.id} className="flex gap-6 relative group">
+                                    {/* Vertical Line */}
+                                    {idx !== steps.length - 1 && (
+                                        <div className={`absolute left-8 top-16 bottom-[-40px] w-1 ${isPast ? 'bg-orange-500' : 'bg-gray-100'}`} />
+                                    )}
+
+                                    <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center flex-shrink-0 transition-all duration-500 ${
+                                        isPast ? 'bg-orange-600 text-white shadow-xl shadow-orange-100' : 
+                                        isCurrent ? 'bg-white text-orange-600 border-4 border-orange-500 shadow-2xl scale-110' : 
+                                        'bg-gray-50 text-gray-300'
+                                    }`}>
+                                        <s.icon className="w-7 h-7" />
+                                    </div>
+                                    <div>
+                                        <h4 className={`text-xl font-black tracking-tight ${isCurrent || isPast ? 'text-gray-900' : 'text-gray-300'}`}>{s.label}</h4>
+                                        <p className={`text-sm font-medium ${isCurrent || isPast ? 'text-gray-500' : 'text-gray-200'}`}>{s.sub}</p>
+                                        {isCurrent && <span className="inline-block mt-3 px-3 py-1 bg-orange-100 text-orange-600 rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse">In Progress</span>}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </div>
@@ -1265,6 +1702,8 @@ const FoodCart = () => {
 const FoodOrders = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [trackingOrder, setTrackingOrder] = useState(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -1286,46 +1725,142 @@ const FoodOrders = () => {
         fetchOrders();
     }, []);
 
-    return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-6">My Orders</h1>
+    if (trackingOrder) return <LiveTracking order={trackingOrder} onBack={() => setTrackingOrder(null)} />;
 
-                {orders.length > 0 ? (
-                    <div className="space-y-4">
+    return (
+        <div className="min-h-screen bg-gray-50 pt-32 pb-24 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-4xl mx-auto">
+                <div className="flex items-center justify-between mb-12">
+                    <div>
+                        <h1 className="text-4xl font-black text-gray-900 tracking-tight">Order History</h1>
+                        <p className="text-gray-500 font-bold text-lg">Manage and track your recent orders</p>
+                    </div>
+                </div>
+
+                {loading ? (
+                    <div className="space-y-6">
+                        {[1, 2, 3].map(n => (
+                            <div key={n} className="h-48 bg-white rounded-[32px] animate-pulse shadow-sm border border-gray-100" />
+                        ))}
+                    </div>
+                ) : orders.length > 0 ? (
+                    <div className="space-y-8">
                         {orders.map(order => (
-                            <div key={order.id} className="bg-white rounded-2xl shadow-sm p-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div>
-                                        <h3 className="font-bold text-gray-900">{order.restaurant_name}</h3>
-                                        <p className="text-sm text-gray-500">Order #{order.id}</p>
-                                    </div>
-                                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${order.status === 'delivered'
-                                        ? 'bg-green-100 text-green-700'
-                                        : 'bg-orange-100 text-orange-700'
+                            <div key={order.id} className="bg-white rounded-[40px] shadow-sm hover:shadow-xl transition-all duration-500 border border-gray-100 overflow-hidden group">
+                                <div className="p-8 pb-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-16 h-16 bg-orange-50 text-orange-600 rounded-3xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
+                                                <Utensils className="w-8 h-8" />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h3 className="text-2xl font-black text-gray-900 leading-none outline-none">{order.restaurant_name}</h3>
+                                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-50 text-green-600 rounded-lg text-[10px] font-black shadow-sm">
+                                                        4.2 <Star className="w-2.5 h-2.5 fill-current" />
+                                                    </div>
+                                                </div>
+                                                <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">Order #{order.id} • {new Date(order.created_at).toLocaleDateString()}</p>
+                                            </div>
+                                        </div>
+                                        <span className={`self-start sm:self-center px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-widest border-2 ${
+                                            order.status === 'delivered' ? 'bg-green-50 text-green-600 border-green-100' :
+                                            order.status === 'cancelled' ? 'bg-red-50 text-red-600 border-red-100' :
+                                            'bg-orange-50 text-orange-600 border-orange-100 animate-pulse'
                                         }`}>
-                                        {order.status === 'delivered' ? 'Delivered' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                                    </span>
+                                            {order.status}
+                                        </span>
+                                    </div>
+                                    <div className="flex gap-2 flex-wrap mb-6">
+                                        {order.items.map((i, idx) => (
+                                            <span key={idx} className="px-4 py-2 bg-gray-50 text-gray-700 rounded-xl text-xs font-black border border-gray-100 group-hover:bg-gray-100 transition-colors">
+                                                {i.quantity} x {i.name}
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
-                                <p className="text-gray-600 text-sm mb-3">
-                                    {order.items.map(i => i.name).join(', ')}
-                                </p>
-                                <div className="flex items-center justify-between border-t border-gray-100 pt-4">
-                                    <span className="text-gray-500 text-sm">
-                                        {new Date(order.created_at).toLocaleDateString()}
-                                    </span>
-                                    <span className="font-bold text-gray-900">₹{order.total}</span>
+                                <div className="px-8 py-6 bg-gray-50/50 border-t border-gray-50 flex items-center justify-between group-hover:bg-gray-50 transition-colors">
+                                    <div>
+                                        <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest outline-none">Total Amount Paid</p>
+                                        <p className="text-2xl font-black text-gray-900 tracking-tight">₹{order.total}</p>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <button 
+                                            onClick={() => navigate(`/food/restaurant/${order.restaurant_id}`)}
+                                            className="px-6 py-3 bg-white text-gray-900 border-2 border-gray-100 font-black rounded-2xl hover:border-orange-500 hover:text-orange-600 transition-all text-xs uppercase tracking-widest"
+                                        >
+                                            View Menu
+                                        </button>
+                                        {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                                            <button 
+                                                onClick={() => setTrackingOrder(order)}
+                                                className="px-6 py-3 bg-gray-900 text-white font-black rounded-2xl hover:bg-orange-600 transition-all shadow-xl shadow-orange-100 text-xs uppercase tracking-widest flex items-center gap-2"
+                                            >
+                                                Track Now <Bike className="w-4 h-4" />
+                                            </button>
+                                        ) }
+                                    </div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-12">
-                        <Timer className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-gray-700 mb-2">No orders yet</h3>
-                        <p className="text-gray-500">Your order history will appear here</p>
+                    <div className="text-center py-32 bg-white rounded-[48px] shadow-sm border border-gray-100">
+                        <div className="w-24 h-24 bg-gray-50 rounded-[40px] flex items-center justify-center mx-auto mb-8 border-2 border-dashed border-gray-200">
+                            <Clock className="w-12 h-12 text-gray-300" />
+                        </div>
+                        <h2 className="text-3xl font-black text-gray-900 mb-4">No orders yet</h2>
+                        <p className="text-gray-500 font-medium mb-10 max-w-xs mx-auto">Hungry? Discover the best flavors in town and start your first order!</p>
+                        <button
+                            onClick={() => navigate('/food')}
+                            className="px-12 py-5 bg-orange-600 text-white font-black rounded-2xl hover:bg-orange-700 shadow-2xl shadow-orange-100 transition-all flex items-center gap-3 mx-auto"
+                        >
+                            GO TO CHOW <Utensils className="w-6 h-6" />
+                        </button>
                     </div>
                 )}
+            </div>
+        </div>
+    );
+};
+
+// Cart Preview Component
+const CartPreviewBar = () => {
+    const { cartItems, getTotal, getItemCount } = useFoodCart();
+    const navigate = useNavigate();
+    
+    if (cartItems.length === 0) return null;
+    
+    return (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-4xl px-4 animate-in fade-in slide-in-from-bottom-10 duration-500">
+            <div className="bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-[32px] p-5 shadow-2xl flex items-center justify-between ring-1 ring-white/20">
+                <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center relative shadow-lg shadow-orange-600/20">
+                        <ShoppingBag className="w-7 h-7 text-white" />
+                        <span className="absolute -top-2 -right-2 w-7 h-7 bg-white text-orange-600 rounded-full flex items-center justify-center text-xs font-black border-2 border-orange-600 shadow-xl">
+                            {getItemCount()}
+                        </span>
+                    </div>
+                    <div className="hidden sm:block">
+                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Your Order from {cartItems[0].restaurantName || 'Restaurant'}</p>
+                        <div className="flex items-center gap-3">
+                            <p className="text-white font-black text-2xl tracking-tight">₹{getTotal()}</p>
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-600" />
+                            <p className="text-gray-400 text-sm font-bold">{getItemCount()} {getItemCount() === 1 ? 'item' : 'items'}</p>
+                        </div>
+                    </div>
+                    {/* Mobile view info */}
+                    <div className="sm:hidden">
+                        <p className="text-white font-black text-xl">₹{getTotal()}</p>
+                        <p className="text-gray-400 text-[10px] uppercase font-black">{getItemCount()} items</p>
+                    </div>
+                </div>
+                <button 
+                    onClick={() => navigate('/food/cart')}
+                    className="flex items-center gap-3 px-8 py-4 bg-white text-gray-900 font-black rounded-2xl hover:bg-orange-50 transition-all shadow-xl active:scale-95 group whitespace-nowrap"
+                >
+                    VIEW CART <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
             </div>
         </div>
     );
@@ -1343,9 +1878,10 @@ const FoodApp = ({ onSwitchApp }) => {
                     <Route path="/restaurants" element={<RestaurantsList />} />
                     <Route path="/restaurant/:id" element={<RestaurantDetail />} />
                     <Route path="/cart" element={<FoodCart />} />
-                    <Route path="/orders" element={<Navigate to="/profile" replace />} />
+                    <Route path="/orders" element={<FoodOrders />} />
                     <Route path="/profile" element={<Navigate to="/profile" replace />} />
                 </Routes>
+                <CartPreviewBar />
             </div>
         </FoodCartProvider>
     );

@@ -59,7 +59,7 @@ const RestaurantLogin = () => {
     ];
 
     const CUISINE_TYPES = [
-        "North Indian", "South Indian", "Chinese", "Italian", "Mexican",
+        "Indian", "Chinese", "Italian", "Mexican",
         "Continental", "Thai", "Japanese", "Mughlai", "Bengali",
         "Punjabi", "Rajasthani", "Biryani", "Fast Food", "Desserts",
         "Beverages", "Multi-Cuisine"

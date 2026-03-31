@@ -2519,11 +2519,19 @@ const AppRouter = () => {
 
   // --- Role-Based Strict Redirection (FORCED ISOLATION) ---
   if (user && user.user_type !== 'user') {
-    if (user.user_type === 'vendor_ecommerce' || user.user_type === 'restaurant') {
+    if (user.user_type === 'vendor_ecommerce') {
       return (
         <Routes>
-          <Route path="/vendor/*" element={<VendorDashboard />} />
+          <Route path="/vendor/*" element={<Vendor />} />
           <Route path="*" element={<Navigate to="/vendor" replace />} />
+        </Routes>
+      );
+    }
+    if (user.user_type === 'restaurant') {
+      return (
+        <Routes>
+          <Route path="/food/vendor/*" element={<RestaurantDashboard />} />
+          <Route path="*" element={<Navigate to="/food/vendor/dashboard" replace />} />
         </Routes>
       );
     }

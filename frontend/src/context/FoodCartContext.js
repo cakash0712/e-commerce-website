@@ -13,9 +13,18 @@ export const FoodCartProvider = ({ children }) => {
         return localStorage.getItem('userLocation') || 'Select Location';
     });
 
+    const [wishlist, setWishlist] = useState(() => {
+        const savedWishlist = localStorage.getItem('foodWishlist');
+        return savedWishlist ? JSON.parse(savedWishlist) : [];
+    });
+
     useEffect(() => {
         localStorage.setItem('foodCart', JSON.stringify(cart));
     }, [cart]);
+
+    useEffect(() => {
+        localStorage.setItem('foodWishlist', JSON.stringify(wishlist));
+    }, [wishlist]);
 
     const addToCart = (item, restaurantId, restaurantName) => {
         setCart(prev => {
@@ -26,6 +35,17 @@ export const FoodCartProvider = ({ children }) => {
             return [...prev, { ...item, quantity: 1, restaurantId, restaurantName }];
         });
     };
+
+    const toggleWishlist = (restaurantId) => {
+        setWishlist(prev => {
+            if (prev.includes(restaurantId)) {
+                return prev.filter(id => id !== restaurantId);
+            }
+            return [...prev, restaurantId];
+        });
+    };
+
+    const isWishlisted = (restaurantId) => wishlist.includes(restaurantId);
 
     const removeFromCart = (id) => {
         setCart(prev => prev.filter(item => item.id !== id));
@@ -45,7 +65,7 @@ export const FoodCartProvider = ({ children }) => {
 
     const getItemCount = () => cart.reduce((total, item) => total + item.quantity, 0);
 
-    const getCartTotal = () => cart.reduce((total, item) => total + (item.base_price * item.quantity), 0);
+    const getCartTotal = () => cart.reduce((total, item) => total + ((item.price || item.base_price || 0) * item.quantity), 0);
 
     const handleLocationUpdate = async (newLoc) => {
         setLocation(newLoc);
@@ -54,8 +74,20 @@ export const FoodCartProvider = ({ children }) => {
 
     return (
         <FoodCartContext.Provider value={{
-            cart, addToCart, removeFromCart, updateQuantity, clearCart,
-            getItemCount, getCartTotal, location, handleLocationUpdate
+            cartItems: cart,
+            cart,
+            addToCart,
+            removeFromCart,
+            updateQuantity,
+            clearCart,
+            getItemCount,
+            getTotal: getCartTotal,
+            getCartTotal,
+            location,
+            handleLocationUpdate,
+            wishlist,
+            toggleWishlist,
+            isWishlisted
         }}>
             {children}
         </FoodCartContext.Provider>

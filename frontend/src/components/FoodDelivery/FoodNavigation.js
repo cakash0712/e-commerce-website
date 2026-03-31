@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import {
     Utensils, MapPin, Search, User, ShoppingCart, Menu, X, ArrowLeft, Building2, Pizza, Clock, Store, Home
@@ -17,6 +17,9 @@ const FoodNavigation = ({ onSwitchApp }) => {
     const [searchSuggestions, setSearchSuggestions] = useState([]);
     const [newLocationInput, setNewLocationInput] = useState('');
     const [suggestions, setSuggestions] = useState([]);
+    const [isScrolled, setIsScrolled] = useState(false);
+    const locationPath = useLocation();
+    const isHomePage = locationPath.pathname === '/food' || locationPath.pathname === '/food/';
     const navigate = useNavigate();
     const itemCount = getItemCount();
 
@@ -58,6 +61,14 @@ const FoodNavigation = ({ onSwitchApp }) => {
 
         return () => clearTimeout(timer);
     }, [newLocationInput]);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 400);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const onLocationConfirm = async (selectedLoc = null) => {
         const finalLoc = (selectedLoc && typeof selectedLoc === 'string' ? selectedLoc : newLocationInput).trim();
@@ -113,8 +124,8 @@ const FoodNavigation = ({ onSwitchApp }) => {
                         </span>
                     </Link>
 
-                    {/* Center: Location & Search */}
-                    <div className="hidden lg:flex items-center flex-grow max-w-2xl bg-gray-50 rounded-full border border-gray-200 p-1">
+                    {/* Center: Location & Search (Hidden on Home top) */}
+                    <div className={`hidden lg:flex items-center flex-grow max-w-2xl bg-gray-50 rounded-full border border-gray-200 p-1 transition-all duration-500 ${(!isScrolled && isHomePage) ? 'opacity-0 invisible scale-95 translate-y-2' : 'opacity-100 visible scale-100 translate-y-0'}`}>
                         <div
                             onClick={() => {
                                 setNewLocationInput(location);
